@@ -1,42 +1,116 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
-import { Link, Route, Switch } from "wouter";
+import { useEffect, useState } from "react";
+import { Link, Route, Switch, useLocation, useParams } from "wouter";
 import { supabase } from "./lib/supabase";
+import type { Session } from "@supabase/supabase-js";
+import Operadores from "./pages/Operadores";
+import OperadorForm from "./pages/OperadorForm";
 
-function Layout({ children }: { children: ReactNode }) {
+// ─── Tipos ───────────────────────────────────────────────────────────────────
+
+type NavItem = {
+  href: string;
+  label: string;
+  icon: string;
+  description: string;
+};
+
+const NAV_ITEMS: NavItem[] = [
+  { href: "/", label: "Dashboard", icon: "⊞", description: "" },
+  {
+    href: "/operadores",
+    label: "Operadores",
+    icon: "👤",
+    description:
+      "Registro y consulta de operadores. Datos personales, documentos, licencia y curso.",
+  },
+  {
+    href: "/ventas",
+    label: "Ventas",
+    icon: "💰",
+    description:
+      "Registro de ventas vinculadas a un operador. Servicio, costo, cobro y forma de pago.",
+  },
+  {
+    href: "/cita-ruta",
+    label: "Cita y Ruta",
+    icon: "🗓️",
+    description:
+      "Gestión de cita SCT y traslado: fecha, punto de reunión, pagos y estatus.",
+  },
+  {
+    href: "/traslados",
+    label: "Traslados",
+    icon: "🚌",
+    description:
+      "Programación y seguimiento de traslados de operadores por fecha.",
+  },
+  {
+    href: "/comisiones",
+    label: "Comisiones",
+    icon: "📊",
+    description:
+      "Reporte de comisiones por promotor en un rango de fechas.",
+  },
+  {
+    href: "/reportes",
+    label: "Reportes",
+    icon: "📋",
+    description:
+      "Hub de reportes: traslados, ventas y solicitudes de servicio.",
+  },
+];
+
+// ─── Layout ──────────────────────────────────────────────────────────────────
+
+function Layout({
+  children,
+  userEmail,
+  onSignOut,
+}: {
+  children: ReactNode;
+  userEmail: string;
+  onSignOut: () => Promise<void>;
+}) {
+  const [location] = useLocation();
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <h1>AppLic ERP</h1>
-        <nav>
-          <Link href="/">Dashboard</Link>
-          <Link href="/clientes">Clientes</Link>
-          <Link href="/ventas">Ventas</Link>
-          <Link href="/servicios">Servicios</Link>
-          <Link href="/reportes">Reportes</Link>
+        <div className="sidebar-header">
+          <span className="sidebar-logo">AppLic</span>
+          <span className="sidebar-subtitle">ERP</span>
+        </div>
+
+        <nav className="sidebar-nav">
+          {NAV_ITEMS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`nav-link${location === item.href || (item.href !== "/" && location.startsWith(item.href)) ? " nav-link--active" : ""}`}
+            >
+              <span className="nav-icon">{item.icon}</span>
+              {item.label}
+            </Link>
+          ))}
         </nav>
+
+        <div className="sidebar-footer">
+          <p className="user-email">{userEmail}</p>
+          <button className="ghost-btn" onClick={onSignOut} type="button">
+            Cerrar sesion
+          </button>
+        </div>
       </aside>
+
       <main className="content">{children}</main>
     </div>
   );
 }
 
-function Placeholder({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <section>
-      <h2>{title}</h2>
-      <p>{description}</p>
-    </section>
-  );
-}
+// ─── Dashboard ───────────────────────────────────────────────────────────────
 
-function SetupChecklist() {
+function Dashboard() {
   const [supabaseStatus, setSupabaseStatus] = useState<
     "pendiente" | "ok" | "error"
   >("pendiente");
@@ -56,70 +130,248 @@ function SetupChecklist() {
       setSupabaseMessage("Conexion valida con Supabase.");
     } catch (error) {
       setSupabaseStatus("error");
-      setSupabaseMessage(error instanceof Error ? error.message : "Error desconocido.");
+      setSupabaseMessage(
+        error instanceof Error ? error.message : "Error desconocido.",
+      );
     }
   };
 
   return (
-    <section>
-      <h2>Checklist de entorno</h2>
-      <p>
-        Esta pantalla confirma que el esqueleto funciona antes de modelar tablas
-        de Access.
-      </p>
-      <ul className="status-list">
-        <li>
-          <strong>Frontend (Vite):</strong> OK
-        </li>
-        <li>
-          <strong>Ruteo base:</strong> OK
-        </li>
-        <li>
-          <strong>Supabase:</strong>{" "}
-          <span className={`status-chip status-${supabaseStatus}`}>
-            {supabaseStatus}
-          </span>
-        </li>
-      </ul>
-      <button className="primary-btn" onClick={checkSupabase} type="button">
-        Probar conexion Supabase
-      </button>
-      <p className="status-message">{supabaseMessage}</p>
-      <p className="next-step">
-        Siguiente: deploy en Render para validar entorno en linea.
-      </p>
-    </section>
+    <div>
+      <h2 className="page-title">Dashboard</h2>
+
+      <div className="module-grid">
+        {NAV_ITEMS.filter((n) => n.href !== "/").map((item) => (
+          <Link key={item.href} href={item.href} className="module-card">
+            <span className="module-icon">{item.icon}</span>
+            <strong>{item.label}</strong>
+            <p>{item.description}</p>
+          </Link>
+        ))}
+      </div>
+
+      <section className="check-card">
+        <h3>Estado del entorno</h3>
+        <ul className="status-list">
+          <li>
+            <strong>Frontend (Vite + React):</strong>{" "}
+            <span className="status-chip status-ok">ok</span>
+          </li>
+          <li>
+            <strong>Tablas en Supabase:</strong>{" "}
+            <span className="status-chip status-ok">ok</span>
+          </li>
+          <li>
+            <strong>Conexion Supabase:</strong>{" "}
+            <span className={`status-chip status-${supabaseStatus}`}>
+              {supabaseStatus}
+            </span>
+          </li>
+        </ul>
+        <button className="primary-btn" onClick={checkSupabase} type="button">
+          Verificar conexion
+        </button>
+        {supabaseStatus !== "pendiente" && (
+          <p className="status-message">{supabaseMessage}</p>
+        )}
+      </section>
+    </div>
   );
 }
 
-export default function App() {
+// ─── Placeholder genérico ────────────────────────────────────────────────────
+
+function Placeholder({ item }: { item: NavItem }) {
   return (
-    <Layout>
+    <div>
+      <h2 className="page-title">
+        <span>{item.icon}</span> {item.label}
+      </h2>
+      <section className="placeholder-card">
+        <p className="placeholder-desc">{item.description}</p>
+        <div className="coming-soon">
+          <span>En construccion</span>
+          <p>
+            Las tablas en Supabase ya estan listas. Esta pantalla se
+            implementara en la siguiente etapa.
+          </p>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+
+function AuthScreen() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const submit = async () => {
+    if (!email || !password) {
+      setMessage("Introduce correo y contrasena.");
+      return;
+    }
+    setLoading(true);
+    setMessage("Procesando...");
+    try {
+      if (mode === "login") {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+        setMessage("Sesion iniciada.");
+      } else {
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+        setMessage("Usuario creado. Revisa tu correo si pide confirmacion.");
+      }
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Error en autenticacion.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKey = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") submit();
+  };
+
+  return (
+    <div className="auth-shell">
+      <section className="auth-card">
+        <div className="auth-logo">
+          <strong>AppLic</strong>
+          <span>ERP</span>
+        </div>
+        <h2>{mode === "login" ? "Iniciar sesion" : "Crear cuenta"}</h2>
+        <label>
+          Correo
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={handleKey}
+            type="email"
+            placeholder="correo@dominio.com"
+            autoFocus
+          />
+        </label>
+        <label>
+          Contrasena
+          <input
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={handleKey}
+            type="password"
+            placeholder="••••••••"
+          />
+        </label>
+        <button
+          className="primary-btn"
+          onClick={submit}
+          type="button"
+          disabled={loading}
+        >
+          {loading
+            ? "Procesando..."
+            : mode === "login"
+              ? "Entrar"
+              : "Crear cuenta"}
+        </button>
+        <button
+          className="link-btn"
+          onClick={() => setMode(mode === "login" ? "signup" : "login")}
+          type="button"
+        >
+          {mode === "login" ? "No tengo cuenta" : "Ya tengo cuenta"}
+        </button>
+        {message && <p className="status-message">{message}</p>}
+      </section>
+    </div>
+  );
+}
+
+// ─── Wrapper para editar operador (extrae :id de la URL) ─────────────────────
+
+function OperadorEditWrapper() {
+  const { id } = useParams<{ id: string }>();
+  const numId = Number(id);
+  if (!id || isNaN(numId)) return <div>ID inválido</div>;
+  return <OperadorForm id={numId} />;
+}
+
+// ─── App root ─────────────────────────────────────────────────────────────────
+
+export default function App() {
+  const [session, setSession] = useState<Session | null>(null);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (isMounted) {
+        setSession(data.session ?? null);
+        setCheckingSession(false);
+      }
+    });
+
+    const { data } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+    });
+
+    return () => {
+      isMounted = false;
+      data.subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+  };
+
+  if (checkingSession) {
+    return <div className="loading-screen">Cargando...</div>;
+  }
+
+  if (!session) {
+    return <AuthScreen />;
+  }
+
+  return (
+    <Layout
+      userEmail={session.user.email ?? "usuario"}
+      onSignOut={handleSignOut}
+    >
       <Switch>
         <Route path="/">
-          <SetupChecklist />
+          <Dashboard />
         </Route>
-        <Route path="/clientes">
-          <Placeholder
-            title="Clientes"
-            description="Registro y consulta de clientes."
-          />
+
+        {/* ── Operadores ── */}
+        <Route path="/operadores">
+          <Operadores />
         </Route>
-        <Route path="/ventas">
-          <Placeholder title="Ventas" description="Registro de ventas en MXN." />
+        <Route path="/operadores/nuevo">
+          <OperadorForm />
         </Route>
-        <Route path="/servicios">
-          <Placeholder
-            title="Servicios"
-            description="Seguimiento de peticiones de servicio."
-          />
+        <Route path="/operadores/:id">
+          <OperadorEditWrapper />
         </Route>
-        <Route path="/reportes">
-          <Placeholder
-            title="Reportes"
-            description="Reportes de ventas y solicitudes de servicio."
-          />
-        </Route>
+
+        {/* ── Resto de módulos (placeholders) ── */}
+        {NAV_ITEMS.filter((n) => !["/", "/operadores"].includes(n.href)).map(
+          (item) => (
+            <Route key={item.href} path={item.href}>
+              <Placeholder item={item} />
+            </Route>
+          ),
+        )}
       </Switch>
     </Layout>
   );
