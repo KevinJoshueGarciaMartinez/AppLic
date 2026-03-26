@@ -3,6 +3,7 @@
 -- Los IDs corresponden a los registros originales de Access.
 
 INSERT INTO public.promotores (id_promotor, nombre, nick, orden, columna_servicios)
+OVERRIDING SYSTEM VALUE
 VALUES
   (3,  'Alfredo Chavez', 'Alfredo', 5, 5),
   (4,  'Valeria Chavez', 'Valeria', 0, 0),
