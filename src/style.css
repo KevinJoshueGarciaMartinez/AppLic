@@ -963,6 +963,162 @@ body {
   color: #374151;
 }
 
+/* ─── Filter card ───────────────────────────────────────────────────────────── */
+
+.filter-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 0;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+  align-items: end;
+}
+
+.form-field-center {
+  display: flex;
+  align-items: flex-end;
+}
+
+/* ─── Promotor chips (comisiones) ────────────────────────────────────────────── */
+
+.promotor-resumen {
+  margin-top: 12px;
+}
+
+.promotor-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.promotor-chip {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13px;
+}
+
+.promotor-chip strong {
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.promotor-chip span {
+  color: #64748b;
+}
+
+/* ─── Table footer totals ────────────────────────────────────────────────────── */
+
+.table-total-row td {
+  background: #f8fafc;
+  border-top: 2px solid #e2e8f0;
+  padding: 10px 14px;
+}
+
+/* ─── Empty report ───────────────────────────────────────────────────────────── */
+
+.empty-report {
+  text-align: center;
+  padding: 48px 20px;
+  color: #94a3b8;
+}
+
+.empty-report span {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #64748b;
+}
+
+.empty-report p {
+  margin: 0;
+  font-size: 13px;
+}
+
+/* ─── Traslados ──────────────────────────────────────────────────────────────── */
+
+.traslado-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.traslado-grupo {
+  margin-top: 24px;
+}
+
+.traslado-grupo-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 10px 14px;
+  background: #f1f5f9;
+  border-radius: 8px;
+}
+
+.traslado-punto {
+  font-weight: 600;
+  font-size: 14px;
+  flex: 1;
+}
+
+.traslado-hora {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.row-concluido td {
+  opacity: 0.55;
+}
+
+.col-obs {
+  max-width: 180px;
+  font-size: 12px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─── Cita y Ruta ────────────────────────────────────────────────────────────── */
+
+.estatus-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mini-checks {
+  display: flex;
+  gap: 4px;
+}
+
+.mono-tag {
+  font-family: monospace;
+  font-size: 12px;
+  background: #f1f5f9;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.text-muted {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
 /* ─── Responsive ─────────────────────────────────────────────────────────────── */
 
 @media (max-width: 700px) {

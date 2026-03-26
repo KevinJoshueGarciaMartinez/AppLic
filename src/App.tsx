@@ -7,6 +7,9 @@ import Operadores from "./pages/Operadores";
 import OperadorForm from "./pages/OperadorForm";
 import Ventas from "./pages/Ventas";
 import VentaForm from "./pages/VentaForm";
+import Comisiones from "./pages/Comisiones";
+import Traslados from "./pages/Traslados";
+import CitaRuta from "./pages/CitaRuta";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -384,9 +387,27 @@ export default function App() {
           <VentaEditWrapper />
         </Route>
 
+        {/* ── Comisiones ── */}
+        <Route path="/comisiones">
+          <Comisiones />
+        </Route>
+
+        {/* ── Traslados ── */}
+        <Route path="/traslados">
+          <Traslados />
+        </Route>
+
+        {/* ── Cita y Ruta ── */}
+        <Route path="/cita-ruta">
+          <CitaRuta />
+        </Route>
+
         {/* ── Resto de módulos (placeholders) ── */}
         {NAV_ITEMS.filter(
-          (n) => !["/", "/operadores", "/ventas"].includes(n.href),
+          (n) =>
+            !["/", "/operadores", "/ventas", "/comisiones", "/traslados", "/cita-ruta"].includes(
+              n.href,
+            ),
         ).map(
           (item) => (
             <Route key={item.href} path={item.href}>
