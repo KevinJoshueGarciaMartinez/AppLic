@@ -10,6 +10,7 @@ import VentaForm from "./pages/VentaForm";
 import Comisiones from "./pages/Comisiones";
 import Traslados from "./pages/Traslados";
 import CitaRuta from "./pages/CitaRuta";
+import Reportes from "./pages/Reportes";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -402,10 +403,15 @@ export default function App() {
           <CitaRuta />
         </Route>
 
+        {/* ── Reportes ── */}
+        <Route path="/reportes">
+          <Reportes />
+        </Route>
+
         {/* ── Resto de módulos (placeholders) ── */}
         {NAV_ITEMS.filter(
           (n) =>
-            !["/", "/operadores", "/ventas", "/comisiones", "/traslados", "/cita-ruta"].includes(
+            !["/", "/operadores", "/ventas", "/comisiones", "/traslados", "/cita-ruta", "/reportes"].includes(
               n.href,
             ),
         ).map(
