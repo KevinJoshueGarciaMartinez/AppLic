@@ -5,6 +5,8 @@ import { supabase } from "./lib/supabase";
 import type { Session } from "@supabase/supabase-js";
 import Operadores from "./pages/Operadores";
 import OperadorForm from "./pages/OperadorForm";
+import Ventas from "./pages/Ventas";
+import VentaForm from "./pages/VentaForm";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -306,6 +308,13 @@ function OperadorEditWrapper() {
   return <OperadorForm id={numId} />;
 }
 
+function VentaEditWrapper() {
+  const { id } = useParams<{ id: string }>();
+  const numId = Number(id);
+  if (!id || isNaN(numId)) return <div>ID inválido</div>;
+  return <VentaForm id={numId} />;
+}
+
 // ─── App root ─────────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -364,8 +373,21 @@ export default function App() {
           <OperadorEditWrapper />
         </Route>
 
+        {/* ── Ventas ── */}
+        <Route path="/ventas">
+          <Ventas />
+        </Route>
+        <Route path="/ventas/nuevo">
+          <VentaForm />
+        </Route>
+        <Route path="/ventas/:id">
+          <VentaEditWrapper />
+        </Route>
+
         {/* ── Resto de módulos (placeholders) ── */}
-        {NAV_ITEMS.filter((n) => !["/", "/operadores"].includes(n.href)).map(
+        {NAV_ITEMS.filter(
+          (n) => !["/", "/operadores", "/ventas"].includes(n.href),
+        ).map(
           (item) => (
             <Route key={item.href} path={item.href}>
               <Placeholder item={item} />

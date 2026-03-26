@@ -93,3 +93,63 @@ export type OperadorInsert = Omit<
   Operador,
   "numero_consecutivo" | "created_at" | "updated_at" | "promotores"
 >;
+
+// ── Catálogo de servicios ─────────────────────────────────────────────────────
+export interface Servicio {
+  id_servicio: number;
+  orden: number;
+  servicio: string;
+  tipo_servicio: number | null;
+  costo_base: number;
+}
+
+// ── Ventas ────────────────────────────────────────────────────────────────────
+export interface Venta {
+  id: number;
+  fecha: string;
+  hora: string | null;
+
+  curp_operador: string | null;
+  operador_nombre?: string | null; // joined
+
+  id_promotor: number | null;
+  promotor: string | null;
+  promotores?: { nombre: string | null } | null;
+
+  id_servicio: number | null;
+  servicio: string | null;
+  tipo_servicio: number | null;
+  catalogo_servicios_costos?: { servicio: string; costo_base: number } | null;
+
+  costo: number;
+  costo_promotor: number;
+  comision_promotor: number; // generated
+  comision_pagada: boolean;
+
+  cobro: number;
+  faltante: number; // generated
+  egreso: number;
+  total_cobrado: number; // generated
+
+  forma_pago: "Efectivo" | "Deposito";
+  numero_referencia: number | null;
+
+  observaciones: string | null;
+  fecha_solicitud_curso: string | null;
+
+  created_at: string;
+  updated_at: string;
+}
+
+export type VentaInsert = Omit<
+  Venta,
+  | "id"
+  | "created_at"
+  | "updated_at"
+  | "comision_promotor"
+  | "faltante"
+  | "total_cobrado"
+  | "promotores"
+  | "catalogo_servicios_costos"
+  | "operador_nombre"
+>;
