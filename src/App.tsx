@@ -8,8 +8,6 @@ import OperadorForm from "./pages/OperadorForm";
 import Ventas from "./pages/Ventas";
 import VentaForm from "./pages/VentaForm";
 import Comisiones from "./pages/Comisiones";
-import Traslados from "./pages/Traslados";
-import CitaRuta from "./pages/CitaRuta";
 import Reportes from "./pages/Reportes";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
@@ -36,20 +34,6 @@ const NAV_ITEMS: NavItem[] = [
     icon: "💰",
     description:
       "Registro de ventas vinculadas a un operador. Servicio, costo, cobro y forma de pago.",
-  },
-  {
-    href: "/cita-ruta",
-    label: "Cita y Ruta",
-    icon: "🗓️",
-    description:
-      "Gestión de cita SCT y traslado: fecha, punto de reunión, pagos y estatus.",
-  },
-  {
-    href: "/traslados",
-    label: "Traslados",
-    icon: "🚌",
-    description:
-      "Programación y seguimiento de traslados de operadores por fecha.",
   },
   {
     href: "/comisiones",
@@ -393,15 +377,6 @@ export default function App() {
           <Comisiones />
         </Route>
 
-        {/* ── Traslados ── */}
-        <Route path="/traslados">
-          <Traslados />
-        </Route>
-
-        {/* ── Cita y Ruta ── */}
-        <Route path="/cita-ruta">
-          <CitaRuta />
-        </Route>
 
         {/* ── Reportes ── */}
         <Route path="/reportes">
@@ -411,7 +386,7 @@ export default function App() {
         {/* ── Resto de módulos (placeholders) ── */}
         {NAV_ITEMS.filter(
           (n) =>
-            !["/", "/operadores", "/ventas", "/comisiones", "/traslados", "/cita-ruta", "/reportes"].includes(
+            !["/", "/operadores", "/ventas", "/comisiones", "/reportes"].includes(
               n.href,
             ),
         ).map(
