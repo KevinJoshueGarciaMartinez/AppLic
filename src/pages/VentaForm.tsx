@@ -16,11 +16,11 @@ async function fetchVenta(id: number): Promise<Venta> {
   return data as Venta;
 }
 
-async function fetchVentaItems(ventaId: number): Promise<VentaItem[]> {
+async function fetchTicketItems(ticketId: number): Promise<VentaItem[]> {
   const { data, error } = await supabase
-    .from("venta_items")
-    .select("id, id_servicio, servicio, tipo_servicio, costo")
-    .eq("venta_id", ventaId)
+    .from("ventas")
+    .select("id_servicio, servicio, tipo_servicio, costo")
+    .eq("ticket_id", ticketId)
     .order("id");
   if (error) return [];
   return (data ?? []) as VentaItem[];
@@ -194,11 +194,12 @@ export default function VentaForm({ id }: Props) {
     enabled: !isNew,
   });
 
-  // Cargar items existentes
+  // Cargar items del ticket (si la venta pertenece a un ticket)
+  const ticketId = ventaData?.ticket_id ?? null;
   const { data: itemsData } = useQuery({
-    queryKey: ["venta_items", id],
-    queryFn: () => fetchVentaItems(id!),
-    enabled: !isNew,
+    queryKey: ["ticket_items", ticketId],
+    queryFn: () => fetchTicketItems(ticketId!),
+    enabled: !!ticketId,
   });
 
   useEffect(() => {
@@ -212,6 +213,7 @@ export default function VentaForm({ id }: Props) {
         total_cobrado,
         promotores,
         catalogo_servicios_costos,
+        ticket_id: _ticket_id,
         ...rest
       } = ventaData;
       setForm(rest as VentaInsert);
@@ -221,16 +223,14 @@ export default function VentaForm({ id }: Props) {
   useEffect(() => {
     if (itemsData && itemsData.length > 0) {
       setItems(itemsData);
-    } else if (ventaData && !itemsData?.length) {
-      // Registro antiguo sin items: inicializar con el servicio existente
-      if (ventaData.id_servicio || ventaData.servicio) {
-        setItems([{
-          id_servicio: ventaData.id_servicio,
-          servicio: ventaData.servicio ?? "",
-          tipo_servicio: ventaData.tipo_servicio,
-          costo: ventaData.costo,
-        }]);
-      }
+    } else if (ventaData) {
+      // Venta individual sin ticket
+      setItems([{
+        id_servicio: ventaData.id_servicio,
+        servicio: ventaData.servicio ?? "",
+        tipo_servicio: ventaData.tipo_servicio,
+        costo: ventaData.costo,
+      }]);
     }
   }, [itemsData, ventaData]);
 
@@ -281,57 +281,60 @@ export default function VentaForm({ id }: Props) {
 
   const mutation = useMutation({
     mutationFn: async (payload: VentaInsert) => {
-      const totalCosto = items.reduce((s, item) => s + item.costo, 0);
-      const servicioTexto = items
-        .filter((i) => i.servicio)
-        .map((i) => i.servicio)
-        .join(", ") || null;
-      const firstItem = items.find((i) => i.id_servicio);
+      const validItems = items.filter((i) => i.servicio);
+      if (validItems.length === 0) throw new Error("Agrega al menos un servicio.");
 
-      const ventaPayload: VentaInsert = {
-        ...payload,
-        costo: totalCosto,
-        servicio: servicioTexto,
-        id_servicio: firstItem?.id_servicio ?? null,
-        tipo_servicio: firstItem?.tipo_servicio ?? null,
-      };
+      const isMulti = validItems.length > 1;
 
       if (isNew) {
-        const { data, error } = await supabase
-          .from("ventas")
-          .insert(ventaPayload)
-          .select("id")
-          .single();
-        if (error) throw new Error(error.message);
+        let ticketId: number | null = null;
 
-        const ventaId = (data as { id: number }).id;
-        const itemsPayload = items
-          .filter((i) => i.servicio)
-          .map(({ id: _id, ...item }) => ({ ...item, venta_id: ventaId }));
-        if (itemsPayload.length > 0) {
-          const { error: itemsErr } = await supabase.from("venta_items").insert(itemsPayload);
-          if (itemsErr) throw new Error(itemsErr.message);
+        if (isMulti) {
+          // Crear ticket cabecera
+          const { data: ticketData, error: ticketErr } = await supabase
+            .from("tickets")
+            .insert({ fecha: payload.fecha ?? new Date().toISOString().slice(0, 10) })
+            .select("id")
+            .single();
+          if (ticketErr) throw new Error(ticketErr.message);
+          ticketId = (ticketData as { id: number }).id;
         }
+
+        // Crear una fila en ventas por cada servicio
+        const ventasPayload = validItems.map((item, idx) => ({
+          ...payload,
+          ticket_id: ticketId,
+          id_servicio: item.id_servicio,
+          servicio: item.servicio,
+          tipo_servicio: item.tipo_servicio,
+          costo: item.costo,
+          // Solo el primer item lleva cobro/costo_promotor; el resto es 0
+          cobro: idx === 0 ? payload.cobro : 0,
+          costo_promotor: idx === 0 ? payload.costo_promotor : 0,
+          egreso: idx === 0 ? payload.egreso : 0,
+        }));
+
+        const { error } = await supabase.from("ventas").insert(ventasPayload);
+        if (error) throw new Error(error.message);
       } else {
+        // Editar venta individual (solo actualiza la fila actual)
+        const item = validItems[0];
+        const ventaPayload: VentaInsert = {
+          ...payload,
+          id_servicio: item.id_servicio,
+          servicio: item.servicio,
+          tipo_servicio: item.tipo_servicio,
+          costo: item.costo,
+        };
         const { error } = await supabase
           .from("ventas")
           .update(ventaPayload)
           .eq("id", id!);
         if (error) throw new Error(error.message);
-
-        await supabase.from("venta_items").delete().eq("venta_id", id!);
-        const itemsPayload = items
-          .filter((i) => i.servicio)
-          .map(({ id: _id, ...item }) => ({ ...item, venta_id: id! }));
-        if (itemsPayload.length > 0) {
-          const { error: itemsErr } = await supabase.from("venta_items").insert(itemsPayload);
-          if (itemsErr) throw new Error(itemsErr.message);
-        }
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ventas"] });
-      if (!isNew) queryClient.invalidateQueries({ queryKey: ["venta_items", id] });
       setGuardado(true);
       setTimeout(() => setGuardado(false), 3000);
       if (isNew) navigate("/ventas");

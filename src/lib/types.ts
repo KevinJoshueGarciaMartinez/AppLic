@@ -103,9 +103,8 @@ export interface Servicio {
   costo_base: number;
 }
 
-// ── Venta items (líneas de ticket) ───────────────────────────────────────────
+// ── Línea de servicio (estado local del formulario) ──────────────────────────
 export interface VentaItem {
-  id?: number;
   id_servicio: number | null;
   servicio: string;
   tipo_servicio: number | null;
@@ -115,6 +114,7 @@ export interface VentaItem {
 // ── Ventas ────────────────────────────────────────────────────────────────────
 export interface Venta {
   id: number;
+  ticket_id: number | null;
   fecha: string;
   hora: string | null;
 
