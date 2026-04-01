@@ -302,28 +302,6 @@ export default function VentaForm({ id }: Props) {
         <div className="form-grid-ventas">
           {/* ── Columna izquierda ── */}
           <div>
-            {/* Fecha y hora */}
-            <div className="form-group-title">Fecha</div>
-            <div className="form-grid form-grid-2">
-              <div className="form-field">
-                <label>Fecha *</label>
-                <input
-                  type="date"
-                  value={form.fecha}
-                  onChange={(e) => set("fecha", e.target.value)}
-                  required
-                />
-              </div>
-              <div className="form-field">
-                <label>Hora</label>
-                <input
-                  type="time"
-                  value={form.hora ?? ""}
-                  onChange={(e) => set("hora", e.target.value || null)}
-                />
-              </div>
-            </div>
-
             {/* Operador */}
             <div className="form-group-title" style={{ marginTop: "1.25rem" }}>
               Operador
