@@ -4,16 +4,26 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 import type { Venta } from "../lib/types";
 
-async function fetchVentas(): Promise<Venta[]> {
-  const { data, error } = await supabase
+function hoy() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+async function fetchVentas(fecha: string | null): Promise<Venta[]> {
+  let q = supabase
     .from("ventas")
     .select(
       "id, fecha, operador_id, operador_nombre, servicio, costo, cobro, faltante, forma_pago, promotor, comision_pagada",
     )
     .order("fecha", { ascending: false })
-    .order("id", { ascending: false })
-    .limit(500);
+    .order("id", { ascending: false });
 
+  if (fecha) {
+    q = q.eq("fecha", fecha);
+  } else {
+    q = q.limit(500);
+  }
+
+  const { data, error } = await q;
   if (error) throw new Error(error.message);
   return (data ?? []) as unknown as Venta[];
 }
@@ -28,13 +38,17 @@ function fmt(n: number) {
 
 export default function Ventas() {
   const [busqueda, setBusqueda] = useState("");
+  const [fechaFiltro, setFechaFiltro] = useState<string | null>(hoy());
 
   const {
     data: ventas = [],
     isLoading,
     isError,
     error,
-  } = useQuery({ queryKey: ["ventas"], queryFn: fetchVentas });
+  } = useQuery({
+    queryKey: ["ventas", fechaFiltro],
+    queryFn: () => fetchVentas(fechaFiltro),
+  });
 
   const filtradas = ventas.filter((v) => {
     const txt = busqueda.toLowerCase();
@@ -47,6 +61,9 @@ export default function Ventas() {
 
   const totalCobrado = filtradas.reduce((s, v) => s + (v.cobro ?? 0), 0);
   const totalFaltante = filtradas.reduce((s, v) => s + (v.faltante ?? 0), 0);
+  const totalCosto = filtradas.reduce((s, v) => s + (v.costo ?? 0), 0);
+
+  const esHoy = fechaFiltro === hoy();
 
   return (
     <div className="page-container">
@@ -56,8 +73,11 @@ export default function Ventas() {
             <span className="page-icon">💰</span> Ventas
           </h1>
           <p className="page-subtitle">
-            Registro de ventas vinculadas a un operador. Servicio, costo, cobro
-            y forma de pago.
+            {fechaFiltro
+              ? esHoy
+                ? "Ventas del día de hoy"
+                : `Ventas del ${fechaFiltro}`
+              : "Todas las ventas (últimas 500)"}
           </p>
         </div>
         <Link href="/ventas/nuevo">
@@ -73,6 +93,31 @@ export default function Ventas() {
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
+        <input
+          type="date"
+          className="search-input"
+          style={{ maxWidth: "160px" }}
+          value={fechaFiltro ?? ""}
+          onChange={(e) => setFechaFiltro(e.target.value || null)}
+        />
+        {fechaFiltro !== hoy() && (
+          <button
+            className="btn-secondary"
+            style={{ whiteSpace: "nowrap" }}
+            onClick={() => setFechaFiltro(hoy())}
+          >
+            Hoy
+          </button>
+        )}
+        {fechaFiltro !== null && (
+          <button
+            className="btn-secondary"
+            style={{ whiteSpace: "nowrap" }}
+            onClick={() => setFechaFiltro(null)}
+          >
+            Ver todas
+          </button>
+        )}
         <span className="record-count">
           {isLoading
             ? "Cargando..."
@@ -83,6 +128,10 @@ export default function Ventas() {
       {/* Totales rápidos */}
       {!isLoading && filtradas.length > 0 && (
         <div className="summary-bar">
+          <div className="summary-item">
+            <span className="summary-label">Total costo</span>
+            <span className="summary-value">{fmt(totalCosto)}</span>
+          </div>
           <div className="summary-item">
             <span className="summary-label">Total cobrado</span>
             <span className="summary-value summary-value--green">
@@ -98,7 +147,7 @@ export default function Ventas() {
             </span>
           </div>
           <div className="summary-item">
-            <span className="summary-label">Registros mostrados</span>
+            <span className="summary-label">Registros</span>
             <span className="summary-value">{filtradas.length}</span>
           </div>
         </div>
@@ -134,7 +183,9 @@ export default function Ventas() {
                   <td colSpan={11} className="table-empty">
                     {busqueda
                       ? "No hay resultados para la búsqueda."
-                      : "No hay ventas registradas. Crea la primera."}
+                      : fechaFiltro
+                        ? "No hay ventas registradas para esta fecha."
+                        : "No hay ventas registradas. Crea la primera."}
                   </td>
                 </tr>
               ) : (
