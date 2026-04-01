@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
@@ -129,15 +129,18 @@ export default function OperadorForm({ id }: Props) {
   const [guardado, setGuardado] = useState(false);
 
   // Load existing record
-  const { isLoading: loadingOp } = useQuery({
+  const { isLoading: loadingOp, data: operadorData } = useQuery({
     queryKey: ["operador", id],
     queryFn: () => fetchOperador(id!),
     enabled: !isNew,
-    onSuccess: (data: Operador) => {
-      const { numero_consecutivo, created_at, updated_at, promotores, ...rest } = data;
+  });
+
+  useEffect(() => {
+    if (operadorData) {
+      const { numero_consecutivo, created_at, updated_at, promotores, ...rest } = operadorData;
       setForm(rest as OperadorInsert);
-    },
-  } as Parameters<typeof useQuery>[0]);
+    }
+  }, [operadorData]);
 
   // Promotores list
   const { data: promotores = [] } = useQuery({
