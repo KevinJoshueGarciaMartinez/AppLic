@@ -16,7 +16,8 @@ interface ResumenVentas {
 interface VentaReporte {
   id: number;
   fecha: string;
-  curp_operador: string | null;
+  operador_id: number | null;
+  operador_nombre: string | null;
   servicio: string | null;
   promotor: string | null;
   costo: number;
@@ -47,7 +48,7 @@ async function fetchReporteVentas(
   let q = supabase
     .from("ventas")
     .select(
-      "id, fecha, curp_operador, servicio, promotor, costo, cobro, faltante, forma_pago, egreso, total_cobrado",
+      "id, fecha, operador_id, operador_nombre, servicio, promotor, costo, cobro, faltante, forma_pago, egreso, total_cobrado",
     )
     .gte("fecha", desde)
     .lte("fecha", hasta)
@@ -432,7 +433,7 @@ export default function Reportes() {
                     <tr key={v.id}>
                       <td className="col-id">{v.id}</td>
                       <td className="col-fecha">{v.fecha}</td>
-                      <td className="col-curp">{v.curp_operador ?? "—"}</td>
+                      <td>{v.operador_nombre ?? "—"}</td>
                       <td>{v.servicio ?? "—"}</td>
                       <td>{v.promotor ?? "—"}</td>
                       <td className="col-money">{fmt(v.costo)}</td>

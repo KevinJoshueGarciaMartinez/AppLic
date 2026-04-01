@@ -8,7 +8,8 @@ import type { Promotor } from "../lib/types";
 interface FilaComision {
   id: number;
   fecha: string;
-  curp_operador: string | null;
+  operador_id: number | null;
+  operador_nombre: string | null;
   servicio: string | null;
   costo: number;
   costo_promotor: number;
@@ -39,7 +40,7 @@ async function fetchComisiones(filtros: Filtros): Promise<FilaComision[]> {
   let q = supabase
     .from("ventas")
     .select(
-      "id, fecha, curp_operador, servicio, costo, costo_promotor, comision_promotor, comision_pagada, promotor, id_promotor",
+      "id, fecha, operador_id, operador_nombre, servicio, costo, costo_promotor, comision_promotor, comision_pagada, promotor, id_promotor",
     )
     .gte("fecha", filtros.fecha_desde)
     .lte("fecha", filtros.fecha_hasta)
@@ -274,7 +275,7 @@ export default function Comisiones() {
                 <tr>
                   <th>#</th>
                   <th>Fecha</th>
-                  <th>Operador (CURP)</th>
+                  <th>Operador</th>
                   <th>Servicio</th>
                   <th>Promotor</th>
                   <th>Costo</th>
@@ -288,7 +289,7 @@ export default function Comisiones() {
                   <tr key={f.id}>
                     <td className="col-id">{f.id}</td>
                     <td className="col-fecha">{f.fecha}</td>
-                    <td className="col-curp">{f.curp_operador ?? "—"}</td>
+                    <td>{f.operador_nombre ?? "—"}</td>
                     <td>{f.servicio ?? "—"}</td>
                     <td>{f.promotor ?? "—"}</td>
                     <td className="col-money">{fmt(f.costo)}</td>

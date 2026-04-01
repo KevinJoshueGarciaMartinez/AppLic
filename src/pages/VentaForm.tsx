@@ -61,7 +61,8 @@ function emptyForm(): VentaInsert {
   return {
     fecha: new Date().toISOString().slice(0, 10),
     hora: new Date().toTimeString().slice(0, 5),
-    curp_operador: null,
+    operador_id: null,
+    operador_nombre: null,
     id_promotor: null,
     promotor: null,
     id_servicio: null,
@@ -82,23 +83,30 @@ function emptyForm(): VentaInsert {
 // ── Operador autocomplete ─────────────────────────────────────────────────────
 
 function OperadorSearch({
-  value,
+  operadorId,
+  operadorNombre,
   onChange,
 }: {
-  value: string | null;
-  onChange: (curp: string, nombre: string) => void;
+  operadorId: number | null;
+  operadorNombre: string | null;
+  onChange: (id: number, nombre: string) => void;
 }) {
-  const [texto, setTexto] = useState(value ?? "");
+  const [texto, setTexto] = useState(operadorNombre ?? "");
   const [resultados, setResultados] = useState<Operador[]>([]);
   const [abierto, setAbierto] = useState(false);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    setTexto(value ?? "");
-  }, [value]);
+    setTexto(operadorNombre ?? "");
+  }, [operadorNombre]);
 
   function handleInput(val: string) {
     setTexto(val);
+    if (val === "") {
+      setResultados([]);
+      setAbierto(false);
+      return;
+    }
     if (debounce.current) clearTimeout(debounce.current);
     debounce.current = setTimeout(async () => {
       const res = await buscarOperadores(val);
@@ -111,9 +119,9 @@ function OperadorSearch({
     const nombre = [op.nombre, op.apellido_paterno, op.apellido_materno]
       .filter(Boolean)
       .join(" ");
-    setTexto(`${op.curp} — ${nombre}`);
+    setTexto(nombre);
     setAbierto(false);
-    onChange(op.curp, nombre);
+    onChange(op.numero_consecutivo, nombre);
   }
 
   return (
@@ -134,15 +142,18 @@ function OperadorSearch({
               className="autocomplete-item"
               onMouseDown={() => seleccionar(op)}
             >
-              <span className="autocomplete-curp">{op.curp}</span>
               <span className="autocomplete-nombre">
                 {[op.nombre, op.apellido_paterno, op.apellido_materno]
                   .filter(Boolean)
                   .join(" ")}
               </span>
+              <span className="autocomplete-curp">{op.curp}</span>
             </li>
           ))}
         </ul>
+      )}
+      {operadorId && (
+        <span className="field-hint">ID: #{operadorId}</span>
       )}
     </div>
   );
@@ -162,11 +173,14 @@ export default function VentaForm({ id }: Props) {
   const [guardado, setGuardado] = useState(false);
 
   // Cargar venta existente
-  const { isLoading: loadingVenta } = useQuery({
+  const { isLoading: loadingVenta, data: ventaData } = useQuery({
     queryKey: ["venta", id],
     queryFn: () => fetchVenta(id!),
     enabled: !isNew,
-    onSuccess: (data: Venta) => {
+  });
+
+  useEffect(() => {
+    if (ventaData) {
       const {
         id: _id,
         created_at,
@@ -176,12 +190,11 @@ export default function VentaForm({ id }: Props) {
         total_cobrado,
         promotores,
         catalogo_servicios_costos,
-        operador_nombre,
         ...rest
-      } = data;
+      } = ventaData;
       setForm(rest as VentaInsert);
-    },
-  } as Parameters<typeof useQuery>[0]);
+    }
+  }, [ventaData]);
 
   const { data: servicios = [] } = useQuery({
     queryKey: ["servicios"],
@@ -318,12 +331,12 @@ export default function VentaForm({ id }: Props) {
             <div className="form-field">
               <label>Buscar operador</label>
               <OperadorSearch
-                value={form.curp_operador}
-                onChange={(curp) => set("curp_operador", curp)}
+                operadorId={form.operador_id}
+                operadorNombre={form.operador_nombre}
+                onChange={(id, nombre) =>
+                  setForm((prev) => ({ ...prev, operador_id: id, operador_nombre: nombre }))
+                }
               />
-              {form.curp_operador && (
-                <span className="field-hint">CURP: {form.curp_operador}</span>
-              )}
             </div>
 
             {/* Servicio */}

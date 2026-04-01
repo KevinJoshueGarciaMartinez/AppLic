@@ -8,7 +8,7 @@ async function fetchVentas(): Promise<Venta[]> {
   const { data, error } = await supabase
     .from("ventas")
     .select(
-      "id, fecha, curp_operador, servicio, costo, cobro, faltante, forma_pago, promotor, comision_pagada",
+      "id, fecha, operador_id, operador_nombre, servicio, costo, cobro, faltante, forma_pago, promotor, comision_pagada",
     )
     .order("fecha", { ascending: false })
     .order("id", { ascending: false })
@@ -39,7 +39,7 @@ export default function Ventas() {
   const filtradas = ventas.filter((v) => {
     const txt = busqueda.toLowerCase();
     return (
-      (v.curp_operador ?? "").toLowerCase().includes(txt) ||
+      (v.operador_nombre ?? "").toLowerCase().includes(txt) ||
       (v.servicio ?? "").toLowerCase().includes(txt) ||
       (v.promotor ?? "").toLowerCase().includes(txt)
     );
@@ -69,7 +69,7 @@ export default function Ventas() {
         <input
           className="search-input"
           type="text"
-          placeholder="Buscar por CURP, servicio o promotor..."
+          placeholder="Buscar por operador, servicio o promotor..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
@@ -117,7 +117,7 @@ export default function Ventas() {
               <tr>
                 <th>#</th>
                 <th>Fecha</th>
-                <th>Operador (CURP)</th>
+                <th>Operador</th>
                 <th>Servicio</th>
                 <th>Costo</th>
                 <th>Cobro</th>
@@ -142,7 +142,7 @@ export default function Ventas() {
                   <tr key={v.id}>
                     <td className="col-id">{v.id}</td>
                     <td className="col-fecha">{v.fecha}</td>
-                    <td className="col-curp">{v.curp_operador ?? "—"}</td>
+                    <td>{v.operador_nombre ?? "—"}</td>
                     <td>{v.servicio ?? "—"}</td>
                     <td className="col-money">{fmt(v.costo)}</td>
                     <td className="col-money col-money--green">{fmt(v.cobro)}</td>

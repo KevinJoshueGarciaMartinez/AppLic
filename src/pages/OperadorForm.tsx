@@ -380,24 +380,6 @@ export default function OperadorForm({ id }: Props) {
               />
             </div>
 
-            <div className="form-grid form-grid-2">
-              <div className="form-field">
-                <label>Fecha de registro</label>
-                <input
-                  type="date"
-                  value={form.fecha ?? ""}
-                  onChange={(e) => set("fecha", e.target.value || null)}
-                />
-              </div>
-              <div className="form-field">
-                <label>Hora</label>
-                <input
-                  type="time"
-                  value={form.hora ?? ""}
-                  onChange={(e) => set("hora", e.target.value || null)}
-                />
-              </div>
-            </div>
           </div>
         )}
 

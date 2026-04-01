@@ -109,8 +109,8 @@ export interface Venta {
   fecha: string;
   hora: string | null;
 
-  curp_operador: string | null;
-  operador_nombre?: string | null; // joined
+  operador_id: number | null;
+  operador_nombre: string | null;
 
   id_promotor: number | null;
   promotor: string | null;
@@ -151,5 +151,4 @@ export type VentaInsert = Omit<
   | "total_cobrado"
   | "promotores"
   | "catalogo_servicios_costos"
-  | "operador_nombre"
 >;
