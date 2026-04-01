@@ -73,6 +73,7 @@ function emptyItem(): VentaItem {
 
 function emptyForm(): VentaInsert {
   return {
+    ticket_id: null,
     fecha: new Date().toISOString().slice(0, 10),
     hora: new Date().toTimeString().slice(0, 5),
     operador_id: null,
