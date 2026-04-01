@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
-import type { Venta, VentaInsert, Servicio, Promotor, Operador } from "../lib/types";
+import type { Venta, VentaInsert, VentaItem, Servicio, Promotor, Operador } from "../lib/types";
 
 // ── Fetchers ──────────────────────────────────────────────────────────────────
 
@@ -14,6 +14,16 @@ async function fetchVenta(id: number): Promise<Venta> {
     .single();
   if (error) throw new Error(error.message);
   return data as Venta;
+}
+
+async function fetchVentaItems(ventaId: number): Promise<VentaItem[]> {
+  const { data, error } = await supabase
+    .from("venta_items")
+    .select("id, id_servicio, servicio, tipo_servicio, costo")
+    .eq("venta_id", ventaId)
+    .order("id");
+  if (error) return [];
+  return (data ?? []) as VentaItem[];
 }
 
 async function fetchServicios(): Promise<Servicio[]> {
@@ -55,6 +65,10 @@ function fmt(n: number) {
     currency: "MXN",
     minimumFractionDigits: 2,
   }).format(n);
+}
+
+function emptyItem(): VentaItem {
+  return { id_servicio: null, servicio: "", tipo_servicio: null, costo: 0 };
 }
 
 function emptyForm(): VentaInsert {
@@ -170,12 +184,20 @@ export default function VentaForm({ id }: Props) {
   const queryClient = useQueryClient();
   const isNew = !id;
   const [form, setForm] = useState<VentaInsert>(emptyForm());
+  const [items, setItems] = useState<VentaItem[]>([emptyItem()]);
   const [guardado, setGuardado] = useState(false);
 
   // Cargar venta existente
   const { isLoading: loadingVenta, data: ventaData } = useQuery({
     queryKey: ["venta", id],
     queryFn: () => fetchVenta(id!),
+    enabled: !isNew,
+  });
+
+  // Cargar items existentes
+  const { data: itemsData } = useQuery({
+    queryKey: ["venta_items", id],
+    queryFn: () => fetchVentaItems(id!),
     enabled: !isNew,
   });
 
@@ -196,6 +218,22 @@ export default function VentaForm({ id }: Props) {
     }
   }, [ventaData]);
 
+  useEffect(() => {
+    if (itemsData && itemsData.length > 0) {
+      setItems(itemsData);
+    } else if (ventaData && !itemsData?.length) {
+      // Registro antiguo sin items: inicializar con el servicio existente
+      if (ventaData.id_servicio || ventaData.servicio) {
+        setItems([{
+          id_servicio: ventaData.id_servicio,
+          servicio: ventaData.servicio ?? "",
+          tipo_servicio: ventaData.tipo_servicio,
+          costo: ventaData.costo,
+        }]);
+      }
+    }
+  }, [itemsData, ventaData]);
+
   const { data: servicios = [] } = useQuery({
     queryKey: ["servicios"],
     queryFn: fetchServicios,
@@ -206,21 +244,94 @@ export default function VentaForm({ id }: Props) {
     queryFn: fetchPromotores,
   });
 
+  // ── Items handlers ────────────────────────────────────────────────────────
+
+  function addItem() {
+    setItems((prev) => [...prev, emptyItem()]);
+  }
+
+  function removeItem(idx: number) {
+    setItems((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function handleItemServicio(idx: number, idServicio: number | null) {
+    const srv = servicios.find((s) => s.id_servicio === idServicio);
+    setItems((prev) =>
+      prev.map((item, i) =>
+        i === idx
+          ? {
+              ...item,
+              id_servicio: srv?.id_servicio ?? null,
+              servicio: srv?.servicio ?? "",
+              tipo_servicio: srv?.tipo_servicio ?? null,
+              costo: srv?.costo_base ?? item.costo,
+            }
+          : item,
+      ),
+    );
+  }
+
+  function handleItemCosto(idx: number, costo: number) {
+    setItems((prev) =>
+      prev.map((item, i) => (i === idx ? { ...item, costo } : item)),
+    );
+  }
+
+  // ── Mutation ─────────────────────────────────────────────────────────────
+
   const mutation = useMutation({
     mutationFn: async (payload: VentaInsert) => {
+      const totalCosto = items.reduce((s, item) => s + item.costo, 0);
+      const servicioTexto = items
+        .filter((i) => i.servicio)
+        .map((i) => i.servicio)
+        .join(", ") || null;
+      const firstItem = items.find((i) => i.id_servicio);
+
+      const ventaPayload: VentaInsert = {
+        ...payload,
+        costo: totalCosto,
+        servicio: servicioTexto,
+        id_servicio: firstItem?.id_servicio ?? null,
+        tipo_servicio: firstItem?.tipo_servicio ?? null,
+      };
+
       if (isNew) {
-        const { error } = await supabase.from("ventas").insert(payload);
+        const { data, error } = await supabase
+          .from("ventas")
+          .insert(ventaPayload)
+          .select("id")
+          .single();
         if (error) throw new Error(error.message);
+
+        const ventaId = (data as { id: number }).id;
+        const itemsPayload = items
+          .filter((i) => i.servicio)
+          .map(({ id: _id, ...item }) => ({ ...item, venta_id: ventaId }));
+        if (itemsPayload.length > 0) {
+          const { error: itemsErr } = await supabase.from("venta_items").insert(itemsPayload);
+          if (itemsErr) throw new Error(itemsErr.message);
+        }
       } else {
         const { error } = await supabase
           .from("ventas")
-          .update(payload)
+          .update(ventaPayload)
           .eq("id", id!);
         if (error) throw new Error(error.message);
+
+        await supabase.from("venta_items").delete().eq("venta_id", id!);
+        const itemsPayload = items
+          .filter((i) => i.servicio)
+          .map(({ id: _id, ...item }) => ({ ...item, venta_id: id! }));
+        if (itemsPayload.length > 0) {
+          const { error: itemsErr } = await supabase.from("venta_items").insert(itemsPayload);
+          if (itemsErr) throw new Error(itemsErr.message);
+        }
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ventas"] });
+      if (!isNew) queryClient.invalidateQueries({ queryKey: ["venta_items", id] });
       setGuardado(true);
       setTimeout(() => setGuardado(false), 3000);
       if (isNew) navigate("/ventas");
@@ -229,19 +340,6 @@ export default function VentaForm({ id }: Props) {
 
   function set<K extends keyof VentaInsert>(key: K, value: VentaInsert[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
-  }
-
-  function handleServicioChange(idServicio: number) {
-    const srv = servicios.find((s) => s.id_servicio === idServicio);
-    if (srv) {
-      setForm((prev) => ({
-        ...prev,
-        id_servicio: srv.id_servicio,
-        servicio: srv.servicio,
-        tipo_servicio: srv.tipo_servicio,
-        costo: srv.costo_base,
-      }));
-    }
   }
 
   function handlePromotorChange(idPromotor: number) {
@@ -253,9 +351,10 @@ export default function VentaForm({ id }: Props) {
     }));
   }
 
-  // Valores calculados en tiempo real
-  const comisionPromotor = form.costo - form.costo_promotor;
-  const faltante = form.costo - form.cobro;
+  // Valores calculados
+  const totalItems = items.reduce((s, item) => s + item.costo, 0);
+  const comisionPromotor = totalItems - form.costo_promotor;
+  const faltante = totalItems - form.cobro;
   const totalCobrado = form.cobro - form.egreso;
 
   function handleSubmit(e: React.FormEvent) {
@@ -303,42 +402,77 @@ export default function VentaForm({ id }: Props) {
           {/* ── Columna izquierda ── */}
           <div>
             {/* Operador */}
-            <div className="form-group-title" style={{ marginTop: "1.25rem" }}>
-              Operador
-            </div>
+            <div className="form-group-title">Operador</div>
             <div className="form-field">
               <label>Buscar operador</label>
               <OperadorSearch
                 operadorId={form.operador_id}
                 operadorNombre={form.operador_nombre}
-                onChange={(id, nombre) =>
-                  setForm((prev) => ({ ...prev, operador_id: id, operador_nombre: nombre }))
+                onChange={(opId, nombre) =>
+                  setForm((prev) => ({ ...prev, operador_id: opId, operador_nombre: nombre }))
                 }
               />
             </div>
 
-            {/* Servicio */}
+            {/* Servicios */}
             <div className="form-group-title" style={{ marginTop: "1.25rem" }}>
-              Servicio
+              Servicios
             </div>
-            <div className="form-field">
-              <label>Servicio *</label>
-              <select
-                value={form.id_servicio ?? ""}
-                onChange={(e) =>
-                  e.target.value
-                    ? handleServicioChange(Number(e.target.value))
-                    : set("id_servicio", null)
-                }
-                required
+
+            <div className="venta-items-list">
+              {items.map((item, idx) => (
+                <div key={idx} className="venta-item-row">
+                  <select
+                    value={item.id_servicio ?? ""}
+                    onChange={(e) =>
+                      handleItemServicio(idx, e.target.value ? Number(e.target.value) : null)
+                    }
+                    required
+                    style={{ flex: 1 }}
+                  >
+                    <option value="">— Seleccionar servicio —</option>
+                    {servicios.map((s) => (
+                      <option key={s.id_servicio} value={s.id_servicio}>
+                        {s.servicio}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={item.costo}
+                    onChange={(e) => handleItemCosto(idx, Number(e.target.value))}
+                    className="venta-item-costo"
+                    placeholder="Costo"
+                  />
+                  {items.length > 1 && (
+                    <button
+                      type="button"
+                      className="btn-remove-item"
+                      onClick={() => removeItem(idx)}
+                      title="Eliminar"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
+
+              <button
+                type="button"
+                className="btn-add-item"
+                onClick={addItem}
               >
-                <option value="">— Seleccionar servicio —</option>
-                {servicios.map((s) => (
-                  <option key={s.id_servicio} value={s.id_servicio}>
-                    {s.servicio}
-                  </option>
-                ))}
-              </select>
+                + Agregar servicio
+              </button>
+
+              {items.length > 1 && (
+                <div className="calc-row" style={{ marginTop: "0.5rem" }}>
+                  <span>Total servicios</span>
+                  <span className="calc-green">{fmt(totalItems)}</span>
+                </div>
+              )}
             </div>
 
             {/* Promotor */}
@@ -377,9 +511,7 @@ export default function VentaForm({ id }: Props) {
               <textarea
                 rows={3}
                 value={form.observaciones ?? ""}
-                onChange={(e) =>
-                  set("observaciones", e.target.value || null)
-                }
+                onChange={(e) => set("observaciones", e.target.value || null)}
               />
             </div>
             <div className="form-field" style={{ marginTop: "0.75rem" }}>
@@ -399,16 +531,9 @@ export default function VentaForm({ id }: Props) {
             <div className="cobro-card">
               <div className="form-group-title">Costos y cobros</div>
 
-              <div className="form-field">
-                <label>Costo del servicio (MXN)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.costo}
-                  onChange={(e) => set("costo", Number(e.target.value))}
-                  required
-                />
+              <div className="calc-row" style={{ marginBottom: "1rem" }}>
+                <span>Total servicios</span>
+                <span style={{ fontWeight: 600 }}>{fmt(totalItems)}</span>
               </div>
 
               <div className="form-field">
@@ -418,17 +543,13 @@ export default function VentaForm({ id }: Props) {
                   min="0"
                   step="0.01"
                   value={form.costo_promotor}
-                  onChange={(e) =>
-                    set("costo_promotor", Number(e.target.value))
-                  }
+                  onChange={(e) => set("costo_promotor", Number(e.target.value))}
                 />
               </div>
 
               <div className="calc-row">
                 <span>Comisión promotor</span>
-                <span
-                  className={comisionPromotor >= 0 ? "calc-green" : "calc-red"}
-                >
+                <span className={comisionPromotor >= 0 ? "calc-green" : "calc-red"}>
                   {fmt(comisionPromotor)}
                 </span>
               </div>

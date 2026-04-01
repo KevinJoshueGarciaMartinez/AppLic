@@ -103,6 +103,15 @@ export interface Servicio {
   costo_base: number;
 }
 
+// ── Venta items (líneas de ticket) ───────────────────────────────────────────
+export interface VentaItem {
+  id?: number;
+  id_servicio: number | null;
+  servicio: string;
+  tipo_servicio: number | null;
+  costo: number;
+}
+
 // ── Ventas ────────────────────────────────────────────────────────────────────
 export interface Venta {
   id: number;
