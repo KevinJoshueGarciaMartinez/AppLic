@@ -160,6 +160,10 @@ export default function Comisiones() {
 
   function handlePagar() {
     if (pendientes.length === 0) return;
+    if (!filtros.id_promotor) {
+      alert("Selecciona un promotor específico antes de registrar el pago.\n\nEl pago de comisiones se realiza por promotor, no a todos a la vez.");
+      return;
+    }
     const nombres = [...new Set(pendientes.map((f) => f.promotor ?? "Sin nombre"))].join(", ");
     const confirmado = window.confirm(
       `¿Marcar ${pendientes.length} comisión(es) como pagadas?\n\nPromotor(es): ${nombres}\nTotal: ${fmt(pendientes.reduce((s, f) => s + f.costo_promotor, 0))}\nFecha de pago: ${hoy()}`,
