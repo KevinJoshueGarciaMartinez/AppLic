@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 import type { Promotor } from "../lib/types";
 
@@ -9,14 +9,15 @@ import type { Promotor } from "../lib/types";
 interface FilaComision {
   id: number;
   fecha: string;
+  fecha_pago: string | null;
   operador_id: number | null;
   operador_nombre: string | null;
   servicio: string | null;
   costo: number;
   costo_promotor: number;
-  comision_promotor: number;
   comision_pagada: boolean;
   promotor: string | null;
+  id_promotor: number | null;
 }
 
 interface Filtros {
@@ -41,19 +42,16 @@ async function fetchComisiones(filtros: Filtros): Promise<FilaComision[]> {
   let q = supabase
     .from("ventas")
     .select(
-      "id, fecha, operador_id, operador_nombre, servicio, costo, costo_promotor, comision_promotor, comision_pagada, promotor, id_promotor",
+      "id, fecha, fecha_pago, operador_id, operador_nombre, servicio, costo, costo_promotor, comision_pagada, promotor, id_promotor",
     )
-    .gte("fecha", filtros.fecha_desde)
-    .lte("fecha", filtros.fecha_hasta)
     .order("fecha", { ascending: false });
 
-  if (filtros.id_promotor) {
-    q = q.eq("id_promotor", Number(filtros.id_promotor));
-  }
+  // Fechas son opcionales: solo aplican si están definidas
+  if (filtros.fecha_desde) q = q.gte("fecha", filtros.fecha_desde);
+  if (filtros.fecha_hasta) q = q.lte("fecha", filtros.fecha_hasta);
 
-  if (filtros.solo_pendientes) {
-    q = q.eq("comision_pagada", false);
-  }
+  if (filtros.id_promotor) q = q.eq("id_promotor", Number(filtros.id_promotor));
+  if (filtros.solo_pendientes) q = q.eq("comision_pagada", false);
 
   const { data, error } = await q;
   if (error) throw new Error(error.message);
@@ -83,13 +81,19 @@ function primerDiaMes() {
 
 export default function Comisiones() {
   const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
+
+  // Por defecto: solo pendientes, sin filtro de fechas (todas las fechas)
   const [filtros, setFiltros] = useState<Filtros>({
     id_promotor: "",
-    fecha_desde: primerDiaMes(),
-    fecha_hasta: hoy(),
-    solo_pendientes: false,
+    fecha_desde: "",
+    fecha_hasta: "",
+    solo_pendientes: true,
   });
-  const [buscar, setBuscar] = useState(false);
+
+  // Carga automática al entrar
+  const [buscar, setBuscar] = useState(true);
+  const [pagado, setPagado] = useState(false);
 
   const { data: promotores = [] } = useQuery({
     queryKey: ["promotores"],
@@ -112,23 +116,61 @@ export default function Comisiones() {
     setFiltros((prev) => ({ ...prev, [key]: value }));
   }
 
-  function handleBuscar(e: React.FormEvent) {
-    e.preventDefault();
-    if (!buscar) {
-      setBuscar(true);
-    } else {
-      refetch();
-    }
+  function handleSoloPendientesChange(checked: boolean) {
+    setFiltros((prev) => ({
+      ...prev,
+      solo_pendientes: checked,
+      // Al activar pendientes, quitar filtro de fechas; al desactivar, poner mes actual
+      fecha_desde: checked ? "" : primerDiaMes(),
+      fecha_hasta: checked ? "" : hoy(),
+    }));
   }
 
-  // Totales — costo_promotor es la comisión que se le paga al promotor
+  function handleBuscar(e: React.FormEvent) {
+    e.preventDefault();
+    setPagado(false);
+    if (!buscar) setBuscar(true);
+    else refetch();
+  }
+
+  // ── Pago de comisiones ────────────────────────────────────────────────────
+
+  const pendientes = filas.filter((f) => !f.comision_pagada);
+
+  const pagarMutation = useMutation({
+    mutationFn: async () => {
+      const ids = pendientes.map((f) => f.id);
+      if (ids.length === 0) throw new Error("No hay comisiones pendientes.");
+      const fechaPago = hoy();
+      const { error } = await supabase
+        .from("ventas")
+        .update({ comision_pagada: true, fecha_pago: fechaPago })
+        .in("id", ids);
+      if (error) throw new Error(error.message);
+      return ids.length;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["comisiones"] });
+      refetch();
+      setPagado(true);
+    },
+  });
+
+  function handlePagar() {
+    if (pendientes.length === 0) return;
+    const nombres = [...new Set(pendientes.map((f) => f.promotor ?? "Sin nombre"))].join(", ");
+    const confirmado = window.confirm(
+      `¿Marcar ${pendientes.length} comisión(es) como pagadas?\n\nPromotor(es): ${nombres}\nTotal: ${fmt(pendientes.reduce((s, f) => s + f.costo_promotor, 0))}\nFecha de pago: ${hoy()}`,
+    );
+    if (confirmado) pagarMutation.mutate();
+  }
+
+  // ── Totales ───────────────────────────────────────────────────────────────
+
   const totalCosto = filas.reduce((s, f) => s + f.costo, 0);
   const totalComision = filas.reduce((s, f) => s + f.costo_promotor, 0);
-  const totalPendiente = filas
-    .filter((f) => !f.comision_pagada)
-    .reduce((s, f) => s + f.costo_promotor, 0);
+  const totalPendiente = pendientes.reduce((s, f) => s + f.costo_promotor, 0);
 
-  // Agrupar por promotor para el resumen
   const resumenPorPromotor = filas.reduce<
     Record<string, { nombre: string; total: number; pendiente: number; registros: number }>
   >((acc, f) => {
@@ -140,9 +182,20 @@ export default function Comisiones() {
     return acc;
   }, {});
 
+  // Descripción del filtro de fechas activo
+  const descFechas =
+    filtros.fecha_desde && filtros.fecha_hasta
+      ? `${filtros.fecha_desde} — ${filtros.fecha_hasta}`
+      : filtros.fecha_desde
+        ? `Desde ${filtros.fecha_desde}`
+        : filtros.fecha_hasta
+          ? `Hasta ${filtros.fecha_hasta}`
+          : "Todas las fechas";
+
   return (
     <div className="page-container">
-      <div className="page-header">
+      {/* ── Cabecera (se oculta al imprimir) ── */}
+      <div className="page-header no-print">
         <button className="ghost-btn" type="button" onClick={() => navigate("/reportes")}>
           ← Reportes
         </button>
@@ -156,8 +209,8 @@ export default function Comisiones() {
         </div>
       </div>
 
-      {/* Filtros */}
-      <form onSubmit={handleBuscar} className="filter-card">
+      {/* ── Filtros (se ocultan al imprimir) ── */}
+      <form onSubmit={handleBuscar} className="filter-card no-print">
         <div className="filter-grid">
           <div className="form-field">
             <label>Promotor</label>
@@ -175,22 +228,20 @@ export default function Comisiones() {
           </div>
 
           <div className="form-field">
-            <label>Desde</label>
+            <label>Desde {filtros.solo_pendientes && <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(opcional)</span>}</label>
             <input
               type="date"
               value={filtros.fecha_desde}
               onChange={(e) => setF("fecha_desde", e.target.value)}
-              required
             />
           </div>
 
           <div className="form-field">
-            <label>Hasta</label>
+            <label>Hasta {filtros.solo_pendientes && <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(opcional)</span>}</label>
             <input
               type="date"
               value={filtros.fecha_hasta}
               onChange={(e) => setF("fecha_hasta", e.target.value)}
-              required
             />
           </div>
 
@@ -199,7 +250,7 @@ export default function Comisiones() {
               <input
                 type="checkbox"
                 checked={filtros.solo_pendientes}
-                onChange={(e) => setF("solo_pendientes", e.target.checked)}
+                onChange={(e) => handleSoloPendientesChange(e.target.checked)}
               />
               Solo pendientes de pago
             </label>
@@ -214,14 +265,46 @@ export default function Comisiones() {
       </form>
 
       {isError && (
-        <div className="alert-error">
+        <div className="alert-error no-print">
           Error: {(error as Error).message}
         </div>
       )}
 
-      {/* Resumen por promotor */}
+      {isLoading && (
+        <div className="loading-state no-print" style={{ marginTop: "20px" }}>
+          <div className="spinner" />
+          <span>Consultando comisiones...</span>
+        </div>
+      )}
+
+      {buscar && !isLoading && filas.length === 0 && !isError && (
+        <div className="empty-report no-print">
+          <span>Sin resultados</span>
+          <p>No hay comisiones para los filtros seleccionados.</p>
+        </div>
+      )}
+
       {filas.length > 0 && (
         <>
+          {/* ── Encabezado de impresión (solo visible al imprimir) ── */}
+          <div className="print-only print-header">
+            <h2>Reporte de Comisiones</h2>
+            <p>
+              {filtros.id_promotor
+                ? `Promotor: ${promotores.find((p) => String(p.id_promotor) === filtros.id_promotor)?.nombre ?? filtros.id_promotor}`
+                : "Todos los promotores"}
+              {" · "}
+              {filtros.solo_pendientes ? "Solo pendientes" : "Todos los estados"}
+              {" · "}
+              {descFechas}
+            </p>
+            <p style={{ fontSize: "0.85em", color: "#666" }}>
+              Impreso el {new Date().toLocaleDateString("es-MX", { dateStyle: "long" })}
+              {pagado && ` · Pagado el ${hoy()}`}
+            </p>
+          </div>
+
+          {/* ── KPIs ── */}
           <div className="summary-bar" style={{ marginTop: "20px" }}>
             <div className="summary-item">
               <span className="summary-label">Registros</span>
@@ -233,21 +316,17 @@ export default function Comisiones() {
             </div>
             <div className="summary-item">
               <span className="summary-label">Total comisiones</span>
-              <span className="summary-value summary-value--green">
-                {fmt(totalComision)}
-              </span>
+              <span className="summary-value summary-value--green">{fmt(totalComision)}</span>
             </div>
             <div className="summary-item">
               <span className="summary-label">Pendiente por pagar</span>
-              <span
-                className={`summary-value ${totalPendiente > 0 ? "summary-value--red" : "summary-value--green"}`}
-              >
+              <span className={`summary-value ${totalPendiente > 0 ? "summary-value--red" : "summary-value--green"}`}>
                 {fmt(totalPendiente)}
               </span>
             </div>
           </div>
 
-          {/* Resumen por promotor */}
+          {/* ── Resumen por promotor ── */}
           {Object.keys(resumenPorPromotor).length > 1 && (
             <div className="promotor-resumen">
               <h3 className="section-subtitle" style={{ marginBottom: "10px" }}>
@@ -268,7 +347,42 @@ export default function Comisiones() {
             </div>
           )}
 
-          {/* Tabla detalle */}
+          {/* ── Botones de acción (se ocultan al imprimir) ── */}
+          <div className="no-print" style={{ display: "flex", gap: "10px", marginTop: "16px", alignItems: "center" }}>
+            {pendientes.length > 0 && (
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handlePagar}
+                disabled={pagarMutation.isPending}
+              >
+                {pagarMutation.isPending
+                  ? "Procesando..."
+                  : `Pagar ${pendientes.length} comisión${pendientes.length !== 1 ? "es" : ""} · ${fmt(totalPendiente)}`}
+              </button>
+            )}
+            {pagado && (
+              <span style={{ color: "var(--success)", fontWeight: 600 }}>
+                ✓ Comisiones marcadas como pagadas
+              </span>
+            )}
+            <button
+              type="button"
+              className="ghost-btn"
+              onClick={() => window.print()}
+              style={{ marginLeft: "auto" }}
+            >
+              🖨️ Imprimir
+            </button>
+          </div>
+
+          {pagarMutation.isError && (
+            <div className="alert-error no-print" style={{ marginTop: "8px" }}>
+              Error: {(pagarMutation.error as Error).message}
+            </div>
+          )}
+
+          {/* ── Tabla detalle ── */}
           <div className="table-wrapper" style={{ marginTop: "16px" }}>
             <table className="data-table">
               <thead>
@@ -281,6 +395,7 @@ export default function Comisiones() {
                   <th>Costo</th>
                   <th>Comisión</th>
                   <th>Estado</th>
+                  <th className="no-print">Fecha pago</th>
                 </tr>
               </thead>
               <tbody>
@@ -292,50 +407,27 @@ export default function Comisiones() {
                     <td>{f.servicio ?? "—"}</td>
                     <td>{f.promotor ?? "—"}</td>
                     <td className="col-money">{fmt(f.costo)}</td>
-                    <td className="col-money col-money--green">
-                      {fmt(f.costo_promotor)}
-                    </td>
+                    <td className="col-money col-money--green">{fmt(f.costo_promotor)}</td>
                     <td>
-                      <span
-                        className={`badge ${f.comision_pagada ? "badge--green" : "badge--yellow"}`}
-                      >
+                      <span className={`badge ${f.comision_pagada ? "badge--green" : "badge--yellow"}`}>
                         {f.comision_pagada ? "Pagada" : "Pendiente"}
                       </span>
                     </td>
+                    <td className="col-fecha no-print">{f.fecha_pago ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr className="table-total-row">
-                  <td colSpan={5}>
-                    <strong>TOTAL ({filas.length} registros)</strong>
-                  </td>
-                  <td className="col-money">
-                    <strong>{fmt(totalCosto)}</strong>
-                  </td>
-                  <td className="col-money col-money--green">
-                    <strong>{fmt(totalComision)}</strong>
-                  </td>
-                  <td></td>
+                  <td colSpan={5}><strong>TOTAL ({filas.length} registros)</strong></td>
+                  <td className="col-money"><strong>{fmt(totalCosto)}</strong></td>
+                  <td className="col-money col-money--green"><strong>{fmt(totalComision)}</strong></td>
+                  <td colSpan={2} />
                 </tr>
               </tfoot>
             </table>
           </div>
         </>
-      )}
-
-      {buscar && !isLoading && filas.length === 0 && !isError && (
-        <div className="empty-report">
-          <span>Sin resultados</span>
-          <p>No hay comisiones para los filtros seleccionados.</p>
-        </div>
-      )}
-
-      {isLoading && (
-        <div className="loading-state" style={{ marginTop: "20px" }}>
-          <div className="spinner" />
-          <span>Consultando comisiones...</span>
-        </div>
       )}
     </div>
   );

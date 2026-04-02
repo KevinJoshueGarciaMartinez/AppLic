@@ -147,6 +147,7 @@ export interface Venta {
 
   observaciones: string | null;
   fecha_solicitud_curso: string | null;
+  fecha_pago: string | null;
 
   created_at: string;
   updated_at: string;

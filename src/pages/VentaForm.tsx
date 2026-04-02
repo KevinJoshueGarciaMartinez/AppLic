@@ -98,6 +98,7 @@ function emptyForm(): VentaInsert {
     numero_referencia: null,
     observaciones: null,
     fecha_solicitud_curso: new Date().toISOString().slice(0, 10),
+    fecha_pago: null,
   };
 }
 
