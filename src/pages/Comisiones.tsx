@@ -151,8 +151,10 @@ export default function Comisiones() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["comisiones"] });
-      refetch();
-      setPagado(true);
+      refetch().then(() => {
+        setPagado(true);
+        setTimeout(() => window.print(), 300);
+      });
     },
   });
 
@@ -347,41 +349,6 @@ export default function Comisiones() {
             </div>
           )}
 
-          {/* ── Botones de acción (se ocultan al imprimir) ── */}
-          <div className="no-print" style={{ display: "flex", gap: "10px", marginTop: "16px", alignItems: "center" }}>
-            {pendientes.length > 0 && (
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={handlePagar}
-                disabled={pagarMutation.isPending}
-              >
-                {pagarMutation.isPending
-                  ? "Procesando..."
-                  : `Pagar ${pendientes.length} comisión${pendientes.length !== 1 ? "es" : ""} · ${fmt(totalPendiente)}`}
-              </button>
-            )}
-            {pagado && (
-              <span style={{ color: "var(--success)", fontWeight: 600 }}>
-                ✓ Comisiones marcadas como pagadas
-              </span>
-            )}
-            <button
-              type="button"
-              className="ghost-btn"
-              onClick={() => window.print()}
-              style={{ marginLeft: "auto" }}
-            >
-              🖨️ Imprimir
-            </button>
-          </div>
-
-          {pagarMutation.isError && (
-            <div className="alert-error no-print" style={{ marginTop: "8px" }}>
-              Error: {(pagarMutation.error as Error).message}
-            </div>
-          )}
-
           {/* ── Tabla detalle ── */}
           <div className="table-wrapper" style={{ marginTop: "16px" }}>
             <table className="data-table">
@@ -427,6 +394,41 @@ export default function Comisiones() {
               </tfoot>
             </table>
           </div>
+
+          {/* ── Botones de acción (se ocultan al imprimir) ── */}
+          <div className="no-print" style={{ display: "flex", gap: "10px", marginTop: "16px", alignItems: "center" }}>
+            {pendientes.length > 0 && (
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handlePagar}
+                disabled={pagarMutation.isPending}
+              >
+                {pagarMutation.isPending
+                  ? "Procesando..."
+                  : `Pagar ${pendientes.length} comisión${pendientes.length !== 1 ? "es" : ""} · ${fmt(totalPendiente)}`}
+              </button>
+            )}
+            {pagado && (
+              <span style={{ color: "var(--success)", fontWeight: 600 }}>
+                ✓ Comisiones marcadas como pagadas
+              </span>
+            )}
+            <button
+              type="button"
+              className="ghost-btn"
+              onClick={() => window.print()}
+              style={{ marginLeft: "auto" }}
+            >
+              🖨️ Imprimir
+            </button>
+          </div>
+
+          {pagarMutation.isError && (
+            <div className="alert-error no-print" style={{ marginTop: "8px" }}>
+              Error: {(pagarMutation.error as Error).message}
+            </div>
+          )}
         </>
       )}
     </div>
