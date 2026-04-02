@@ -29,7 +29,7 @@ async function fetchTicketItems(ticketId: number): Promise<VentaItem[]> {
 async function fetchServicios(): Promise<Servicio[]> {
   const { data, error } = await supabase
     .from("catalogo_servicios_costos")
-    .select("id_servicio, orden, servicio, tipo_servicio, costo_base")
+    .select("id_servicio, orden, servicio, tipo_servicio, costo_base, com_1")
     .order("orden");
   if (error) throw new Error(error.message);
   return (data ?? []) as Servicio[];
@@ -270,6 +270,10 @@ export default function VentaForm({ id }: Props) {
           : item,
       ),
     );
+    // Auto-llenar comisión desde el catálogo (solo para el primer item)
+    if (idx === 0 && srv) {
+      setForm((prev) => ({ ...prev, costo_promotor: srv.com_1 }));
+    }
   }
 
   function handleItemCosto(idx: number, costo: number) {
@@ -541,7 +545,7 @@ export default function VentaForm({ id }: Props) {
               </div>
 
               <div className="form-field">
-                <label>Costo para el promotor (MXN)</label>
+                <label>Comisión del promotor (MXN)</label>
                 <input
                   type="number"
                   min="0"
@@ -552,7 +556,7 @@ export default function VentaForm({ id }: Props) {
               </div>
 
               <div className="calc-row">
-                <span>Comisión promotor</span>
+                <span>Ganancia neta</span>
                 <span className={comisionPromotor >= 0 ? "calc-green" : "calc-red"}>
                   {fmt(comisionPromotor)}
                 </span>

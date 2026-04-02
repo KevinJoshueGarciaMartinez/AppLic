@@ -101,6 +101,7 @@ export interface Servicio {
   servicio: string;
   tipo_servicio: number | null;
   costo_base: number;
+  com_1: number;
 }
 
 // ── Línea de servicio (estado local del formulario) ──────────────────────────
