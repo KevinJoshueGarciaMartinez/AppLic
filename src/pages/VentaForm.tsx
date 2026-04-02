@@ -376,6 +376,10 @@ export default function VentaForm({ id }: Props) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.operador_id) {
+      alert("Selecciona un operador antes de guardar.");
+      return;
+    }
     mutation.mutate(form);
   }
 
@@ -421,7 +425,7 @@ export default function VentaForm({ id }: Props) {
             {/* Operador */}
             <div className="form-group-title">Operador</div>
             <div className="form-field">
-              <label>Buscar operador</label>
+              <label>Buscar operador *</label>
               <OperadorSearch
                 operadorId={form.operador_id}
                 operadorNombre={form.operador_nombre}
