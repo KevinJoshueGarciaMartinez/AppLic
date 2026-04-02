@@ -112,30 +112,50 @@ function primerDiaMes() {
 // ── Excel export ───────────────────────────────────────────────────────────────
 
 function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
-  const filas = cursos.map((c) => {
-    const op = c.operadores;
-    return {
-      "Hora":                op?.hora ?? "",
-      "Nombre":              op?.nombre ?? "",
-      "Apellido Paterno":    op?.apellido_paterno ?? "",
-      "Apellido Materno":    op?.apellido_materno ?? "",
-      "Texto 228":           "",
-      "Texto 169":           "",
-      "Fecha Solicitud":     c.fecha_solicitud_curso ?? "",
-      "Servicio":            c.servicio ?? "",
-      "Texto 230":           "",
-      "CURP":                op?.curp ?? "",
-      "Licencia Núm.":       op?.licencia_numero ?? "",
-      "Dirección":           op?.direccion ?? "",
-      "Teléfono 1":          op?.telefono_1 ?? "",
-      "Quién cobró curso":   op?.quien_cobro_curso ?? "",
-      "Promotor":            c.promotor ?? "",
-      "Escolaridad":         op?.escolaridad ?? "",
-      "Licencia Vigencia":   op?.licencia_vigencia ?? "",
-    };
+  const fechaEncabezado = new Date().toLocaleDateString("es-MX", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 
-  const ws = XLSX.utils.json_to_sheet(filas);
+  const headers = [
+    "Hora", "Nombre", "Apellido Paterno", "Apellido Materno",
+    "Texto 228", "Texto 169", "Fecha Solicitud", "Servicio",
+    "Texto 230", "CURP", "Licencia Núm.", "Dirección",
+    "Teléfono 1", "Quién cobró curso", "Promotor", "Escolaridad", "Licencia Vigencia",
+  ];
+
+  const dataRows = cursos.map((c) => {
+    const op = c.operadores;
+    return [
+      op?.hora ?? "",
+      op?.nombre ?? "",
+      op?.apellido_paterno ?? "",
+      op?.apellido_materno ?? "",
+      "",
+      "",
+      c.fecha_solicitud_curso ?? "",
+      c.servicio ?? "",
+      "",
+      op?.curp ?? "",
+      op?.licencia_numero ?? "",
+      op?.direccion ?? "",
+      op?.telefono_1 ?? "",
+      op?.quien_cobro_curso ?? "",
+      c.promotor ?? "",
+      op?.escolaridad ?? "",
+      op?.licencia_vigencia ?? "",
+    ];
+  });
+
+  const aoa = [
+    [fechaEncabezado], // Fila 1: fecha
+    headers,           // Fila 2: encabezados
+    ...dataRows,       // Fila 3+: datos
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
 
   // Ancho de columnas aproximado
   ws["!cols"] = [
