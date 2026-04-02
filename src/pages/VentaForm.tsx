@@ -313,19 +313,23 @@ export default function VentaForm({ id }: Props) {
           ticketId = (ticketData as { id: number }).id;
         }
 
-        // Crear una fila en ventas por cada servicio
-        const ventasPayload = validItems.map((item, idx) => ({
-          ...payload,
-          ticket_id: ticketId,
-          id_servicio: item.id_servicio,
-          servicio: item.servicio,
-          tipo_servicio: item.tipo_servicio,
-          costo: item.costo,
-          costo_promotor: item.com_1,
-          // Solo el primer item lleva cobro/egreso
-          cobro: idx === 0 ? payload.cobro : 0,
-          egreso: idx === 0 ? payload.egreso : 0,
-        }));
+        // Distribuir cobro en cascada: cada servicio recibe hasta su costo, el resto al siguiente
+        let cobroRestante = payload.cobro ?? 0;
+        const ventasPayload = validItems.map((item, idx) => {
+          const cobroItem = Math.min(cobroRestante, item.costo);
+          cobroRestante = Math.max(0, cobroRestante - cobroItem);
+          return {
+            ...payload,
+            ticket_id: ticketId,
+            id_servicio: item.id_servicio,
+            servicio: item.servicio,
+            tipo_servicio: item.tipo_servicio,
+            costo: item.costo,
+            costo_promotor: item.com_1,
+            cobro: cobroItem,
+            egreso: idx === 0 ? (payload.egreso ?? 0) : 0,
+          };
+        });
 
         const { error } = await supabase.from("ventas").insert(ventasPayload);
         if (error) throw new Error(error.message);
