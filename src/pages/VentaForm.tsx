@@ -380,6 +380,10 @@ export default function VentaForm({ id }: Props) {
       alert("Selecciona un operador antes de guardar.");
       return;
     }
+    if (!form.id_promotor) {
+      alert("Selecciona un promotor antes de guardar.");
+      return;
+    }
     mutation.mutate(form);
   }
 
@@ -502,7 +506,7 @@ export default function VentaForm({ id }: Props) {
               Promotor
             </div>
             <div className="form-field">
-              <label>Promotor</label>
+              <label>Promotor *</label>
               <select
                 value={form.id_promotor ?? ""}
                 onChange={(e) =>
