@@ -237,6 +237,7 @@ export default function VentaForm({ id }: Props) {
         servicio: ventaData.servicio ?? "",
         tipo_servicio: ventaData.tipo_servicio,
         costo: ventaData.costo,
+        com_1: ventaData.costo_promotor ?? 0,
       }]);
     }
   }, [itemsData, ventaData]);
