@@ -547,15 +547,9 @@ export default function VentaForm({ id }: Props) {
                 <span style={{ fontWeight: 600 }}>{fmt(totalItems)}</span>
               </div>
 
-              <div className="form-field">
-                <label>Comisión del promotor (MXN)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.costo_promotor}
-                  onChange={(e) => set("costo_promotor", Number(e.target.value))}
-                />
+              <div className="calc-row">
+                <span>Comisión del promotor</span>
+                <span>{fmt(form.costo_promotor)}</span>
               </div>
 
               <div className="calc-row">
