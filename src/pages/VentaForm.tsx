@@ -451,6 +451,7 @@ export default function VentaForm({ id }: Props) {
                     min="0"
                     step="0.01"
                     value={item.costo}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => handleItemCosto(idx, Number(e.target.value))}
                     className="venta-item-costo"
                     placeholder="Costo"
@@ -568,6 +569,7 @@ export default function VentaForm({ id }: Props) {
                   min="0"
                   step="0.01"
                   value={form.cobro}
+                  onFocus={(e) => e.target.select()}
                   onChange={(e) => set("cobro", Number(e.target.value))}
                   required
                 />
@@ -580,6 +582,7 @@ export default function VentaForm({ id }: Props) {
                   min="0"
                   step="0.01"
                   value={form.egreso}
+                  onFocus={(e) => e.target.select()}
                   onChange={(e) => set("egreso", Number(e.target.value))}
                 />
               </div>
