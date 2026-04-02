@@ -372,7 +372,6 @@ export default function VentaForm({ id }: Props) {
   const tieneCurso = items.some((item) => item.tipo_servicio === 2);
 
   const faltante = totalItems - form.cobro;
-  const totalCobrado = form.cobro - form.egreso;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -589,27 +588,11 @@ export default function VentaForm({ id }: Props) {
                 />
               </div>
 
-              <div className="form-field">
-                <label>Egreso (MXN)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.egreso}
-                  onFocus={(e) => e.target.select()}
-                  onChange={(e) => set("egreso", Number(e.target.value))}
-                />
-              </div>
-
               <div className="calc-row">
                 <span>Faltante</span>
                 <span className={faltante > 0 ? "calc-red" : "calc-green"}>
                   {fmt(faltante)}
                 </span>
-              </div>
-              <div className="calc-row calc-row--total">
-                <span>Total cobrado neto</span>
-                <span className="calc-green">{fmt(totalCobrado)}</span>
               </div>
 
               <hr className="divider" />
