@@ -375,18 +375,6 @@ export default function VentaForm({ id }: Props) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.operador_id) {
-      alert("Selecciona un operador antes de guardar.");
-      return;
-    }
-    if (!form.id_promotor) {
-      alert("Selecciona un promotor antes de guardar.");
-      return;
-    }
-    if (form.cobro > totalItems) {
-      alert(`El cobro ($${form.cobro.toFixed(2)}) no puede ser mayor al total de servicios ($${totalItems.toFixed(2)}).`);
-      return;
-    }
     mutation.mutate(form);
   }
 
@@ -439,6 +427,15 @@ export default function VentaForm({ id }: Props) {
                 onChange={(opId, nombre) =>
                   setForm((prev) => ({ ...prev, operador_id: opId, operador_nombre: nombre }))
                 }
+              />
+              {/* Input invisible para activar validación nativa del navegador */}
+              <input
+                type="text"
+                required
+                tabIndex={-1}
+                value={form.operador_id?.toString() ?? ""}
+                onChange={() => {}}
+                style={{ opacity: 0, height: 0, width: 0, padding: 0, border: 0, position: "absolute", pointerEvents: "none" }}
               />
             </div>
 
@@ -511,6 +508,7 @@ export default function VentaForm({ id }: Props) {
             <div className="form-field">
               <label>Promotor *</label>
               <select
+                required
                 value={form.id_promotor ?? ""}
                 onChange={(e) =>
                   e.target.value
