@@ -9,6 +9,7 @@ import Ventas from "./pages/Ventas";
 import VentaForm from "./pages/VentaForm";
 import Comisiones from "./pages/Comisiones";
 import Reportes from "./pages/Reportes";
+import PeticionCursos from "./pages/PeticionCursos";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -296,26 +297,6 @@ function VentaEditWrapper() {
   return <VentaForm id={numId} />;
 }
 
-// ─── Placeholders de sub-reportes ────────────────────────────────────────────
-
-function PeticionCursosPlaceholder() {
-  const [, navigate] = useLocation();
-  return (
-    <div className="page-container">
-      <div className="page-header">
-        <button className="ghost-btn" type="button" onClick={() => navigate("/reportes")}>
-          ← Reportes
-        </button>
-      </div>
-      <h1 className="page-title">📝 Petición de Cursos</h1>
-      <div className="coming-soon" style={{ marginTop: "2rem" }}>
-        <span>En construcción</span>
-        <p>Este reporte se implementará próximamente.</p>
-      </div>
-    </div>
-  );
-}
-
 // ─── App root ─────────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -393,7 +374,7 @@ export default function App() {
           <Comisiones />
         </Route>
         <Route path="/reportes/peticion-cursos">
-          <PeticionCursosPlaceholder />
+          <PeticionCursos />
         </Route>
 
         {/* ── Resto de módulos (placeholders) ── */}
