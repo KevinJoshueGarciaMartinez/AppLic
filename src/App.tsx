@@ -36,13 +36,6 @@ const NAV_ITEMS: NavItem[] = [
       "Registro de ventas vinculadas a un operador. Servicio, costo, cobro y forma de pago.",
   },
   {
-    href: "/comisiones",
-    label: "Comisiones",
-    icon: "📊",
-    description:
-      "Reporte de comisiones por promotor en un rango de fechas.",
-  },
-  {
     href: "/reportes",
     label: "Reportes",
     icon: "📋",
@@ -303,6 +296,26 @@ function VentaEditWrapper() {
   return <VentaForm id={numId} />;
 }
 
+// ─── Placeholders de sub-reportes ────────────────────────────────────────────
+
+function PeticionCursosPlaceholder() {
+  const [, navigate] = useLocation();
+  return (
+    <div className="page-container">
+      <div className="page-header">
+        <button className="ghost-btn" type="button" onClick={() => navigate("/reportes")}>
+          ← Reportes
+        </button>
+      </div>
+      <h1 className="page-title">📝 Petición de Cursos</h1>
+      <div className="coming-soon" style={{ marginTop: "2rem" }}>
+        <span>En construcción</span>
+        <p>Este reporte se implementará próximamente.</p>
+      </div>
+    </div>
+  );
+}
+
 // ─── App root ─────────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -372,21 +385,21 @@ export default function App() {
           <VentaEditWrapper />
         </Route>
 
-        {/* ── Comisiones ── */}
-        <Route path="/comisiones">
-          <Comisiones />
-        </Route>
-
-
         {/* ── Reportes ── */}
         <Route path="/reportes">
           <Reportes />
+        </Route>
+        <Route path="/reportes/comisiones">
+          <Comisiones />
+        </Route>
+        <Route path="/reportes/peticion-cursos">
+          <PeticionCursosPlaceholder />
         </Route>
 
         {/* ── Resto de módulos (placeholders) ── */}
         {NAV_ITEMS.filter(
           (n) =>
-            !["/", "/operadores", "/ventas", "/comisiones", "/reportes"].includes(
+            !["/", "/operadores", "/ventas", "/reportes"].includes(
               n.href,
             ),
         ).map(

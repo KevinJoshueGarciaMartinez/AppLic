@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 import type { Promotor } from "../lib/types";
@@ -81,6 +82,7 @@ function primerDiaMes() {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function Comisiones() {
+  const [, navigate] = useLocation();
   const [filtros, setFiltros] = useState<Filtros>({
     id_promotor: "",
     fecha_desde: primerDiaMes(),
@@ -141,6 +143,9 @@ export default function Comisiones() {
   return (
     <div className="page-container">
       <div className="page-header">
+        <button className="ghost-btn" type="button" onClick={() => navigate("/reportes")}>
+          ← Reportes
+        </button>
         <div>
           <h1 className="page-title">
             <span className="page-icon">📊</span> Comisiones
