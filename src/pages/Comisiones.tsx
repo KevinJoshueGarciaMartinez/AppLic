@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
@@ -94,6 +94,9 @@ export default function Comisiones() {
   // Carga automática al entrar
   const [buscar, setBuscar] = useState(true);
   const [pagado, setPagado] = useState(false);
+  // Snapshot de filas para imprimir tras el pago (evita que desaparezcan al hacer refetch)
+  const [filasImprimir, setFilasImprimir] = useState<FilaComision[]>([]);
+  const [listoParaImprimir, setListoParaImprimir] = useState(false);
 
   const { data: promotores = [] } = useQuery({
     queryKey: ["promotores"],
@@ -137,6 +140,20 @@ export default function Comisiones() {
 
   const pendientes = filas.filter((f) => !f.comision_pagada);
 
+  // Dispara impresión tras actualizar el snapshot en el DOM
+  useEffect(() => {
+    if (listoParaImprimir) {
+      const t = setTimeout(() => {
+        window.print();
+        setListoParaImprimir(false);
+        // Refetch real después de imprimir
+        queryClient.invalidateQueries({ queryKey: ["comisiones"] });
+        refetch();
+      }, 300);
+      return () => clearTimeout(t);
+    }
+  }, [listoParaImprimir]);
+
   const pagarMutation = useMutation({
     mutationFn: async () => {
       const ids = pendientes.map((f) => f.id);
@@ -147,14 +164,18 @@ export default function Comisiones() {
         .update({ comision_pagada: true, fecha_pago: fechaPago })
         .in("id", ids);
       if (error) throw new Error(error.message);
-      return ids.length;
+      return { ids, fechaPago };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["comisiones"] });
-      refetch().then(() => {
-        setPagado(true);
-        setTimeout(() => window.print(), 300);
-      });
+    onSuccess: ({ ids, fechaPago }) => {
+      // Construir snapshot con las filas actuales marcadas como pagadas
+      const snapshot = filas.map((f) =>
+        ids.includes(f.id)
+          ? { ...f, comision_pagada: true, fecha_pago: fechaPago }
+          : f,
+      );
+      setFilasImprimir(snapshot);
+      setPagado(true);
+      setListoParaImprimir(true); // dispara el useEffect
     },
   });
 
@@ -173,11 +194,14 @@ export default function Comisiones() {
 
   // ── Totales ───────────────────────────────────────────────────────────────
 
-  const totalCosto = filas.reduce((s, f) => s + f.costo, 0);
-  const totalComision = filas.reduce((s, f) => s + f.costo_promotor, 0);
+  // Durante la impresión usar snapshot; el resto del tiempo, datos en vivo
+  const filasActivas = listoParaImprimir && filasImprimir.length > 0 ? filasImprimir : filas;
+
+  const totalCosto = filasActivas.reduce((s, f) => s + f.costo, 0);
+  const totalComision = filasActivas.reduce((s, f) => s + f.costo_promotor, 0);
   const totalPendiente = pendientes.reduce((s, f) => s + f.costo_promotor, 0);
 
-  const resumenPorPromotor = filas.reduce<
+  const resumenPorPromotor = filasActivas.reduce<
     Record<string, { nombre: string; total: number; pendiente: number; registros: number }>
   >((acc, f) => {
     const key = f.promotor ?? "Sin promotor";
@@ -283,14 +307,14 @@ export default function Comisiones() {
         </div>
       )}
 
-      {buscar && !isLoading && filas.length === 0 && !isError && (
+      {buscar && !isLoading && filasActivas.length === 0 && !isError && (
         <div className="empty-report no-print">
           <span>Sin resultados</span>
           <p>No hay comisiones para los filtros seleccionados.</p>
         </div>
       )}
 
-      {filas.length > 0 && (
+      {filasActivas.length > 0 && (
         <>
           {/* ── Encabezado de impresión (solo visible al imprimir) ── */}
           <div className="print-only print-header">
@@ -314,7 +338,7 @@ export default function Comisiones() {
           <div className="summary-bar" style={{ marginTop: "20px" }}>
             <div className="summary-item">
               <span className="summary-label">Registros</span>
-              <span className="summary-value">{filas.length}</span>
+              <span className="summary-value">{filasActivas.length}</span>
             </div>
             <div className="summary-item">
               <span className="summary-label">Total costos</span>
@@ -370,7 +394,7 @@ export default function Comisiones() {
                 </tr>
               </thead>
               <tbody>
-                {filas.map((f) => (
+                {filasActivas.map((f) => (
                   <tr key={f.id}>
                     <td className="col-id">{f.id}</td>
                     <td className="col-fecha">{f.fecha}</td>
@@ -390,7 +414,7 @@ export default function Comisiones() {
               </tbody>
               <tfoot>
                 <tr className="table-total-row">
-                  <td colSpan={5}><strong>TOTAL ({filas.length} registros)</strong></td>
+                  <td colSpan={5}><strong>TOTAL ({filasActivas.length} registros)</strong></td>
                   <td className="col-money"><strong>{fmt(totalCosto)}</strong></td>
                   <td className="col-money col-money--green"><strong>{fmt(totalComision)}</strong></td>
                   <td colSpan={2} />
