@@ -1185,33 +1185,53 @@ body {
 .print-only { display: none; }
 
 @media print {
-  .no-print { display: none !important; }
-  .print-only { display: block !important; }
+  /* Ocultar todo el DOM, luego revelar solo el page-container */
+  body * { visibility: hidden; }
 
-  .app-shell { display: block; }
-  .sidebar { display: none; }
-  .content { padding: 0; }
-  .page-container { padding: 0; }
+  .page-container,
+  .page-container * { visibility: visible; }
+
+  .page-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 16px 24px;
+    background: #fff;
+    color: #000;
+  }
+
+  /* Ocultar elementos marcados como no imprimibles */
+  .no-print,
+  .no-print * { visibility: hidden !important; display: none !important; }
+
+  /* Mostrar elementos solo para impresión */
+  .print-only { display: block !important; visibility: visible !important; }
 
   .print-header {
-    margin-bottom: 16px;
-    padding-bottom: 10px;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
     border-bottom: 2px solid #333;
   }
-  .print-header h2 { font-size: 1.4rem; margin: 0 0 4px; }
-  .print-header p { margin: 2px 0; font-size: 0.9rem; }
+  .print-header h2 { font-size: 1.3rem; margin: 0 0 4px; color: #000; }
+  .print-header p { margin: 2px 0; font-size: 0.88rem; color: #444; }
 
   .summary-bar {
-    display: flex;
+    display: flex !important;
     gap: 24px;
     margin-bottom: 12px;
     flex-wrap: wrap;
   }
+  .summary-item { visibility: visible !important; }
+  .summary-label, .summary-value { color: #000 !important; }
 
-  .data-table { font-size: 0.85rem; }
-  .data-table th, .data-table td { padding: 5px 8px; }
+  .data-table { font-size: 0.82rem; width: 100%; border-collapse: collapse; }
+  .data-table th, .data-table td { padding: 5px 8px; border-bottom: 1px solid #ddd; color: #000; }
+  .data-table th { background: #f0f0f0 !important; }
 
   .badge { border: 1px solid #aaa; background: none !important; color: #333 !important; }
+
+  .table-total-row td { border-top: 2px solid #333; font-weight: bold; }
 }
 
 /* ─── Responsive ─────────────────────────────────────────────────────────────── */
