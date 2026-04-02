@@ -553,13 +553,6 @@ export default function VentaForm({ id }: Props) {
                 <span>{fmt(form.costo_promotor)}</span>
               </div>
 
-              <div className="calc-row">
-                <span>Ganancia neta</span>
-                <span className={comisionPromotor >= 0 ? "calc-green" : "calc-red"}>
-                  {fmt(comisionPromotor)}
-                </span>
-              </div>
-
               <hr className="divider" />
 
               <div className="form-field">
