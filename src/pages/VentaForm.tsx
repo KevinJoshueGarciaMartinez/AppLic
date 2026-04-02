@@ -384,6 +384,10 @@ export default function VentaForm({ id }: Props) {
       alert("Selecciona un promotor antes de guardar.");
       return;
     }
+    if (form.cobro > totalItems) {
+      alert(`El cobro ($${form.cobro.toFixed(2)}) no puede ser mayor al total de servicios ($${totalItems.toFixed(2)}).`);
+      return;
+    }
     mutation.mutate(form);
   }
 
@@ -576,6 +580,7 @@ export default function VentaForm({ id }: Props) {
                 <input
                   type="number"
                   min="0"
+                  max={totalItems}
                   step="0.01"
                   value={form.cobro}
                   onFocus={(e) => e.target.select()}
