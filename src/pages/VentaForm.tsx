@@ -91,7 +91,7 @@ function emptyForm(): VentaInsert {
     forma_pago: "Efectivo",
     numero_referencia: null,
     observaciones: null,
-    fecha_solicitud_curso: null,
+    fecha_solicitud_curso: new Date().toISOString().slice(0, 10),
   };
 }
 
