@@ -369,7 +369,7 @@ export default function VentaForm({ id }: Props) {
   // Valores calculados
   const totalItems = items.reduce((s, item) => s + item.costo, 0);
   const tieneCurso = items.some((item) => item.tipo_servicio === 2);
-  const comisionPromotor = totalItems - form.costo_promotor;
+
   const faltante = totalItems - form.cobro;
   const totalCobrado = form.cobro - form.egreso;
 
