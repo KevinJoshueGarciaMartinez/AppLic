@@ -119,13 +119,12 @@ export default function Comisiones() {
     }
   }
 
-  // Totales
+  // Totales — costo_promotor es la comisión que se le paga al promotor
   const totalCosto = filas.reduce((s, f) => s + f.costo, 0);
-  const totalCostoPromotor = filas.reduce((s, f) => s + f.costo_promotor, 0);
-  const totalComision = filas.reduce((s, f) => s + f.comision_promotor, 0);
+  const totalComision = filas.reduce((s, f) => s + f.costo_promotor, 0);
   const totalPendiente = filas
     .filter((f) => !f.comision_pagada)
-    .reduce((s, f) => s + f.comision_promotor, 0);
+    .reduce((s, f) => s + f.costo_promotor, 0);
 
   // Agrupar por promotor para el resumen
   const resumenPorPromotor = filas.reduce<
@@ -133,9 +132,9 @@ export default function Comisiones() {
   >((acc, f) => {
     const key = f.promotor ?? "Sin promotor";
     if (!acc[key]) acc[key] = { nombre: key, total: 0, pendiente: 0, registros: 0 };
-    acc[key].total += f.comision_promotor;
+    acc[key].total += f.costo_promotor;
     acc[key].registros += 1;
-    if (!f.comision_pagada) acc[key].pendiente += f.comision_promotor;
+    if (!f.comision_pagada) acc[key].pendiente += f.costo_promotor;
     return acc;
   }, {});
 
@@ -241,10 +240,6 @@ export default function Comisiones() {
                 {fmt(totalPendiente)}
               </span>
             </div>
-            <div className="summary-item">
-              <span className="summary-label">Costo a promotores</span>
-              <span className="summary-value">{fmt(totalCostoPromotor)}</span>
-            </div>
           </div>
 
           {/* Resumen por promotor */}
@@ -279,7 +274,6 @@ export default function Comisiones() {
                   <th>Servicio</th>
                   <th>Promotor</th>
                   <th>Costo</th>
-                  <th>C. Promotor</th>
                   <th>Comisión</th>
                   <th>Estado</th>
                 </tr>
@@ -293,9 +287,8 @@ export default function Comisiones() {
                     <td>{f.servicio ?? "—"}</td>
                     <td>{f.promotor ?? "—"}</td>
                     <td className="col-money">{fmt(f.costo)}</td>
-                    <td className="col-money">{fmt(f.costo_promotor)}</td>
                     <td className="col-money col-money--green">
-                      {fmt(f.comision_promotor)}
+                      {fmt(f.costo_promotor)}
                     </td>
                     <td>
                       <span
@@ -314,9 +307,6 @@ export default function Comisiones() {
                   </td>
                   <td className="col-money">
                     <strong>{fmt(totalCosto)}</strong>
-                  </td>
-                  <td className="col-money">
-                    <strong>{fmt(totalCostoPromotor)}</strong>
                   </td>
                   <td className="col-money col-money--green">
                     <strong>{fmt(totalComision)}</strong>
