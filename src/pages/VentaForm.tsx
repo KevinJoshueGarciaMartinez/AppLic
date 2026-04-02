@@ -361,6 +361,7 @@ export default function VentaForm({ id }: Props) {
 
   // Valores calculados
   const totalItems = items.reduce((s, item) => s + item.costo, 0);
+  const tieneCurso = items.some((item) => item.tipo_servicio === 2);
   const comisionPromotor = totalItems - form.costo_promotor;
   const faltante = totalItems - form.cobro;
   const totalCobrado = form.cobro - form.egreso;
@@ -522,16 +523,18 @@ export default function VentaForm({ id }: Props) {
                 onChange={(e) => set("observaciones", e.target.value || null)}
               />
             </div>
-            <div className="form-field" style={{ marginTop: "0.75rem" }}>
-              <label>Fecha solicitud de curso</label>
-              <input
-                type="date"
-                value={form.fecha_solicitud_curso ?? ""}
-                onChange={(e) =>
-                  set("fecha_solicitud_curso", e.target.value || null)
-                }
-              />
-            </div>
+            {tieneCurso && (
+              <div className="form-field" style={{ marginTop: "0.75rem" }}>
+                <label>Fecha solicitud de curso</label>
+                <input
+                  type="date"
+                  value={form.fecha_solicitud_curso ?? ""}
+                  onChange={(e) =>
+                    set("fecha_solicitud_curso", e.target.value || null)
+                  }
+                />
+              </div>
+            )}
           </div>
 
           {/* ── Columna derecha: cobros ── */}
