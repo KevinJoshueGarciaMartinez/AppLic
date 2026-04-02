@@ -110,6 +110,7 @@ export interface VentaItem {
   servicio: string;
   tipo_servicio: number | null;
   costo: number;
+  com_1: number;
 }
 
 // ── Ventas ────────────────────────────────────────────────────────────────────

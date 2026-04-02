@@ -19,11 +19,17 @@ async function fetchVenta(id: number): Promise<Venta> {
 async function fetchTicketItems(ticketId: number): Promise<VentaItem[]> {
   const { data, error } = await supabase
     .from("ventas")
-    .select("id_servicio, servicio, tipo_servicio, costo")
+    .select("id_servicio, servicio, tipo_servicio, costo, costo_promotor")
     .eq("ticket_id", ticketId)
     .order("id");
   if (error) return [];
-  return (data ?? []) as VentaItem[];
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    id_servicio: row.id_servicio as number | null,
+    servicio: row.servicio as string,
+    tipo_servicio: row.tipo_servicio as number | null,
+    costo: row.costo as number,
+    com_1: row.costo_promotor as number,
+  }));
 }
 
 async function fetchServicios(): Promise<Servicio[]> {
@@ -68,7 +74,7 @@ function fmt(n: number) {
 }
 
 function emptyItem(): VentaItem {
-  return { id_servicio: null, servicio: "", tipo_servicio: null, costo: 0 };
+  return { id_servicio: null, servicio: "", tipo_servicio: null, costo: 0, com_1: 0 };
 }
 
 function emptyForm(): VentaInsert {
@@ -257,8 +263,8 @@ export default function VentaForm({ id }: Props) {
 
   function handleItemServicio(idx: number, idServicio: number | null) {
     const srv = servicios.find((s) => s.id_servicio === idServicio);
-    setItems((prev) =>
-      prev.map((item, i) =>
+    setItems((prev) => {
+      const updated = prev.map((item, i) =>
         i === idx
           ? {
               ...item,
@@ -266,14 +272,15 @@ export default function VentaForm({ id }: Props) {
               servicio: srv?.servicio ?? "",
               tipo_servicio: srv?.tipo_servicio ?? null,
               costo: srv?.costo_base ?? item.costo,
+              com_1: srv?.com_1 ?? 0,
             }
           : item,
-      ),
-    );
-    // Auto-llenar comisión desde el catálogo (solo para el primer item)
-    if (idx === 0 && srv) {
-      setForm((prev) => ({ ...prev, costo_promotor: srv.com_1 }));
-    }
+      );
+      // Recalcular costo_promotor como suma de todas las comisiones
+      const totalComision = updated.reduce((s, item) => s + item.com_1, 0);
+      setForm((prev) => ({ ...prev, costo_promotor: totalComision }));
+      return updated;
+    });
   }
 
   function handleItemCosto(idx: number, costo: number) {
@@ -313,9 +320,9 @@ export default function VentaForm({ id }: Props) {
           servicio: item.servicio,
           tipo_servicio: item.tipo_servicio,
           costo: item.costo,
-          // Solo el primer item lleva cobro/costo_promotor; el resto es 0
+          costo_promotor: item.com_1,
+          // Solo el primer item lleva cobro/egreso
           cobro: idx === 0 ? payload.cobro : 0,
-          costo_promotor: idx === 0 ? payload.costo_promotor : 0,
           egreso: idx === 0 ? payload.egreso : 0,
         }));
 
