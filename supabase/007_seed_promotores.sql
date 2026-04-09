@@ -13,3 +13,15 @@ ON CONFLICT (id_promotor) DO UPDATE SET
   nick               = EXCLUDED.nick,
   orden              = EXCLUDED.orden,
   columna_servicios  = EXCLUDED.columna_servicios;
+
+insert into public.promotores (nombre, nick, orden, columna_servicios)
+select 'Veronica Villafan', 'Veronica', 0, 0
+where not exists (
+  select 1 from public.promotores p where p.nombre = 'Veronica Villafan'
+);
+
+insert into public.promotores (nombre, nick, orden, columna_servicios)
+select 'Adrian Garcia', 'Adrian', 0, 0
+where not exists (
+  select 1 from public.promotores p where p.nombre = 'Adrian Garcia'
+);
