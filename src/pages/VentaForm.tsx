@@ -82,18 +82,6 @@ function hoyLocal(): string {
   return `${y}-${m}-${day}`;
 }
 
-function fmtFechaSolicitudCurso(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  const parts = iso.split("-").map(Number);
-  const [y, mo, da] = parts;
-  if (!y || !mo || !da) return iso;
-  return new Date(y, mo - 1, da).toLocaleDateString("es-MX", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-}
-
 function emptyItem(): VentaItem {
   return { id_servicio: null, servicio: "", tipo_servicio: null, costo: 0, com_1: 0 };
 }
@@ -579,17 +567,6 @@ export default function VentaForm({ id }: Props) {
                 onChange={(e) => set("observaciones", e.target.value || null)}
               />
             </div>
-            {tieneCurso && (
-              <div className="form-field" style={{ marginTop: "0.75rem" }}>
-                <label>Fecha solicitud de curso</label>
-                <div
-                  className="fecha-solicitud-curso-readonly"
-                  title="Se usa la fecha de hoy; no se puede cambiar desde aquí"
-                >
-                  {fmtFechaSolicitudCurso(form.fecha_solicitud_curso)}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* ── Columna derecha: cobros ── */}
