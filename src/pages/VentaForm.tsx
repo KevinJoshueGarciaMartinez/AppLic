@@ -243,15 +243,6 @@ export default function VentaForm({ id }: Props) {
     }
   }, [itemsData, ventaData]);
 
-  // Valores calculados (total de líneas; usado antes del primer render con items)
-  const totalItems = items.reduce((s, item) => s + item.costo, 0);
-
-  // Venta nueva: el cobro sigue el total de servicios (importes solo desde catálogo)
-  useEffect(() => {
-    if (!isNew) return;
-    setForm((prev) => ({ ...prev, cobro: totalItems }));
-  }, [isNew, totalItems]);
-
   const { data: servicios = [] } = useQuery({
     queryKey: ["servicios"],
     queryFn: fetchServicios,
@@ -375,8 +366,8 @@ export default function VentaForm({ id }: Props) {
     }));
   }
 
+  const totalItems = items.reduce((s, item) => s + item.costo, 0);
   const tieneCurso = items.some((item) => item.tipo_servicio === 2);
-
   const faltante = totalItems - form.cobro;
 
   function handleSubmit(e: React.FormEvent) {
@@ -387,6 +378,14 @@ export default function VentaForm({ id }: Props) {
     }
     if (!form.id_promotor) {
       alert("Selecciona un promotor antes de guardar.");
+      return;
+    }
+    if (form.cobro > totalItems) {
+      alert("El cobro no puede ser mayor al total de servicios.");
+      return;
+    }
+    if (form.cobro < 0) {
+      alert("El cobro no puede ser negativo.");
       return;
     }
     mutation.mutate(form);
@@ -576,14 +575,13 @@ export default function VentaForm({ id }: Props) {
                 <label>Cobro recibido (MXN)</label>
                 <input
                   type="number"
-                  className="input-importe-readonly"
-                  readOnly
-                  tabIndex={-1}
                   min={0}
                   max={totalItems}
                   step={0.01}
                   value={form.cobro}
-                  title="Igual al total de servicios; los importes vienen del catálogo"
+                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => set("cobro", Number(e.target.value))}
+                  title="Lo que se recibió del cliente; puede ser menor al total (pago parcial)"
                   required
                 />
               </div>
