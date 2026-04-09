@@ -111,6 +111,8 @@ export interface VentaItem {
   tipo_servicio: number | null;
   costo: number;
   com_1: number;
+  /** Nota por línea; se guarda en ventas.observaciones por fila */
+  observaciones: string | null;
 }
 
 // ── Ventas ────────────────────────────────────────────────────────────────────

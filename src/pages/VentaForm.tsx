@@ -19,7 +19,7 @@ async function fetchVenta(id: number): Promise<Venta> {
 async function fetchTicketItems(ticketId: number): Promise<VentaItem[]> {
   const { data, error } = await supabase
     .from("ventas")
-    .select("id_servicio, servicio, tipo_servicio, costo, costo_promotor")
+    .select("id_servicio, servicio, tipo_servicio, costo, costo_promotor, observaciones")
     .eq("ticket_id", ticketId)
     .order("id");
   if (error) return [];
@@ -29,6 +29,7 @@ async function fetchTicketItems(ticketId: number): Promise<VentaItem[]> {
     tipo_servicio: row.tipo_servicio as number | null,
     costo: row.costo as number,
     com_1: row.costo_promotor as number,
+    observaciones: (row.observaciones as string | null) ?? null,
   }));
 }
 
@@ -80,10 +81,6 @@ function hoyLocal(): string {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
-}
-
-function emptyItem(): VentaItem {
-  return { id_servicio: null, servicio: "", tipo_servicio: null, costo: 0, com_1: 0 };
 }
 
 function emptyForm(): VentaInsert {
@@ -201,7 +198,9 @@ export default function VentaForm({ id }: Props) {
   const queryClient = useQueryClient();
   const isNew = !id;
   const [form, setForm] = useState<VentaInsert>(emptyForm());
-  const [items, setItems] = useState<VentaItem[]>([emptyItem()]);
+  const [items, setItems] = useState<VentaItem[]>([]);
+  const [draftServicioId, setDraftServicioId] = useState<number | "">("");
+  const [draftObservaciones, setDraftObservaciones] = useState("");
   const [guardado, setGuardado] = useState(false);
 
   // Cargar venta existente
@@ -248,9 +247,19 @@ export default function VentaForm({ id }: Props) {
         tipo_servicio: ventaData.tipo_servicio,
         costo: ventaData.costo,
         com_1: ventaData.costo_promotor ?? 0,
+        observaciones: ventaData.observaciones ?? null,
       }]);
     }
   }, [itemsData, ventaData]);
+
+  useEffect(() => {
+    const totalComision = items.reduce((s, item) => s + item.com_1, 0);
+    setForm((prev) =>
+      prev.costo_promotor === totalComision
+        ? prev
+        : { ...prev, costo_promotor: totalComision },
+    );
+  }, [items]);
 
   const { data: servicios = [] } = useQuery({
     queryKey: ["servicios"],
@@ -264,34 +273,59 @@ export default function VentaForm({ id }: Props) {
 
   // ── Items handlers ────────────────────────────────────────────────────────
 
-  function addItem() {
-    setItems((prev) => [...prev, emptyItem()]);
+  function addLineFromDraft() {
+    if (draftServicioId === "") {
+      alert("Selecciona un servicio para agregarlo al ticket.");
+      return;
+    }
+    const srv = servicios.find((s) => s.id_servicio === Number(draftServicioId));
+    if (!srv) return;
+    const obs = draftObservaciones.trim() === "" ? null : draftObservaciones.trim();
+    setItems((prev) => [
+      ...prev,
+      {
+        id_servicio: srv.id_servicio,
+        servicio: srv.servicio,
+        tipo_servicio: srv.tipo_servicio,
+        costo: srv.costo_base,
+        com_1: srv.com_1,
+        observaciones: obs,
+      },
+    ]);
+    setDraftServicioId("");
+    setDraftObservaciones("");
   }
 
   function removeItem(idx: number) {
     setItems((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  function handleItemServicio(idx: number, idServicio: number | null) {
+  function updateItemServicio(idx: number, idServicio: number | null) {
     const srv = servicios.find((s) => s.id_servicio === idServicio);
-    setItems((prev) => {
-      const updated = prev.map((item, i) =>
+    setItems((prev) =>
+      prev.map((item, i) =>
         i === idx
           ? {
               ...item,
               id_servicio: srv?.id_servicio ?? null,
               servicio: srv?.servicio ?? "",
               tipo_servicio: srv?.tipo_servicio ?? null,
-              costo: srv?.costo_base ?? item.costo,
+              costo: srv?.costo_base ?? 0,
               com_1: srv?.com_1 ?? 0,
             }
           : item,
-      );
-      // Recalcular costo_promotor como suma de todas las comisiones
-      const totalComision = updated.reduce((s, item) => s + item.com_1, 0);
-      setForm((prev) => ({ ...prev, costo_promotor: totalComision }));
-      return updated;
-    });
+      ),
+    );
+  }
+
+  function updateItemObservaciones(idx: number, value: string) {
+    setItems((prev) =>
+      prev.map((item, i) =>
+        i === idx
+          ? { ...item, observaciones: value === "" ? null : value }
+          : item,
+      ),
+    );
   }
 
   // ── Mutation ─────────────────────────────────────────────────────────────
@@ -332,6 +366,7 @@ export default function VentaForm({ id }: Props) {
             costo_promotor: item.com_1,
             cobro: cobroItem,
             egreso: idx === 0 ? (payload.egreso ?? 0) : 0,
+            observaciones: item.observaciones?.trim() || null,
           };
         });
 
@@ -346,6 +381,7 @@ export default function VentaForm({ id }: Props) {
           servicio: item.servicio,
           tipo_servicio: item.tipo_servicio,
           costo: item.costo,
+          observaciones: item.observaciones?.trim() || null,
         };
         const { error } = await supabase
           .from("ventas")
@@ -455,9 +491,8 @@ export default function VentaForm({ id }: Props) {
 
       <form onSubmit={handleSubmit} className="record-form">
         <div className="form-grid-ventas">
-          {/* ── Columna izquierda ── */}
+          {/* ── Columna izquierda: operador y promotor ── */}
           <div>
-            {/* Operador */}
             <div className="form-group-title">Operador</div>
             <div className="form-field">
               <label>Buscar operador *</label>
@@ -470,71 +505,13 @@ export default function VentaForm({ id }: Props) {
               />
             </div>
 
-            {/* Servicios */}
-            <div className="form-group-title" style={{ marginTop: "1.25rem" }}>
-              Servicios
-            </div>
-
-            <div className="venta-items-list">
-              {items.map((item, idx) => (
-                <div key={idx} className="venta-item-row">
-                  <select
-                    value={item.id_servicio ?? ""}
-                    onChange={(e) =>
-                      handleItemServicio(idx, e.target.value ? Number(e.target.value) : null)
-                    }
-                    required
-                    style={{ flex: 1 }}
-                  >
-                    <option value="">— Seleccionar servicio —</option>
-                    {servicios.map((s) => (
-                      <option key={s.id_servicio} value={s.id_servicio}>
-                        {s.servicio}
-                      </option>
-                    ))}
-                  </select>
-                  <span
-                    className="venta-item-costo venta-item-costo--readonly"
-                    title="Importe del catálogo; no se puede editar"
-                  >
-                    {item.id_servicio != null ? fmt(item.costo) : "—"}
-                  </span>
-                  {items.length > 1 && (
-                    <button
-                      type="button"
-                      className="btn-remove-item"
-                      onClick={() => removeItem(idx)}
-                      title="Eliminar"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-              ))}
-
-              <button
-                type="button"
-                className="btn-add-item"
-                onClick={addItem}
-              >
-                + Agregar servicio
-              </button>
-
-              {items.length > 1 && (
-                <div className="calc-row" style={{ marginTop: "0.5rem" }}>
-                  <span>Total servicios</span>
-                  <span className="calc-green">{fmt(totalItems)}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Promotor */}
             <div className="form-group-title" style={{ marginTop: "1.25rem" }}>
               Promotor
             </div>
             <div className="form-field">
               <label>Promotor *</label>
               <select
+                className="select-promotor-wide"
                 value={form.id_promotor ?? ""}
                 onChange={(e) =>
                   e.target.value
@@ -554,25 +531,81 @@ export default function VentaForm({ id }: Props) {
                 ))}
               </select>
             </div>
-
-            {/* Observaciones */}
-            <div className="form-group-title" style={{ marginTop: "1.25rem" }}>
-              Notas
-            </div>
-            <div className="form-field">
-              <label>Observaciones</label>
-              <textarea
-                rows={3}
-                value={form.observaciones ?? ""}
-                onChange={(e) => set("observaciones", e.target.value || null)}
-              />
-            </div>
           </div>
 
-          {/* ── Columna derecha: cobros ── */}
+          {/* ── Columna derecha: ticket / desglose + cobros ── */}
           <div>
             <div className="cobro-card">
-              <div className="form-group-title">Costos y cobros</div>
+              <div className="form-group-title">Ticket — desglose</div>
+
+              {items.length === 0 ? (
+                <p className="ticket-empty-hint">
+                  Usa el botón al final del formulario para agregar servicios al ticket.
+                </p>
+              ) : (
+                <div className="ticket-desglose-wrap">
+                  <table className="ticket-desglose-table">
+                    <thead>
+                      <tr>
+                        <th>Servicio</th>
+                        <th className="col-monto">Importe</th>
+                        <th className="col-nota">Nota</th>
+                        <th className="col-acc" aria-label="Quitar" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((item, idx) => (
+                        <tr key={idx}>
+                          <td>
+                            <select
+                              className="ticket-line-servicio"
+                              value={item.id_servicio ?? ""}
+                              onChange={(e) =>
+                                updateItemServicio(
+                                  idx,
+                                  e.target.value ? Number(e.target.value) : null,
+                                )
+                              }
+                              title="Cambiar servicio"
+                            >
+                              <option value="">— Servicio —</option>
+                              {servicios.map((s) => (
+                                <option key={s.id_servicio} value={s.id_servicio}>
+                                  {s.servicio}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="col-monto">{fmt(item.costo)}</td>
+                          <td className="col-nota">
+                            <input
+                              type="text"
+                              className="venta-line-obs-input"
+                              value={item.observaciones ?? ""}
+                              placeholder="Opcional"
+                              title={
+                                item.observaciones ||
+                                "Nota por servicio (completa en BD; vista compacta en ticket)"
+                              }
+                              onChange={(e) => updateItemObservaciones(idx, e.target.value)}
+                            />
+                          </td>
+                          <td className="col-acc">
+                            <button
+                              type="button"
+                              className="btn-remove-item"
+                              onClick={() => removeItem(idx)}
+                              title="Quitar del ticket"
+                            >
+                              ×
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
               <div className="calc-row" style={{ marginBottom: "1rem" }}>
                 <span>Total servicios</span>
@@ -637,6 +670,43 @@ export default function VentaForm({ id }: Props) {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Agregar servicio al final del formulario */}
+        <div className="venta-add-service-bar">
+          <div className="form-group-title" style={{ marginBottom: "8px" }}>
+            Agregar al ticket
+          </div>
+          <div className="venta-add-service-inner">
+            <select
+              className="venta-draft-servicio"
+              value={draftServicioId === "" ? "" : String(draftServicioId)}
+              onChange={(e) =>
+                setDraftServicioId(e.target.value === "" ? "" : Number(e.target.value))
+              }
+            >
+              <option value="">— Seleccionar servicio —</option>
+              {servicios.map((s) => (
+                <option key={s.id_servicio} value={s.id_servicio}>
+                  {s.servicio}
+                </option>
+              ))}
+            </select>
+            <input
+              type="text"
+              className="venta-draft-obs"
+              placeholder="Nota del servicio (opcional)"
+              value={draftObservaciones}
+              onChange={(e) => setDraftObservaciones(e.target.value)}
+            />
+            <button
+              type="button"
+              className="btn-primary venta-btn-add-line"
+              onClick={addLineFromDraft}
+            >
+              + Agregar servicio
+            </button>
           </div>
         </div>
 

@@ -802,9 +802,155 @@ body {
 
 .form-grid-ventas {
   display: grid;
-  grid-template-columns: 1fr 360px;
+  grid-template-columns: 1fr minmax(340px, 440px);
   gap: 24px;
   align-items: start;
+}
+
+.select-promotor-wide {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  font-size: 1rem;
+  line-height: 1.35;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+}
+
+.ticket-empty-hint {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.ticket-desglose-wrap {
+  overflow-x: auto;
+  margin-bottom: 8px;
+  max-width: 100%;
+}
+
+.ticket-desglose-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.ticket-desglose-table th,
+.ticket-desglose-table td {
+  padding: 6px 4px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
+}
+
+.ticket-desglose-table th {
+  text-align: left;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ticket-desglose-table .col-monto {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  width: 5.5rem;
+}
+
+.ticket-desglose-table .col-nota {
+  max-width: 6.5rem;
+  min-width: 5rem;
+}
+
+.ticket-desglose-table .col-acc {
+  width: 2rem;
+  text-align: center;
+  padding-left: 0;
+}
+
+.ticket-line-servicio {
+  width: 100%;
+  max-width: 100%;
+  font-size: 0.8rem;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+}
+
+.venta-line-obs-input {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 0.78rem;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.venta-line-obs-input:focus {
+  white-space: normal;
+  text-overflow: clip;
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.venta-add-service-bar {
+  margin-top: 28px;
+  padding: 18px 20px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.venta-add-service-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.venta-draft-servicio {
+  flex: 1 1 200px;
+  min-width: 160px;
+  min-height: 42px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 0.9rem;
+}
+
+.venta-draft-obs {
+  flex: 2 1 220px;
+  min-width: 180px;
+  min-height: 42px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 0.9rem;
+}
+
+.venta-btn-add-line {
+  flex: 0 0 auto;
+  align-self: center;
+  white-space: nowrap;
+  padding-left: 18px;
+  padding-right: 18px;
+}
+
+@media (max-width: 900px) {
+  .form-grid-ventas {
+    grid-template-columns: 1fr;
+  }
+
+  .cobro-card {
+    position: static;
+  }
 }
 
 .form-group-title {
