@@ -95,31 +95,6 @@ function Layout({
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 
 function Dashboard() {
-  const [supabaseStatus, setSupabaseStatus] = useState<
-    "pendiente" | "ok" | "error"
-  >("pendiente");
-  const [supabaseMessage, setSupabaseMessage] = useState(
-    "Sin validar todavia.",
-  );
-
-  const checkSupabase = async () => {
-    try {
-      const { error } = await supabase.auth.getSession();
-      if (error) {
-        setSupabaseStatus("error");
-        setSupabaseMessage(error.message);
-        return;
-      }
-      setSupabaseStatus("ok");
-      setSupabaseMessage("Conexion valida con Supabase.");
-    } catch (error) {
-      setSupabaseStatus("error");
-      setSupabaseMessage(
-        error instanceof Error ? error.message : "Error desconocido.",
-      );
-    }
-  };
-
   return (
     <div>
       <h2 className="page-title">Dashboard</h2>
@@ -133,32 +108,6 @@ function Dashboard() {
           </Link>
         ))}
       </div>
-
-      <section className="check-card">
-        <h3>Estado del entorno</h3>
-        <ul className="status-list">
-          <li>
-            <strong>Frontend (Vite + React):</strong>{" "}
-            <span className="status-chip status-ok">ok</span>
-          </li>
-          <li>
-            <strong>Tablas en Supabase:</strong>{" "}
-            <span className="status-chip status-ok">ok</span>
-          </li>
-          <li>
-            <strong>Conexion Supabase:</strong>{" "}
-            <span className={`status-chip status-${supabaseStatus}`}>
-              {supabaseStatus}
-            </span>
-          </li>
-        </ul>
-        <button className="primary-btn" onClick={checkSupabase} type="button">
-          Verificar conexion
-        </button>
-        {supabaseStatus !== "pendiente" && (
-          <p className="status-message">{supabaseMessage}</p>
-        )}
-      </section>
     </div>
   );
 }

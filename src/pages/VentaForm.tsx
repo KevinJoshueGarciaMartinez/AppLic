@@ -243,6 +243,15 @@ export default function VentaForm({ id }: Props) {
     }
   }, [itemsData, ventaData]);
 
+  // Valores calculados (total de líneas; usado antes del primer render con items)
+  const totalItems = items.reduce((s, item) => s + item.costo, 0);
+
+  // Venta nueva: el cobro sigue el total de servicios (importes solo desde catálogo)
+  useEffect(() => {
+    if (!isNew) return;
+    setForm((prev) => ({ ...prev, cobro: totalItems }));
+  }, [isNew, totalItems]);
+
   const { data: servicios = [] } = useQuery({
     queryKey: ["servicios"],
     queryFn: fetchServicios,
@@ -283,12 +292,6 @@ export default function VentaForm({ id }: Props) {
       setForm((prev) => ({ ...prev, costo_promotor: totalComision }));
       return updated;
     });
-  }
-
-  function handleItemCosto(idx: number, costo: number) {
-    setItems((prev) =>
-      prev.map((item, i) => (i === idx ? { ...item, costo } : item)),
-    );
   }
 
   // ── Mutation ─────────────────────────────────────────────────────────────
@@ -372,8 +375,6 @@ export default function VentaForm({ id }: Props) {
     }));
   }
 
-  // Valores calculados
-  const totalItems = items.reduce((s, item) => s + item.costo, 0);
   const tieneCurso = items.some((item) => item.tipo_servicio === 2);
 
   const faltante = totalItems - form.cobro;
@@ -466,16 +467,12 @@ export default function VentaForm({ id }: Props) {
                       </option>
                     ))}
                   </select>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={item.costo}
-                    onFocus={(e) => e.target.select()}
-                    onChange={(e) => handleItemCosto(idx, Number(e.target.value))}
-                    className="venta-item-costo"
-                    placeholder="Costo"
-                  />
+                  <span
+                    className="venta-item-costo venta-item-costo--readonly"
+                    title="Importe del catálogo; no se puede editar"
+                  >
+                    {item.id_servicio != null ? fmt(item.costo) : "—"}
+                  </span>
                   {items.length > 1 && (
                     <button
                       type="button"
@@ -579,12 +576,14 @@ export default function VentaForm({ id }: Props) {
                 <label>Cobro recibido (MXN)</label>
                 <input
                   type="number"
-                  min="0"
+                  className="input-importe-readonly"
+                  readOnly
+                  tabIndex={-1}
+                  min={0}
                   max={totalItems}
-                  step="0.01"
+                  step={0.01}
                   value={form.cobro}
-                  onFocus={(e) => e.target.select()}
-                  onChange={(e) => set("cobro", Number(e.target.value))}
+                  title="Igual al total de servicios; los importes vienen del catálogo"
                   required
                 />
               </div>
