@@ -875,21 +875,12 @@ body {
   border: 1px solid #cbd5e1;
 }
 
-.venta-ticket-panel {
-  position: static;
-  margin-top: 1.25rem;
-}
-
 .venta-add-service-bar {
   margin-top: 28px;
   padding: 18px 20px;
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-}
-
-.venta-add-service-bar--inline {
-  margin-top: 16px;
 }
 
 .venta-add-service-inner {
