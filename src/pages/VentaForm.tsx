@@ -73,6 +73,27 @@ function fmt(n: number) {
   }).format(n);
 }
 
+/** Fecha local YYYY-MM-DD (evita desfase vs UTC de toISOString). */
+function hoyLocal(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function fmtFechaSolicitudCurso(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const parts = iso.split("-").map(Number);
+  const [y, mo, da] = parts;
+  if (!y || !mo || !da) return iso;
+  return new Date(y, mo - 1, da).toLocaleDateString("es-MX", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
 function emptyItem(): VentaItem {
   return { id_servicio: null, servicio: "", tipo_servicio: null, costo: 0, com_1: 0 };
 }
@@ -97,7 +118,7 @@ function emptyForm(): VentaInsert {
     forma_pago: "Efectivo",
     numero_referencia: null,
     observaciones: null,
-    fecha_solicitud_curso: new Date().toISOString().slice(0, 10),
+    fecha_solicitud_curso: hoyLocal(),
     fecha_pago: null,
   };
 }
@@ -370,6 +391,24 @@ export default function VentaForm({ id }: Props) {
   const tieneCurso = items.some((item) => item.tipo_servicio === 2);
   const faltante = totalItems - form.cobro;
 
+  // Con curso en el ticket: nueva venta → fecha solicitud = hoy (sin date picker). Edición → conservar fecha guardada; si falta, usar hoy.
+  useEffect(() => {
+    if (!tieneCurso) return;
+    const hoy = hoyLocal();
+    if (isNew) {
+      setForm((prev) =>
+        prev.fecha_solicitud_curso === hoy
+          ? prev
+          : { ...prev, fecha_solicitud_curso: hoy },
+      );
+      return;
+    }
+    setForm((prev) => {
+      if (prev.fecha_solicitud_curso) return prev;
+      return { ...prev, fecha_solicitud_curso: hoy };
+    });
+  }, [tieneCurso, isNew]);
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.operador_id) {
@@ -543,13 +582,12 @@ export default function VentaForm({ id }: Props) {
             {tieneCurso && (
               <div className="form-field" style={{ marginTop: "0.75rem" }}>
                 <label>Fecha solicitud de curso</label>
-                <input
-                  type="date"
-                  value={form.fecha_solicitud_curso ?? ""}
-                  onChange={(e) =>
-                    set("fecha_solicitud_curso", e.target.value || null)
-                  }
-                />
+                <div
+                  className="fecha-solicitud-curso-readonly"
+                  title="Se usa la fecha de hoy; no se puede cambiar desde aquí"
+                >
+                  {fmtFechaSolicitudCurso(form.fecha_solicitud_curso)}
+                </div>
               </div>
             )}
           </div>

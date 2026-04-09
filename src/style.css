@@ -854,6 +854,20 @@ body {
   border-radius: 8px;
 }
 
+.fecha-solicitud-curso-readonly {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  color: #334155;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
 .btn-remove-item {
   background: none;
   border: 1px solid #e2e8f0;
