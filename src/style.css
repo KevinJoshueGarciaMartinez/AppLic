@@ -860,11 +860,6 @@ body {
   width: 5.5rem;
 }
 
-.ticket-desglose-table .col-nota {
-  max-width: 6.5rem;
-  min-width: 5rem;
-}
-
 .ticket-desglose-table .col-acc {
   width: 2rem;
   text-align: center;
@@ -880,24 +875,9 @@ body {
   border: 1px solid #cbd5e1;
 }
 
-.venta-line-obs-input {
-  width: 100%;
-  box-sizing: border-box;
-  font-size: 0.78rem;
-  padding: 4px 6px;
-  border-radius: 6px;
-  border: 1px solid #cbd5e1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.venta-line-obs-input:focus {
-  white-space: normal;
-  text-overflow: clip;
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+.venta-ticket-panel {
+  position: static;
+  margin-top: 1.25rem;
 }
 
 .venta-add-service-bar {
@@ -906,6 +886,10 @@ body {
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
+}
+
+.venta-add-service-bar--inline {
+  margin-top: 16px;
 }
 
 .venta-add-service-inner {

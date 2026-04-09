@@ -318,16 +318,6 @@ export default function VentaForm({ id }: Props) {
     );
   }
 
-  function updateItemObservaciones(idx: number, value: string) {
-    setItems((prev) =>
-      prev.map((item, i) =>
-        i === idx
-          ? { ...item, observaciones: value === "" ? null : value }
-          : item,
-      ),
-    );
-  }
-
   // ── Mutation ─────────────────────────────────────────────────────────────
 
   const mutation = useMutation({
@@ -491,7 +481,7 @@ export default function VentaForm({ id }: Props) {
 
       <form onSubmit={handleSubmit} className="record-form">
         <div className="form-grid-ventas">
-          {/* ── Columna izquierda: operador y promotor ── */}
+          {/* ── Columna izquierda: operador, promotor, ticket, agregar servicios ── */}
           <div>
             <div className="form-group-title">Operador</div>
             <div className="form-field">
@@ -531,16 +521,13 @@ export default function VentaForm({ id }: Props) {
                 ))}
               </select>
             </div>
-          </div>
 
-          {/* ── Columna derecha: ticket / desglose + cobros ── */}
-          <div>
-            <div className="cobro-card">
-              <div className="form-group-title">Ticket — desglose</div>
+            <div className="cobro-card venta-ticket-panel">
+              <div className="form-group-title">Ticket</div>
 
               {items.length === 0 ? (
                 <p className="ticket-empty-hint">
-                  Usa el botón al final del formulario para agregar servicios al ticket.
+                  Usa «Agregar al ticket» debajo para incluir servicios.
                 </p>
               ) : (
                 <div className="ticket-desglose-wrap">
@@ -549,7 +536,6 @@ export default function VentaForm({ id }: Props) {
                       <tr>
                         <th>Servicio</th>
                         <th className="col-monto">Importe</th>
-                        <th className="col-nota">Nota</th>
                         <th className="col-acc" aria-label="Quitar" />
                       </tr>
                     </thead>
@@ -577,19 +563,6 @@ export default function VentaForm({ id }: Props) {
                             </select>
                           </td>
                           <td className="col-monto">{fmt(item.costo)}</td>
-                          <td className="col-nota">
-                            <input
-                              type="text"
-                              className="venta-line-obs-input"
-                              value={item.observaciones ?? ""}
-                              placeholder="Opcional"
-                              title={
-                                item.observaciones ||
-                                "Nota por servicio (completa en BD; vista compacta en ticket)"
-                              }
-                              onChange={(e) => updateItemObservaciones(idx, e.target.value)}
-                            />
-                          </td>
                           <td className="col-acc">
                             <button
                               type="button"
@@ -606,6 +579,54 @@ export default function VentaForm({ id }: Props) {
                   </table>
                 </div>
               )}
+
+              <div className="calc-row" style={{ marginBottom: "0" }}>
+                <span>Total servicios</span>
+                <span style={{ fontWeight: 600 }}>{fmt(totalItems)}</span>
+              </div>
+            </div>
+
+            <div className="venta-add-service-bar venta-add-service-bar--inline">
+              <div className="form-group-title" style={{ marginBottom: "8px" }}>
+                Agregar al ticket
+              </div>
+              <div className="venta-add-service-inner">
+                <select
+                  className="venta-draft-servicio"
+                  value={draftServicioId === "" ? "" : String(draftServicioId)}
+                  onChange={(e) =>
+                    setDraftServicioId(e.target.value === "" ? "" : Number(e.target.value))
+                  }
+                >
+                  <option value="">— Seleccionar servicio —</option>
+                  {servicios.map((s) => (
+                    <option key={s.id_servicio} value={s.id_servicio}>
+                      {s.servicio}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  className="venta-draft-obs"
+                  placeholder="Nota del servicio (opcional, solo BD)"
+                  value={draftObservaciones}
+                  onChange={(e) => setDraftObservaciones(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="btn-primary venta-btn-add-line"
+                  onClick={addLineFromDraft}
+                >
+                  + Agregar servicio
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Columna derecha: solo cobros ── */}
+          <div>
+            <div className="cobro-card">
+              <div className="form-group-title">Costos y cobros</div>
 
               <div className="calc-row" style={{ marginBottom: "1rem" }}>
                 <span>Total servicios</span>
@@ -670,43 +691,6 @@ export default function VentaForm({ id }: Props) {
                 </div>
               )}
             </div>
-          </div>
-        </div>
-
-        {/* Agregar servicio al final del formulario */}
-        <div className="venta-add-service-bar">
-          <div className="form-group-title" style={{ marginBottom: "8px" }}>
-            Agregar al ticket
-          </div>
-          <div className="venta-add-service-inner">
-            <select
-              className="venta-draft-servicio"
-              value={draftServicioId === "" ? "" : String(draftServicioId)}
-              onChange={(e) =>
-                setDraftServicioId(e.target.value === "" ? "" : Number(e.target.value))
-              }
-            >
-              <option value="">— Seleccionar servicio —</option>
-              {servicios.map((s) => (
-                <option key={s.id_servicio} value={s.id_servicio}>
-                  {s.servicio}
-                </option>
-              ))}
-            </select>
-            <input
-              type="text"
-              className="venta-draft-obs"
-              placeholder="Nota del servicio (opcional)"
-              value={draftObservaciones}
-              onChange={(e) => setDraftObservaciones(e.target.value)}
-            />
-            <button
-              type="button"
-              className="btn-primary venta-btn-add-line"
-              onClick={addLineFromDraft}
-            >
-              + Agregar servicio
-            </button>
           </div>
         </div>
 
