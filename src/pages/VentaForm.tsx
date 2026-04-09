@@ -636,15 +636,6 @@ export default function VentaForm({ id }: Props) {
                   />
                 </div>
               )}
-
-              <label className="checkbox-label" style={{ marginTop: "1rem" }}>
-                <input
-                  type="checkbox"
-                  checked={!!form.comision_pagada}
-                  onChange={(e) => set("comision_pagada", e.target.checked)}
-                />
-                Comisión del promotor pagada
-              </label>
             </div>
           </div>
         </div>
