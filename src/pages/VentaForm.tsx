@@ -564,11 +564,6 @@ export default function VentaForm({ id }: Props) {
                 <span style={{ fontWeight: 600 }}>{fmt(totalItems)}</span>
               </div>
 
-              <div className="calc-row">
-                <span>Comisión del promotor</span>
-                <span>{fmt(form.costo_promotor)}</span>
-              </div>
-
               <hr className="divider" />
 
               <div className="form-field">
