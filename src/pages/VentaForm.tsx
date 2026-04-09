@@ -2,7 +2,15 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
+import {
+  fetchSaldoFavorWallet,
+  fetchSaldoEnContraDeuda,
+  insertAbonoSaldo,
+  insertAplicacionSaldoTicket,
+} from "../lib/saldoOperador";
 import type { Venta, VentaInsert, VentaItem, Servicio, Promotor, Operador } from "../lib/types";
+
+const EPSILON_DEUDA = 0.005;
 
 // ── Fetchers ──────────────────────────────────────────────────────────────────
 
@@ -19,17 +27,22 @@ async function fetchVenta(id: number): Promise<Venta> {
 async function fetchTicketItems(ticketId: number): Promise<VentaItem[]> {
   const { data, error } = await supabase
     .from("ventas")
-    .select("id_servicio, servicio, tipo_servicio, costo, costo_promotor, observaciones")
+    .select(
+      "id, id_servicio, servicio, tipo_servicio, costo, costo_promotor, observaciones, cobro, egreso",
+    )
     .eq("ticket_id", ticketId)
     .order("id");
   if (error) return [];
   return (data ?? []).map((row: Record<string, unknown>) => ({
+    ventaId: row.id as number,
     id_servicio: row.id_servicio as number | null,
     servicio: row.servicio as string,
     tipo_servicio: row.tipo_servicio as number | null,
-    costo: row.costo as number,
-    com_1: row.costo_promotor as number,
+    costo: Number(row.costo ?? 0),
+    com_1: Number(row.costo_promotor ?? 0),
     observaciones: (row.observaciones as string | null) ?? null,
+    cobro: Number(row.cobro ?? 0),
+    egreso: Number(row.egreso ?? 0),
   }));
 }
 
@@ -81,6 +94,16 @@ function hoyLocal(): string {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+/** Reparte el cobro total en cascada por línea (mismo criterio que al crear venta). */
+function distribuirCobroEnCascada(costos: number[], totalCobro: number): number[] {
+  let rest = Math.max(0, totalCobro);
+  return costos.map((c) => {
+    const x = Math.min(rest, c);
+    rest = Math.max(0, rest - x);
+    return x;
+  });
 }
 
 function emptyForm(): VentaInsert {
@@ -201,6 +224,9 @@ export default function VentaForm({ id }: Props) {
   const [items, setItems] = useState<VentaItem[]>([]);
   const [draftServicioId, setDraftServicioId] = useState<number | "">("");
   const [draftObservaciones, setDraftObservaciones] = useState("");
+  const [abonoMonto, setAbonoMonto] = useState("");
+  const [abonoConcepto, setAbonoConcepto] = useState("");
+  const [aplicarSaldoStr, setAplicarSaldoStr] = useState("");
   const [guardado, setGuardado] = useState(false);
 
   // Cargar venta existente
@@ -229,28 +255,46 @@ export default function VentaForm({ id }: Props) {
         total_cobrado,
         promotores,
         catalogo_servicios_costos,
-        ticket_id: _ticket_id,
+        ticket_id: tid,
+        cobro: cobroRow,
         ...rest
       } = ventaData;
-      setForm(rest as VentaInsert);
+      const base = rest as VentaInsert;
+      // En ticket multi-línea el total cobrado se calcula al cargar ítems; no usar cobro de una sola fila.
+      if (!tid) {
+        base.cobro = cobroRow;
+      } else {
+        base.cobro = 0;
+      }
+      setForm(base);
     }
   }, [ventaData]);
 
   useEffect(() => {
     if (itemsData && itemsData.length > 0) {
       setItems(itemsData);
-    } else if (ventaData) {
-      // Venta individual sin ticket
-      setItems([{
-        id_servicio: ventaData.id_servicio,
-        servicio: ventaData.servicio ?? "",
-        tipo_servicio: ventaData.tipo_servicio,
-        costo: ventaData.costo,
-        com_1: ventaData.costo_promotor ?? 0,
-        observaciones: ventaData.observaciones ?? null,
-      }]);
+      const sumCobro = itemsData.reduce((s, it) => s + Number(it.cobro ?? 0), 0);
+      if (!isNew && ventaData?.ticket_id) {
+        setForm((prev) => ({ ...prev, cobro: sumCobro }));
+      }
+      return;
     }
-  }, [itemsData, ventaData]);
+    if (ventaData && !ventaData.ticket_id) {
+      setItems([
+        {
+          ventaId: ventaData.id,
+          id_servicio: ventaData.id_servicio,
+          servicio: ventaData.servicio ?? "",
+          tipo_servicio: ventaData.tipo_servicio,
+          costo: ventaData.costo,
+          com_1: ventaData.costo_promotor ?? 0,
+          observaciones: ventaData.observaciones ?? null,
+          cobro: ventaData.cobro,
+          egreso: ventaData.egreso,
+        },
+      ]);
+    }
+  }, [itemsData, ventaData, isNew]);
 
   useEffect(() => {
     const totalComision = items.reduce((s, item) => s + item.com_1, 0);
@@ -271,9 +315,51 @@ export default function VentaForm({ id }: Props) {
     queryFn: fetchPromotores,
   });
 
+  const operadorIdSaldo = form.operador_id;
+  const {
+    data: saldosOperador,
+    isError: saldoQueryError,
+    error: saldoError,
+    isLoading: saldoLoading,
+  } = useQuery({
+    queryKey: ["operador_saldos", operadorIdSaldo],
+    queryFn: async () => {
+      if (operadorIdSaldo == null) return { favor: 0, contra: 0 };
+      const [favor, contra] = await Promise.all([
+        fetchSaldoFavorWallet(operadorIdSaldo),
+        fetchSaldoEnContraDeuda(operadorIdSaldo),
+      ]);
+      return { favor, contra };
+    },
+    enabled: operadorIdSaldo != null,
+  });
+
+  const abonoMutation = useMutation({
+    mutationFn: async () => {
+      if (operadorIdSaldo == null) throw new Error("Selecciona un operador.");
+      const m = Number(abonoMonto);
+      if (!Number.isFinite(m) || m <= 0) throw new Error("Indica un monto válido mayor a cero.");
+      await insertAbonoSaldo(operadorIdSaldo, m, abonoConcepto || null);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["operador_saldos", operadorIdSaldo] });
+      setAbonoMonto("");
+      setAbonoConcepto("");
+    },
+  });
+
+  const saldoFavor = saldosOperador?.favor ?? 0;
+  const saldoContra = saldosOperador?.contra ?? 0;
+  const bloquearNuevaVentaPorDeuda =
+    isNew && operadorIdSaldo != null && saldoContra > EPSILON_DEUDA;
+
   // ── Items handlers ────────────────────────────────────────────────────────
 
   function addLineFromDraft() {
+    if (!isNew) {
+      alert("En edición no se agregan líneas al ticket. Crea una venta nueva para otro servicio.");
+      return;
+    }
     if (draftServicioId === "") {
       alert("Selecciona un servicio para agregarlo al ticket.");
       return;
@@ -320,18 +406,29 @@ export default function VentaForm({ id }: Props) {
 
   // ── Mutation ─────────────────────────────────────────────────────────────
 
+  type VentaSaveVars = { payload: VentaInsert; aplicarSaldo: number };
+
   const mutation = useMutation({
-    mutationFn: async (payload: VentaInsert) => {
+    mutationFn: async ({ payload, aplicarSaldo }: VentaSaveVars) => {
       const validItems = items.filter((i) => i.servicio);
       if (validItems.length === 0) throw new Error("Agrega al menos un servicio.");
 
+      const operadorId = payload.operador_id;
+      if (aplicarSaldo > EPSILON_DEUDA && operadorId == null) {
+        throw new Error("Selecciona un operador para aplicar saldo a favor.");
+      }
+
+      const totalCobro = Math.max(0, Number(payload.cobro ?? 0));
+      const costos = validItems.map((i) => i.costo);
+      const cobrosLinea = distribuirCobroEnCascada(costos, totalCobro);
+
       const isMulti = validItems.length > 1;
+      const ticketIdEdit = ventaData?.ticket_id ?? null;
 
       if (isNew) {
         let ticketId: number | null = null;
 
         if (isMulti) {
-          // Crear ticket cabecera
           const { data: ticketData, error: ticketErr } = await supabase
             .from("tickets")
             .insert({ fecha: payload.fecha ?? new Date().toISOString().slice(0, 10) })
@@ -341,47 +438,84 @@ export default function VentaForm({ id }: Props) {
           ticketId = (ticketData as { id: number }).id;
         }
 
-        // Distribuir cobro en cascada: cada servicio recibe hasta su costo, el resto al siguiente
-        let cobroRestante = payload.cobro ?? 0;
-        const ventasPayload = validItems.map((item, idx) => {
-          const cobroItem = Math.min(cobroRestante, item.costo);
-          cobroRestante = Math.max(0, cobroRestante - cobroItem);
-          return {
+        const ventasPayload = validItems.map((item, idx) => ({
+          ...payload,
+          ticket_id: ticketId,
+          id_servicio: item.id_servicio,
+          servicio: item.servicio,
+          tipo_servicio: item.tipo_servicio,
+          costo: item.costo,
+          costo_promotor: item.com_1,
+          cobro: cobrosLinea[idx] ?? 0,
+          egreso: idx === 0 ? (payload.egreso ?? 0) : 0,
+          observaciones: item.observaciones?.trim() || null,
+        }));
+
+        const { data: inserted, error } = await supabase
+          .from("ventas")
+          .insert(ventasPayload)
+          .select("id");
+        if (error) throw new Error(error.message);
+
+        if (aplicarSaldo > EPSILON_DEUDA && operadorId != null) {
+          const firstId = (inserted as { id: number }[] | null)?.[0]?.id ?? null;
+          await insertAplicacionSaldoTicket(operadorId, aplicarSaldo, {
+            ticketId,
+            ventaId: firstId,
+          });
+        }
+      } else {
+        if (ticketIdEdit && validItems.some((it) => !it.ventaId)) {
+          throw new Error(
+            "Este ticket tiene líneas sin id. Recarga la página; no se pueden agregar servicios en edición.",
+          );
+        }
+
+        const sorted = ticketIdEdit
+          ? [...validItems].sort((a, b) => (a.ventaId ?? 0) - (b.ventaId ?? 0))
+          : validItems;
+
+        const cobrosSorted = ticketIdEdit
+          ? distribuirCobroEnCascada(
+              sorted.map((i) => i.costo),
+              totalCobro,
+            )
+          : cobrosLinea;
+
+        for (let idx = 0; idx < sorted.length; idx++) {
+          const item = sorted[idx]!;
+          const vid = item.ventaId ?? id!;
+          const ventaPayload: VentaInsert = {
             ...payload,
-            ticket_id: ticketId,
             id_servicio: item.id_servicio,
             servicio: item.servicio,
             tipo_servicio: item.tipo_servicio,
             costo: item.costo,
             costo_promotor: item.com_1,
-            cobro: cobroItem,
+            cobro: cobrosSorted[idx] ?? 0,
             egreso: idx === 0 ? (payload.egreso ?? 0) : 0,
             observaciones: item.observaciones?.trim() || null,
           };
-        });
+          const { error } = await supabase.from("ventas").update(ventaPayload).eq("id", vid);
+          if (error) throw new Error(error.message);
+        }
 
-        const { error } = await supabase.from("ventas").insert(ventasPayload);
-        if (error) throw new Error(error.message);
-      } else {
-        // Editar venta individual (solo actualiza la fila actual)
-        const item = validItems[0];
-        const ventaPayload: VentaInsert = {
-          ...payload,
-          id_servicio: item.id_servicio,
-          servicio: item.servicio,
-          tipo_servicio: item.tipo_servicio,
-          costo: item.costo,
-          observaciones: item.observaciones?.trim() || null,
-        };
-        const { error } = await supabase
-          .from("ventas")
-          .update(ventaPayload)
-          .eq("id", id!);
-        if (error) throw new Error(error.message);
+        if (aplicarSaldo > EPSILON_DEUDA && operadorId != null) {
+          const firstVentaId = sorted[0]?.ventaId ?? (id != null ? id : null);
+          await insertAplicacionSaldoTicket(operadorId, aplicarSaldo, {
+            ticketId: ticketIdEdit,
+            ventaId: firstVentaId,
+          });
+        }
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ventas"] });
+      queryClient.invalidateQueries({ queryKey: ["ticket_items"] });
+      if (id != null) queryClient.invalidateQueries({ queryKey: ["venta", id] });
+      queryClient.invalidateQueries({ queryKey: ["operador_saldos"] });
+      queryClient.invalidateQueries({ queryKey: ["operador_saldo_movs"] });
+      setAplicarSaldoStr("");
       setGuardado(true);
       setTimeout(() => setGuardado(false), 3000);
       if (isNew) navigate("/ventas");
@@ -429,8 +563,18 @@ export default function VentaForm({ id }: Props) {
       alert("Selecciona un operador antes de guardar.");
       return;
     }
+    if (isNew && saldoContra > EPSILON_DEUDA) {
+      alert(
+        "Este operador tiene saldo en contra (ventas con faltante pendiente). Liquida esa deuda antes de registrar una venta nueva.",
+      );
+      return;
+    }
     if (!form.id_promotor) {
       alert("Selecciona un promotor antes de guardar.");
+      return;
+    }
+    if (!Number.isFinite(form.cobro)) {
+      alert("Indica un total cobrado válido.");
       return;
     }
     if (form.cobro > totalItems) {
@@ -441,7 +585,21 @@ export default function VentaForm({ id }: Props) {
       alert("El cobro no puede ser negativo.");
       return;
     }
-    mutation.mutate(form);
+    const aplicarRaw = aplicarSaldoStr.trim() === "" ? 0 : Number(aplicarSaldoStr.replace(",", "."));
+    const aplicarSaldo = Number.isFinite(aplicarRaw) ? Math.round(aplicarRaw * 100) / 100 : 0;
+    if (aplicarSaldo < -EPSILON_DEUDA) {
+      alert("El monto a aplicar desde saldo a favor no puede ser negativo.");
+      return;
+    }
+    if (aplicarSaldo > form.cobro + EPSILON_DEUDA) {
+      alert("No puedes aplicar más saldo a favor que el total cobrado del ticket.");
+      return;
+    }
+    if (aplicarSaldo > saldoFavor + EPSILON_DEUDA) {
+      alert("Saldo a favor insuficiente para ese monto.");
+      return;
+    }
+    mutation.mutate({ payload: form, aplicarSaldo });
   }
 
   if (!isNew && loadingVenta) {
@@ -484,16 +642,88 @@ export default function VentaForm({ id }: Props) {
           {/* ── Izquierda: operador, promotor, alta de servicios ── */}
           <div>
             <div className="form-group-title">Operador</div>
-            <div className="form-field">
-              <label>Buscar operador *</label>
-              <OperadorSearch
-                operadorId={form.operador_id}
-                operadorNombre={form.operador_nombre}
-                onChange={(opId, nombre) =>
-                  setForm((prev) => ({ ...prev, operador_id: opId, operador_nombre: nombre }))
-                }
-              />
+            <div className="venta-operador-bloque">
+              <div className="venta-operador-busqueda">
+                <div className="form-field" style={{ marginBottom: 0 }}>
+                  <label>Buscar operador *</label>
+                  <OperadorSearch
+                    operadorId={form.operador_id}
+                    operadorNombre={form.operador_nombre}
+                    onChange={(opId, nombre) =>
+                      setForm((prev) => ({ ...prev, operador_id: opId, operador_nombre: nombre }))
+                    }
+                  />
+                </div>
+              </div>
+              {form.operador_id != null && (
+                <div className="venta-saldos-cards" aria-live="polite">
+                  <div className="saldo-mini-card saldo-mini-card--favor">
+                    <span className="saldo-mini-card__titulo">Saldo a favor</span>
+                    <span className="saldo-mini-card__monto">
+                      {saldoLoading ? "…" : fmt(saldoFavor)}
+                    </span>
+                    <span className="saldo-mini-card__hint">Abonos registrados</span>
+                  </div>
+                  <div className="saldo-mini-card saldo-mini-card--contra">
+                    <span className="saldo-mini-card__titulo">Saldo en contra</span>
+                    <span className="saldo-mini-card__monto">
+                      {saldoLoading ? "…" : fmt(saldoContra)}
+                    </span>
+                    <span className="saldo-mini-card__hint">Suma de faltantes en ventas</span>
+                  </div>
+                </div>
+              )}
             </div>
+            {saldoQueryError && form.operador_id != null && (
+              <p className="field-hint" style={{ color: "#b91c1c" }}>
+                No se pudieron cargar los saldos: {(saldoError as Error).message}
+              </p>
+            )}
+            {bloquearNuevaVentaPorDeuda && (
+              <div className="alert-error" style={{ marginTop: "10px" }}>
+                No puedes registrar una venta nueva mientras el operador tenga saldo en contra.
+                Liquida primero los faltantes pendientes.
+              </div>
+            )}
+            {form.operador_id != null && (
+              <div className="venta-abono-en-venta" style={{ marginTop: "12px" }}>
+                <div className="form-group-title" style={{ marginBottom: "6px" }}>
+                  Abonar a favor
+                </div>
+                <div className="venta-abono-en-venta-inner">
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    className="venta-abono-monto"
+                    placeholder="Monto"
+                    value={abonoMonto}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setAbonoMonto(e.target.value)}
+                  />
+                  <input
+                    type="text"
+                    className="venta-abono-concepto"
+                    placeholder="Concepto (opcional)"
+                    value={abonoConcepto}
+                    onChange={(e) => setAbonoConcepto(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    disabled={abonoMutation.isPending}
+                    onClick={() => abonoMutation.mutate()}
+                  >
+                    {abonoMutation.isPending ? "Guardando…" : "Registrar abono"}
+                  </button>
+                </div>
+                {abonoMutation.isError && (
+                  <p className="field-hint" style={{ color: "#b91c1c", marginTop: "6px" }}>
+                    {(abonoMutation.error as Error).message}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="form-group-title" style={{ marginTop: "1.25rem" }}>
               Promotor
@@ -551,6 +781,12 @@ export default function VentaForm({ id }: Props) {
                 <button
                   type="button"
                   className="btn-primary venta-btn-add-line"
+                  disabled={!isNew}
+                  title={
+                    isNew
+                      ? undefined
+                      : "En edición no se agregan líneas; crea una venta nueva para más servicios"
+                  }
                   onClick={addLineFromDraft}
                 >
                   + Agregar servicio
@@ -606,8 +842,13 @@ export default function VentaForm({ id }: Props) {
                             <button
                               type="button"
                               className="btn-remove-item"
+                              disabled={!isNew}
                               onClick={() => removeItem(idx)}
-                              title="Quitar del ticket"
+                              title={
+                                isNew
+                                  ? "Quitar del ticket"
+                                  : "No se quitan líneas al editar; usa una venta nueva si aplica"
+                              }
                             >
                               ×
                             </button>
@@ -627,7 +868,7 @@ export default function VentaForm({ id }: Props) {
               <hr className="divider" />
 
               <div className="form-field">
-                <label>Cobro recibido (MXN)</label>
+                <label>Total cobrado (MXN)</label>
                 <input
                   type="number"
                   min={0}
@@ -636,9 +877,33 @@ export default function VentaForm({ id }: Props) {
                   value={form.cobro}
                   onFocus={(e) => e.target.select()}
                   onChange={(e) => set("cobro", Number(e.target.value))}
-                  title="Lo que se recibió del cliente; puede ser menor al total (pago parcial)"
+                  title="Suma aplicada al ticket (efectivo, depósito y/o saldo a favor)"
                   required
                 />
+                <span className="field-hint">
+                  Incluye todo lo que cubre el ticket; indica abajo cuánto proviene del saldo a favor.
+                </span>
+              </div>
+
+              <div className="form-field">
+                <label>De eso, desde saldo a favor (MXN)</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={Math.min(saldoFavor, form.cobro, totalItems)}
+                  step={0.01}
+                  value={aplicarSaldoStr}
+                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => setAplicarSaldoStr(e.target.value)}
+                  disabled={form.operador_id == null || saldoFavor <= EPSILON_DEUDA}
+                  title="Se descuenta del saldo a favor del operador y no puede superar el total cobrado"
+                  placeholder="0"
+                />
+                {form.operador_id != null && saldoFavor > EPSILON_DEUDA && (
+                  <span className="field-hint">
+                    Máx. {fmt(Math.min(saldoFavor, form.cobro))} (saldo disponible y total cobrado).
+                  </span>
+                )}
               </div>
 
               <div className="calc-row">
@@ -697,7 +962,7 @@ export default function VentaForm({ id }: Props) {
           <button
             type="submit"
             className="btn-primary"
-            disabled={mutation.isPending}
+            disabled={mutation.isPending || bloquearNuevaVentaPorDeuda}
           >
             {mutation.isPending
               ? "Guardando…"

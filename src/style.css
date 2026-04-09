@@ -807,6 +807,105 @@ body {
   align-items: start;
 }
 
+/* Operador + saldos en venta */
+.venta-operador-bloque {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .venta-operador-bloque {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .venta-operador-busqueda {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.venta-saldos-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.operador-saldo-resumen {
+  width: 100%;
+}
+
+.saldo-mini-card {
+  flex: 1 1 140px;
+  min-width: 130px;
+  max-width: 200px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.saldo-mini-card--favor {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.saldo-mini-card--contra {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.saldo-mini-card__titulo {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+}
+
+.saldo-mini-card__monto {
+  font-size: 1.15rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #0f172a;
+}
+
+.saldo-mini-card__hint {
+  font-size: 0.7rem;
+  color: #64748b;
+  line-height: 1.3;
+}
+
+.venta-abono-en-venta-inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.venta-abono-monto {
+  width: 110px;
+  min-height: 40px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+}
+
+.venta-abono-concepto {
+  flex: 1 1 160px;
+  min-width: 140px;
+  min-height: 40px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+}
+
 .select-promotor-wide {
   width: 100%;
   min-height: 48px;

@@ -113,6 +113,11 @@ export interface VentaItem {
   com_1: number;
   /** Nota por línea; se guarda en ventas.observaciones por fila */
   observaciones: string | null;
+  /** Id de la fila en `ventas` al editar un ticket o venta existente */
+  ventaId?: number;
+  /** Valores cargados desde BD (edición) */
+  cobro?: number;
+  egreso?: number;
 }
 
 // ── Ventas ────────────────────────────────────────────────────────────────────

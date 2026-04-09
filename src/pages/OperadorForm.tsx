@@ -2,7 +2,21 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
+import {
+  fetchSaldoFavorWallet,
+  fetchSaldoEnContraDeuda,
+  fetchMovimientosSaldo,
+  insertAbonoSaldo,
+} from "../lib/saldoOperador";
 import type { Operador, OperadorInsert, Promotor } from "../lib/types";
+
+function fmtSaldo(n: number) {
+  return new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN",
+    minimumFractionDigits: 2,
+  }).format(n);
+}
 
 // ── fetch individual ──────────────────────────────────────────────────────────
 async function fetchOperador(id: number): Promise<Operador> {
@@ -127,6 +141,8 @@ export default function OperadorForm({ id }: Props) {
   const [activeTab, setActiveTab] = useState(0);
   const [form, setForm] = useState<OperadorInsert>(emptyForm());
   const [guardado, setGuardado] = useState(false);
+  const [abonoMonto, setAbonoMonto] = useState("");
+  const [abonoConcepto, setAbonoConcepto] = useState("");
 
   // Load existing record
   const { isLoading: loadingOp, data: operadorData } = useQuery({
@@ -146,6 +162,45 @@ export default function OperadorForm({ id }: Props) {
   const { data: promotores = [] } = useQuery({
     queryKey: ["promotores"],
     queryFn: fetchPromotores,
+  });
+
+  const {
+    data: saldosOp,
+    isLoading: saldosLoading,
+    refetch: refetchSaldos,
+  } = useQuery({
+    queryKey: ["operador_saldos", id],
+    queryFn: async () => {
+      if (!id) return { favor: 0, contra: 0 };
+      const [favor, contra] = await Promise.all([
+        fetchSaldoFavorWallet(id),
+        fetchSaldoEnContraDeuda(id),
+      ]);
+      return { favor, contra };
+    },
+    enabled: !isNew && !!id,
+  });
+
+  const { data: movimientosSaldo = [], refetch: refetchMovs } = useQuery({
+    queryKey: ["operador_saldo_movs", id],
+    queryFn: () => fetchMovimientosSaldo(id!),
+    enabled: !isNew && !!id,
+  });
+
+  const abonoMutation = useMutation({
+    mutationFn: async () => {
+      if (!id) throw new Error("Sin operador.");
+      const m = Number(abonoMonto);
+      if (!Number.isFinite(m) || m <= 0) throw new Error("Monto inválido.");
+      await insertAbonoSaldo(id, m, abonoConcepto || null);
+    },
+    onSuccess: () => {
+      setAbonoMonto("");
+      setAbonoConcepto("");
+      refetchSaldos();
+      refetchMovs();
+      queryClient.invalidateQueries({ queryKey: ["operador_saldos"] });
+    },
   });
 
   // Save mutation
@@ -188,6 +243,7 @@ export default function OperadorForm({ id }: Props) {
     "Licencia y médico",
     "Cita SCT",
     "Curso",
+    ...(isNew ? [] : ["Saldo"]),
   ];
 
   if (!isNew && loadingOp) {
@@ -734,6 +790,104 @@ export default function OperadorForm({ id }: Props) {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {!isNew && activeTab === 5 && (
+          <div className="form-section">
+            <div className="venta-saldos-cards operador-saldo-resumen" style={{ marginBottom: "1.25rem" }}>
+              <div className="saldo-mini-card saldo-mini-card--favor">
+                <span className="saldo-mini-card__titulo">Saldo a favor</span>
+                <span className="saldo-mini-card__monto">
+                  {saldosLoading ? "…" : fmtSaldo(saldosOp?.favor ?? 0)}
+                </span>
+                <span className="saldo-mini-card__hint">Suma de movimientos (abonos − aplicaciones)</span>
+              </div>
+              <div className="saldo-mini-card saldo-mini-card--contra">
+                <span className="saldo-mini-card__titulo">Saldo en contra</span>
+                <span className="saldo-mini-card__monto">
+                  {saldosLoading ? "…" : fmtSaldo(saldosOp?.contra ?? 0)}
+                </span>
+                <span className="saldo-mini-card__hint">Suma de faltantes en ventas del operador</span>
+              </div>
+            </div>
+
+            <div className="form-group-title">Registrar abono a favor</div>
+            <div className="venta-abono-en-venta-inner" style={{ marginBottom: "1.5rem" }}>
+              <input
+                type="number"
+                min={0}
+                step={0.01}
+                className="venta-abono-monto"
+                placeholder="Monto"
+                value={abonoMonto}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => setAbonoMonto(e.target.value)}
+              />
+              <input
+                type="text"
+                className="venta-abono-concepto"
+                placeholder="Concepto (opcional)"
+                value={abonoConcepto}
+                onChange={(e) => setAbonoConcepto(e.target.value)}
+              />
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={abonoMutation.isPending}
+                onClick={() => abonoMutation.mutate()}
+              >
+                {abonoMutation.isPending ? "Guardando…" : "Registrar abono"}
+              </button>
+            </div>
+            {abonoMutation.isError && (
+              <p className="field-hint" style={{ color: "#b91c1c", marginBottom: "1rem" }}>
+                {(abonoMutation.error as Error).message}
+              </p>
+            )}
+
+            <div className="form-group-title">Historial de movimientos</div>
+            <div className="table-wrapper">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Tipo</th>
+                    <th>Importe</th>
+                    <th>Concepto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {movimientosSaldo.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} style={{ color: "#64748b" }}>
+                        Sin movimientos registrados.
+                      </td>
+                    </tr>
+                  ) : (
+                    movimientosSaldo.map((m) => (
+                      <tr key={m.id}>
+                        <td className="col-fecha">
+                          {new Date(m.created_at).toLocaleString("es-MX", {
+                            dateStyle: "short",
+                            timeStyle: "short",
+                          })}
+                        </td>
+                        <td>
+                          {m.tipo === "abono"
+                            ? "Abono"
+                            : m.tipo === "aplicacion_ticket"
+                              ? "Aplicación a ticket"
+                              : m.tipo}
+                        </td>
+                        <td className="col-money">{fmtSaldo(Number(m.importe))}</td>
+                        <td>{m.concepto ?? "—"}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
