@@ -143,7 +143,7 @@ export interface Venta {
   total_cobrado: number; // generated
 
   forma_pago: "Efectivo" | "Deposito";
-  numero_referencia: number | null;
+  numero_referencia: string | null;
 
   observaciones: string | null;
   fecha_solicitud_curso: string | null;

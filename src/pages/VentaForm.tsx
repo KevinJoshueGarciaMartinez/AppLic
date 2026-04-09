@@ -605,14 +605,17 @@ export default function VentaForm({ id }: Props) {
 
               {form.forma_pago === "Deposito" && (
                 <div className="form-field">
-                  <label>Número de referencia</label>
+                  <label>Referencia</label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="text"
+                    autoComplete="off"
+                    placeholder="Ej. folio, transferencia, CLABE…"
                     value={form.numero_referencia ?? ""}
                     onChange={(e) =>
                       set(
                         "numero_referencia",
-                        e.target.value ? Number(e.target.value) : null,
+                        e.target.value.trim() === "" ? null : e.target.value,
                       )
                     }
                   />
