@@ -7,7 +7,7 @@ import type { Operador } from "../lib/types";
 async function fetchOperadores(): Promise<Operador[]> {
   const { data, error } = await supabase
     .from("operadores")
-    .select("numero_consecutivo, fecha, nombre, apellido_paterno, apellido_materno, curp, telefono_1, licencia_numero, promotores(nombre)")
+    .select("numero_consecutivo, fecha, nombre, apellido_paterno, apellido_materno, curp, telefono_1, licencia_numero, es_prospecto, promotores(nombre)")
     .order("numero_consecutivo", { ascending: false });
 
   if (error) throw new Error(error.message);
@@ -26,7 +26,8 @@ export default function Operadores() {
     const texto = busqueda.toLowerCase();
     const nombre = `${op.nombre ?? ""} ${op.apellido_paterno ?? ""} ${op.apellido_materno ?? ""}`.toLowerCase();
     const curp = (op.curp ?? "").toLowerCase();
-    return nombre.includes(texto) || curp.includes(texto);
+    const tel = (op.telefono_1 ?? "").toLowerCase();
+    return nombre.includes(texto) || curp.includes(texto) || tel.includes(texto);
   });
 
   return (
@@ -50,7 +51,7 @@ export default function Operadores() {
         <input
           className="search-input"
           type="text"
-          placeholder="Buscar por nombre o CURP..."
+          placeholder="Buscar por nombre, CURP o teléfono..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
@@ -76,6 +77,7 @@ export default function Operadores() {
                 <th>Teléfono</th>
                 <th>Promotor</th>
                 <th>Licencia</th>
+                <th>Tipo</th>
                 <th>Fecha</th>
                 <th></th>
               </tr>
@@ -83,7 +85,7 @@ export default function Operadores() {
             <tbody>
               {filtrados.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="table-empty">
+                  <td colSpan={9} className="table-empty">
                     {busqueda
                       ? "No hay resultados para la búsqueda."
                       : "No hay operadores registrados. Crea el primero."}
@@ -98,7 +100,7 @@ export default function Operadores() {
                         .filter(Boolean)
                         .join(" ")}
                     </td>
-                    <td className="col-curp">{op.curp}</td>
+                    <td className="col-curp">{op.curp ?? "—"}</td>
                     <td>{op.telefono_1 ?? "—"}</td>
                     <td>
                       {op.promotores
@@ -106,6 +108,13 @@ export default function Operadores() {
                         : "—"}
                     </td>
                     <td>{op.licencia_numero ?? "—"}</td>
+                    <td>
+                      {op.es_prospecto ? (
+                        <span className="badge badge--amber">Prospecto</span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
                     <td className="col-fecha">{op.fecha ?? "—"}</td>
                     <td>
                       <Link href={`/operadores/${op.numero_consecutivo}`}>

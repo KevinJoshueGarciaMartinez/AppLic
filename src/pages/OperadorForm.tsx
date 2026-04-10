@@ -55,6 +55,22 @@ const MEDIOS_SOLICITUD = [
   "Referido",
 ];
 
+const MEDIOS_CAPTACION = [
+  "Email",
+  "Telefono",
+  "Redes",
+  "Presencial",
+  "Referido",
+  "Otro",
+] as const;
+
+const ESTATUS_SEGUIMIENTO = [
+  "Interesado",
+  "Seguimiento",
+  "Visita",
+  "Cerrada",
+] as const;
+
 const FORMAS_COBRO = ["Efectivo", "Transferencia", "Tarjeta", "Depósito"];
 
 // ── default empty form ────────────────────────────────────────────────────────
@@ -117,7 +133,17 @@ function emptyForm(): OperadorInsert {
     confirmado: false,
     contacto_sct: null,
     asistencia: false,
+    es_prospecto: false,
+    medio_captacion: null,
+    fecha_captacion: null,
+    proxima_llamada: null,
+    estatus_seguimiento: null,
+    notas_seguimiento: null,
   };
+}
+
+function fromSeguimientoQuery(): boolean {
+  return new URLSearchParams(window.location.search).get("from") === "seguimiento";
 }
 
 // ── component ─────────────────────────────────────────────────────────────────
@@ -132,6 +158,7 @@ export default function OperadorForm({ id }: Props) {
   const [activeTab, setActiveTab] = useState(0);
   const [form, setForm] = useState<OperadorInsert>(emptyForm());
   const [guardado, setGuardado] = useState(false);
+  const [errorCliente, setErrorCliente] = useState<string | null>(null);
 
   // Load existing record
   const { isLoading: loadingOp, data: operadorData } = useQuery({
@@ -143,9 +170,27 @@ export default function OperadorForm({ id }: Props) {
   useEffect(() => {
     if (operadorData) {
       const { numero_consecutivo, created_at, updated_at, promotores, ...rest } = operadorData;
-      setForm(rest as OperadorInsert);
+      setForm({
+        ...(rest as OperadorInsert),
+        curp: rest.curp ?? "",
+      } as OperadorInsert);
     }
   }, [operadorData]);
+
+  useEffect(() => {
+    if (!isNew) return;
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get("prospecto") !== "1") return;
+    const hoy = new Date().toISOString().slice(0, 10);
+    setForm((prev) => ({
+      ...prev,
+      es_prospecto: true,
+      estatus_seguimiento: "Interesado",
+      fecha_captacion: hoy,
+      proxima_llamada: hoy,
+      curp: "",
+    }));
+  }, [isNew]);
 
   // Promotores list
   const { data: promotores = [] } = useQuery({
@@ -191,12 +236,15 @@ export default function OperadorForm({ id }: Props) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["operadores"] });
+      queryClient.invalidateQueries({ queryKey: ["seguimiento_operadores"] });
       if (!isNew) {
         queryClient.invalidateQueries({ queryKey: ["operador", id] });
       }
       setGuardado(true);
       setTimeout(() => setGuardado(false), 3000);
-      if (isNew) navigate("/operadores");
+      if (isNew) {
+        navigate(fromSeguimientoQuery() ? "/seguimiento" : "/operadores");
+      }
     },
   });
 
@@ -206,8 +254,31 @@ export default function OperadorForm({ id }: Props) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    mutation.mutate(form);
+    setErrorCliente(null);
+    if (form.es_prospecto) {
+      if (!(form.proxima_llamada?.trim())) {
+        setErrorCliente("La próxima llamada es obligatoria mientras sea prospecto (sirve para filtros y orden en Seguimiento).");
+        return;
+      }
+    } else {
+      const c = form.curp?.trim() ?? "";
+      if (!c) {
+        setErrorCliente("La CURP es obligatoria al formalizar el operador (desmarca «Prospecto» solo cuando ya tengas CURP).");
+        return;
+      }
+    }
+    const payload: OperadorInsert = {
+      ...form,
+      curp: form.es_prospecto
+        ? (form.curp?.trim() || null)
+        : (form.curp ?? "").trim().toUpperCase(),
+      medio_captacion: form.medio_captacion?.trim() || null,
+      notas_seguimiento: form.notas_seguimiento?.trim() || null,
+    };
+    mutation.mutate(payload);
   }
+
+  const volverHref = fromSeguimientoQuery() ? "/seguimiento" : "/operadores";
 
   const tabs = [
     "Datos personales",
@@ -234,8 +305,8 @@ export default function OperadorForm({ id }: Props) {
       {/* Header */}
       <div className="page-header">
         <div>
-          <button className="btn-back" onClick={() => navigate("/operadores")}>
-            ← Volver a Operadores
+          <button className="btn-back" onClick={() => navigate(volverHref)}>
+            ← {fromSeguimientoQuery() ? "Volver a Seguimiento" : "Volver a Operadores"}
           </button>
           <h1 className="page-title">
             <span className="page-icon">👤</span>
@@ -251,6 +322,9 @@ export default function OperadorForm({ id }: Props) {
         </div>
       </div>
 
+      {errorCliente && (
+        <div className="alert-error">{errorCliente}</div>
+      )}
       {mutation.isError && (
         <div className="alert-error">
           Error al guardar: {(mutation.error as Error).message}
@@ -278,6 +352,90 @@ export default function OperadorForm({ id }: Props) {
         {/* ── Tab 0: Datos personales ── */}
         {activeTab === 0 && (
           <div className="form-section">
+            <h3 className="section-subtitle">Seguimiento comercial</h3>
+            <div className="checkbox-grid" style={{ marginBottom: "1rem" }}>
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={!!form.es_prospecto}
+                  onChange={(e) => set("es_prospecto", e.target.checked)}
+                />
+                Prospecto (registro ligero, CURP opcional)
+              </label>
+            </div>
+            <div className="form-grid form-grid-2">
+              <div className="form-field">
+                <label>Medio de captación</label>
+                <select
+                  value={form.medio_captacion ?? ""}
+                  onChange={(e) =>
+                    set("medio_captacion", e.target.value || null)
+                  }
+                >
+                  <option value="">— Seleccionar —</option>
+                  {MEDIOS_CAPTACION.map((m) => (
+                    <option key={m} value={m}>
+                      {m === "Telefono" ? "Teléfono" : m === "Redes" ? "Redes sociales" : m}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-field">
+                <label>Fecha de captación</label>
+                <input
+                  type="date"
+                  value={form.fecha_captacion ?? ""}
+                  onChange={(e) =>
+                    set("fecha_captacion", e.target.value || null)
+                  }
+                />
+              </div>
+              <div className="form-field">
+                <label>
+                  Próxima llamada
+                  {form.es_prospecto ? " *" : ""}
+                </label>
+                <input
+                  type="date"
+                  value={form.proxima_llamada ?? ""}
+                  onChange={(e) =>
+                    set("proxima_llamada", e.target.value || null)
+                  }
+                  required={!!form.es_prospecto}
+                />
+              </div>
+              <div className="form-field">
+                <label>Estatus de seguimiento</label>
+                <select
+                  value={form.estatus_seguimiento ?? ""}
+                  onChange={(e) =>
+                    set("estatus_seguimiento", e.target.value || null)
+                  }
+                >
+                  <option value="">— Sin definir —</option>
+                  {ESTATUS_SEGUIMIENTO.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="form-field form-field-full">
+              <label>Notas de seguimiento</label>
+              <textarea
+                value={form.notas_seguimiento ?? ""}
+                onChange={(e) =>
+                  set("notas_seguimiento", e.target.value || null)
+                }
+                rows={2}
+                placeholder="Recordatorios para la próxima llamada…"
+              />
+            </div>
+
+            <h3 className="section-subtitle" style={{ marginTop: "1.5rem" }}>
+              Datos personales
+            </h3>
             <div className="form-grid form-grid-3">
               <div className="form-field">
                 <label>Nombre *</label>
@@ -308,13 +466,13 @@ export default function OperadorForm({ id }: Props) {
 
             <div className="form-grid form-grid-2">
               <div className="form-field">
-                <label>CURP *</label>
+                <label>CURP{form.es_prospecto ? " (opcional en prospecto)" : " *"}</label>
                 <input
                   type="text"
-                  value={form.curp}
+                  value={form.curp ?? ""}
                   onChange={(e) => set("curp", e.target.value.toUpperCase())}
                   maxLength={18}
-                  required
+                  required={!form.es_prospecto}
                   style={{ textTransform: "uppercase" }}
                 />
               </div>
@@ -832,7 +990,7 @@ export default function OperadorForm({ id }: Props) {
           <button
             type="button"
             className="btn-secondary"
-            onClick={() => navigate("/operadores")}
+            onClick={() => navigate(volverHref)}
           >
             Cancelar
           </button>

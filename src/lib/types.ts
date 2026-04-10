@@ -15,7 +15,8 @@ export interface Operador {
   nombre: string;
   apellido_paterno: string | null;
   apellido_materno: string | null;
-  curp: string;
+  /** Nulo si es prospecto (`es_prospecto`) y aún no se captura. */
+  curp: string | null;
   telefono_1: string | null;
   telefono_2: string | null;
   telefono_3: string | null;
@@ -84,6 +85,14 @@ export interface Operador {
   confirmado: boolean;
   contacto_sct: string | null;
   asistencia: boolean;
+
+  /** Registro ligero: cliente potencial sin expediente completo (CURP opcional). */
+  es_prospecto: boolean;
+  medio_captacion: string | null;
+  fecha_captacion: string | null;
+  proxima_llamada: string | null;
+  estatus_seguimiento: string | null;
+  notas_seguimiento: string | null;
 
   created_at: string;
   updated_at: string;

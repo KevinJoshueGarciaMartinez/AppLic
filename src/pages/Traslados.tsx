@@ -10,7 +10,7 @@ interface OperadorTraslado {
   nombre: string;
   apellido_paterno: string | null;
   apellido_materno: string | null;
-  curp: string;
+  curp: string | null;
   telefono_1: string | null;
   fecha_traslado: string | null;
   hora_encuentro: string | null;
@@ -195,7 +195,7 @@ export default function Traslados() {
                   >
                     <td className="col-id">{op.numero_consecutivo}</td>
                     <td className="col-nombre">{nombreCompleto(op)}</td>
-                    <td className="col-curp">{op.curp}</td>
+                    <td className="col-curp">{op.curp ?? "—"}</td>
                     <td>{op.telefono_1 ?? "—"}</td>
                     <td className="col-obs">
                       {op.observaciones_traslado ?? "—"}

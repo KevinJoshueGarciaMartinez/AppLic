@@ -10,7 +10,7 @@ interface OperadorCita {
   nombre: string;
   apellido_paterno: string | null;
   apellido_materno: string | null;
-  curp: string;
+  curp: string | null;
   telefono_1: string | null;
   cita_fecha_solicitada: string | null;
   cita_fecha_asignada: string | null;
@@ -298,7 +298,7 @@ export default function CitaRuta() {
                   <tr key={c.numero_consecutivo}>
                     <td className="col-id">{c.numero_consecutivo}</td>
                     <td className="col-nombre">{nombreCompleto(c)}</td>
-                    <td className="col-curp">{c.curp}</td>
+                    <td className="col-curp">{c.curp ?? "—"}</td>
                     <td>{c.telefono_1 ?? "—"}</td>
                     <td className="col-fecha">
                       {c.cita_fecha_solicitada ?? "—"}

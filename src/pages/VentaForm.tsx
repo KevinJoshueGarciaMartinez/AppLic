@@ -93,9 +93,11 @@ async function buscarOperadores(texto: string): Promise<Operador[]> {
   if (texto.length < 2) return [];
   const { data, error } = await supabase
     .from("operadores")
-    .select("numero_consecutivo, nombre, apellido_paterno, apellido_materno, curp")
+    .select(
+      "numero_consecutivo, nombre, apellido_paterno, apellido_materno, curp, telefono_1, es_prospecto",
+    )
     .or(
-      `curp.ilike.%${texto}%,nombre.ilike.%${texto}%,apellido_paterno.ilike.%${texto}%`,
+      `curp.ilike.%${texto}%,nombre.ilike.%${texto}%,apellido_paterno.ilike.%${texto}%,telefono_1.ilike.%${texto}%`,
     )
     .limit(8);
   if (error) return [];
@@ -220,7 +222,7 @@ function OperadorSearch({
         onChange={(e) => handleInput(e.target.value)}
         onFocus={() => texto.length >= 2 && setAbierto(resultados.length > 0)}
         onBlur={() => setTimeout(() => setAbierto(false), 150)}
-        placeholder="Buscar por nombre o CURP..."
+        placeholder="Buscar por nombre, CURP o teléfono..."
       />
       {abierto && (
         <ul className="autocomplete-list">
@@ -235,7 +237,11 @@ function OperadorSearch({
                   .filter(Boolean)
                   .join(" ")}
               </span>
-              <span className="autocomplete-curp">{op.curp}</span>
+              <span className="autocomplete-curp">
+                {op.curp ?? "Sin CURP"}
+                {op.es_prospecto ? " · Prospecto" : ""}
+                {op.telefono_1 ? ` · ${op.telefono_1}` : ""}
+              </span>
             </li>
           ))}
         </ul>

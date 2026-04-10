@@ -12,7 +12,7 @@ interface OperadorInfo {
   nombre: string;
   apellido_paterno: string | null;
   apellido_materno: string | null;
-  curp: string;
+  curp: string | null;
   licencia_numero: string | null;
   licencia_vigencia: string | null;
   direccion: string | null;

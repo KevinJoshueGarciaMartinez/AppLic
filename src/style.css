@@ -788,6 +788,11 @@ input[type="number"] {
 .badge--green  { background: #dcfce7; color: #166534; }
 .badge--yellow { background: #fef9c3; color: #92400e; }
 
+/* Fila con próxima llamada vencida (seguimiento) */
+.row-seguimiento-vencido td {
+  background: rgba(254, 215, 170, 0.35);
+}
+
 /* ─── Money columns ──────────────────────────────────────────────────────────── */
 
 .col-money        { font-variant-numeric: tabular-nums; text-align: right; }
@@ -1670,6 +1675,49 @@ input[type="number"] {
   max-width: 460px;
   width: 90%;
   box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+
+.modal-card--lg {
+  position: relative;
+  max-width: 520px;
+  max-height: min(90vh, 720px);
+  overflow-y: auto;
+}
+
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.modal-close:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.modal-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 14px;
+  margin-top: 16px;
+}
+
+.modal-form-grid .form-field-full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 540px) {
+  .modal-form-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .modal-title {

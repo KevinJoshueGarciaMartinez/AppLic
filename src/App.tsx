@@ -10,6 +10,7 @@ import VentaForm from "./pages/VentaForm";
 import Comisiones from "./pages/Comisiones";
 import Reportes from "./pages/Reportes";
 import PeticionCursos from "./pages/PeticionCursos";
+import SeguimientoVentas from "./pages/SeguimientoVentas";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,13 @@ const NAV_ITEMS: NavItem[] = [
     icon: "💰",
     description:
       "Registro de ventas vinculadas a un operador. Servicio, costo, cobro y forma de pago.",
+  },
+  {
+    href: "/seguimiento",
+    label: "Seguimiento",
+    icon: "📞",
+    description:
+      "Prospectos como operadores ligeros: captación, próxima llamada y estatus.",
   },
   {
     href: "/reportes",
@@ -315,6 +323,10 @@ export default function App() {
           <VentaEditWrapper />
         </Route>
 
+        <Route path="/seguimiento">
+          <SeguimientoVentas />
+        </Route>
+
         {/* ── Reportes ── */}
         <Route path="/reportes">
           <Reportes />
@@ -329,7 +341,7 @@ export default function App() {
         {/* ── Resto de módulos (placeholders) ── */}
         {NAV_ITEMS.filter(
           (n) =>
-            !["/", "/operadores", "/ventas", "/reportes"].includes(
+            !["/", "/operadores", "/ventas", "/seguimiento", "/reportes"].includes(
               n.href,
             ),
         ).map(
