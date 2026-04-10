@@ -6,6 +6,7 @@ import {
   fetchSaldoFavorWallet,
   fetchSaldoEnContraDeuda,
   fetchMovimientosSaldoTicket,
+  insertAbonoSaldo,
   insertAplicacionSaldoTicket,
   insertDevolucionCancelacion,
   type OperadorSaldoMovimientoRow,
@@ -276,6 +277,8 @@ export default function VentaForm({ id }: Props) {
   // ── Cancelación ───────────────────────────────────────────────────────────
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [motivoCancelacion, setMotivoCancelacion] = useState("");
+  const [confirmSobrepagoMonto, setConfirmSobrepagoMonto] = useState<number | null>(null);
+  const ventaSavePendingRef = useRef<VentaSaveVars | null>(null);
 
   // Cargar venta existente
   const { isLoading: loadingVenta, data: ventaData } = useQuery({
@@ -655,6 +658,7 @@ export default function VentaForm({ id }: Props) {
       const cobroEfectivo = round2(Math.min(totalCobro, totalItemsCalc));
       const ratioPago =
         totalCobro > EPSILON_DEUDA ? Math.min(1, cobroEfectivo / totalCobro) : 0;
+      const sobrepagoInicial = round2(Math.max(0, totalCobro - cobroEfectivo));
 
       const costos = validItems.map((i) => i.costo);
       const cobrosLinea = distribuirCobroEnCascada(costos, cobroEfectivo);
@@ -735,6 +739,18 @@ export default function VentaForm({ id }: Props) {
           await insertAplicacionSaldoTicket(operadorId, aplicarSaldo, {
             ticketId,
             ventaId: firstId,
+          });
+        }
+
+        if (sobrepagoInicial > EPSILON_DEUDA) {
+          if (operadorId == null) {
+            throw new Error(
+              "Selecciona un operador para registrar el sobrepago como saldo a favor.",
+            );
+          }
+          await insertAbonoSaldo(operadorId, sobrepagoInicial, "Sobrepago (pago inicial)", {
+            ventaId: firstId,
+            ticketId,
           });
         }
       } else {
@@ -900,10 +916,33 @@ export default function VentaForm({ id }: Props) {
         }
       }
 
-      // Se permite capturar cobro mayor al total (cambio). El ticket siempre se registra por su total.
+      const sobrepagoEnNuevaVenta = round2(Math.max(0, form.cobro - totalItems));
+      if (sobrepagoEnNuevaVenta > EPSILON_DEUDA) {
+        if (form.operador_id == null) {
+          alert(
+            "Selecciona un operador para registrar el sobrepago como saldo a favor.",
+          );
+          return;
+        }
+        ventaSavePendingRef.current = { payload: form, aplicarSaldo };
+        setConfirmSobrepagoMonto(sobrepagoEnNuevaVenta);
+        return;
+      }
     }
 
     mutation.mutate({ payload: form, aplicarSaldo });
+  }
+
+  function dismissConfirmSobrepago() {
+    ventaSavePendingRef.current = null;
+    setConfirmSobrepagoMonto(null);
+  }
+
+  function confirmSobrepagoAndSave() {
+    const pending = ventaSavePendingRef.current;
+    ventaSavePendingRef.current = null;
+    setConfirmSobrepagoMonto(null);
+    if (pending) mutation.mutate(pending);
   }
 
   function handleRegistrarLiquidacionClick() {
@@ -1354,8 +1393,8 @@ export default function VentaForm({ id }: Props) {
                       required
                     />
                     <span className="field-hint">
-                      Incluye lo recibido del cliente. Si excede el total de servicios, se toma como
-                      cambio y no genera saldo a favor desde esta ventana.
+                      Incluye lo recibido del cliente. Si excede el total de servicios, antes de guardar
+                      se confirmará el saldo a favor para el operador.
                     </span>
                   </>
                 )}
@@ -1662,6 +1701,32 @@ export default function VentaForm({ id }: Props) {
           )}
         </div>
       </form>
+
+      {/* Confirmación de sobrepago (nueva venta) */}
+      {confirmSobrepagoMonto != null && (
+        <div className="modal-overlay" onClick={dismissConfirmSobrepago}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h2 className="modal-title modal-title--info">Confirmar sobrepago</h2>
+            <p className="modal-desc">
+              Se agregará al operador saldo a favor:{" "}
+              <strong style={{ color: "#0f172a" }}>{fmt(confirmSobrepagoMonto)}</strong>.
+            </p>
+            <div className="modal-actions">
+              <button type="button" className="btn-secondary" onClick={dismissConfirmSobrepago}>
+                Modificar
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={mutation.isPending}
+                onClick={confirmSobrepagoAndSave}
+              >
+                Continuar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de cancelación */}
       {showCancelModal && (
