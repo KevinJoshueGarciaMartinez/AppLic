@@ -1792,6 +1792,10 @@ input[type="number"] {
   font-size: 13px;
 }
 
+.liquidacion-table .col-money {
+  text-align: center;
+}
+
 .liquidacion-form-wrap {
   background: #fff7ed;
   border: 1.5px solid #fcd34d;
