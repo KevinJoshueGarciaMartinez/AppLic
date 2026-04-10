@@ -1672,6 +1672,10 @@ input[type="number"] {
   margin: 0 0 8px;
 }
 
+.modal-title--info {
+  color: #1d4ed8;
+}
+
 .modal-desc {
   font-size: 13px;
   color: #64748b;

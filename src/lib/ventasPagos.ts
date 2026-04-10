@@ -178,7 +178,12 @@ export async function registrarLiquidacion(params: LiquidacionParams): Promise<v
   }
 
   // ── 5. Sobrepago → saldo a favor (abono vinculado al ticket) ─────────────
-  if (sobrepago > 0.005 && operadorId != null) {
+  if (sobrepago > 0.005) {
+    if (operadorId == null) {
+      throw new Error(
+        "Se requiere un operador en el ticket para registrar el sobrepago como saldo a favor.",
+      );
+    }
     await insertAbonoSaldo(operadorId, sobrepago, "Sobrepago (liquidación)", {
       ventaId,
       ticketId,

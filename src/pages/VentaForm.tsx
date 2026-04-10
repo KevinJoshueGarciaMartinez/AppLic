@@ -280,6 +280,13 @@ export default function VentaForm({ id }: Props) {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [motivoCancelacion, setMotivoCancelacion] = useState("");
 
+  type SobrepagoModalState = { kind: "venta" | "liq"; amount: number } | null;
+  const [sobrepagoModal, setSobrepagoModal] = useState<SobrepagoModalState>(null);
+  const ventaSavePendingRef = useRef<{
+    payload: VentaInsert;
+    aplicarSaldo: number;
+  } | null>(null);
+
   // Cargar venta existente
   const { isLoading: loadingVenta, data: ventaData } = useQuery({
     queryKey: ["venta", id],
@@ -427,49 +434,61 @@ export default function VentaForm({ id }: Props) {
     return rows;
   }, [historialPagos, movsSaldoTicket]);
 
+  function prepareLiquidacionInput(): {
+    monto: number;
+    pagoEfectivo: number;
+    pagoDeposito: number;
+    pagoSaldo: number;
+  } {
+    const favorWallet = saldosOperador?.favor ?? 0;
+    const monto = parseMontoInput(liqForm.monto);
+    if (monto <= 0) throw new Error("Indica un monto mayor a cero.");
+
+    let pagoEfectivo = 0;
+    let pagoDeposito = 0;
+    let pagoSaldo = 0;
+
+    if (liqForm.formaPago === "Dividida") {
+      pagoEfectivo = parseMontoInput(liqForm.pagoEfectivo);
+      pagoDeposito = parseMontoInput(liqForm.pagoDeposito);
+      pagoSaldo = parseMontoInput(liqForm.pagoSaldo);
+      const sum = round2(pagoEfectivo + pagoDeposito + pagoSaldo);
+      if (Math.abs(sum - monto) > 0.02)
+        throw new Error(
+          "En pago dividido, la suma de los parciales debe igualar el monto total.",
+        );
+      if (pagoSaldo > favorWallet + EPSILON_DEUDA)
+        throw new Error("Saldo a favor insuficiente para la parte de saldo.");
+    } else if (liqForm.formaPago === "Saldo") {
+      pagoSaldo = monto;
+      if (pagoSaldo > favorWallet + EPSILON_DEUDA)
+        throw new Error("Saldo a favor insuficiente.");
+    } else if (liqForm.formaPago === "Efectivo") {
+      pagoEfectivo = monto;
+    } else {
+      pagoDeposito = monto;
+    }
+
+    return { monto, pagoEfectivo, pagoDeposito, pagoSaldo };
+  }
+
   // ── Mutación de liquidación ───────────────────────────────────────────────
   const liqMutation = useMutation({
     mutationFn: async () => {
-      const monto = parseMontoInput(liqForm.monto);
-      if (monto <= 0) throw new Error("Indica un monto mayor a cero.");
-
-      let pagoEfectivo = 0;
-      let pagoDeposito = 0;
-      let pagoSaldo = 0;
-
-      if (liqForm.formaPago === "Dividida") {
-        pagoEfectivo = parseMontoInput(liqForm.pagoEfectivo);
-        pagoDeposito = parseMontoInput(liqForm.pagoDeposito);
-        pagoSaldo    = parseMontoInput(liqForm.pagoSaldo);
-        const sum = round2(pagoEfectivo + pagoDeposito + pagoSaldo);
-        if (Math.abs(sum - monto) > 0.02)
-          throw new Error(
-            "En pago dividido, la suma de los parciales debe igualar el monto total.",
-          );
-        if (pagoSaldo > saldoFavor + EPSILON_DEUDA)
-          throw new Error("Saldo a favor insuficiente para la parte de saldo.");
-      } else if (liqForm.formaPago === "Saldo") {
-        pagoSaldo = monto;
-        if (pagoSaldo > saldoFavor + EPSILON_DEUDA)
-          throw new Error("Saldo a favor insuficiente.");
-      } else if (liqForm.formaPago === "Efectivo") {
-        pagoEfectivo = monto;
-      } else {
-        pagoDeposito = monto;
-      }
+      const { monto, pagoEfectivo, pagoDeposito, pagoSaldo } = prepareLiquidacionInput();
 
       await registrarLiquidacion({
-        ventaId:   ticketIdParaPagos ? null : (id ?? null),
-        ticketId:  ticketIdParaPagos,
+        ventaId: ticketIdParaPagos ? null : (id ?? null),
+        ticketId: ticketIdParaPagos,
         operadorId: form.operador_id,
-        fecha:     hoyLocal(),
+        fecha: hoyLocal(),
         monto,
-        formaPago:    liqForm.formaPago,
+        formaPago: liqForm.formaPago,
         pagoEfectivo,
         pagoDeposito,
         pagoSaldo,
         referencia: liqForm.referencia.trim() || null,
-        concepto:   liqForm.concepto.trim()   || null,
+        concepto: liqForm.concepto.trim() || null,
       });
     },
     onSuccess: () => {
@@ -640,6 +659,12 @@ export default function VentaForm({ id }: Props) {
       if (validItems.length === 0) throw new Error("Agrega al menos un servicio.");
 
       const operadorId = payload.operador_id;
+      const abonoAlGuardar = Number(String(abonoMonto).trim().replace(",", "."));
+      const quiereAbono =
+        Number.isFinite(abonoAlGuardar) && abonoAlGuardar > EPSILON_DEUDA;
+      if (quiereAbono && operadorId == null) {
+        throw new Error("Selecciona un operador para registrar el abono a favor.");
+      }
       if (aplicarSaldo > EPSILON_DEUDA && operadorId == null) {
         throw new Error("Selecciona un operador para aplicar saldo a favor o saldo operador en pago dividido.");
       }
@@ -726,7 +751,12 @@ export default function VentaForm({ id }: Props) {
           if (pagoErr) throw new Error(`Error al registrar pago inicial: ${pagoErr.message}`);
         }
 
-        if (sobrepagoInicial > EPSILON_DEUDA && operadorId != null) {
+        if (sobrepagoInicial > EPSILON_DEUDA) {
+          if (operadorId == null) {
+            throw new Error(
+              "Selecciona un operador para registrar el sobrepago como saldo a favor.",
+            );
+          }
           await insertAbonoSaldo(operadorId, sobrepagoInicial, "Sobrepago (pago inicial)", {
             ventaId: firstId,
             ticketId,
@@ -738,6 +768,15 @@ export default function VentaForm({ id }: Props) {
             ticketId,
             ventaId: firstId,
           });
+        }
+
+        if (quiereAbono && operadorId != null) {
+          await insertAbonoSaldo(
+            operadorId,
+            abonoAlGuardar,
+            abonoConcepto.trim() || "Abono a favor",
+            { ventaId: firstId, ticketId },
+          );
         }
       } else {
         if (ticketIdEdit && validItems.some((it) => !it.ventaId)) {
@@ -791,6 +830,10 @@ export default function VentaForm({ id }: Props) {
       queryClient.invalidateQueries({ queryKey: historialTicketQueryKey });
       queryClient.invalidateQueries({ queryKey: ["operador_saldos"] });
       queryClient.invalidateQueries({ queryKey: ["operador_saldo_movs"] });
+      if (isNew) {
+        setAbonoMonto("");
+        setAbonoConcepto("");
+      }
       setGuardado(true);
       setTimeout(() => setGuardado(false), 3000);
       if (isNew) navigate("/ventas");
@@ -905,7 +948,62 @@ export default function VentaForm({ id }: Props) {
       }
     }
 
+    const sobrepagoEnVentaNueva = round2(
+      Math.max(0, form.cobro - Math.min(form.cobro, totalItems)),
+    );
+    if (isNew && sobrepagoEnVentaNueva > EPSILON_DEUDA) {
+      if (form.operador_id == null) {
+        alert(
+          "Para registrar el sobrepago como saldo a favor debes seleccionar un operador en el ticket.",
+        );
+        return;
+      }
+      ventaSavePendingRef.current = { payload: form, aplicarSaldo };
+      setSobrepagoModal({ kind: "venta", amount: sobrepagoEnVentaNueva });
+      return;
+    }
+
     mutation.mutate({ payload: form, aplicarSaldo });
+  }
+
+  function dismissSobrepagoModal() {
+    ventaSavePendingRef.current = null;
+    setSobrepagoModal(null);
+  }
+
+  function confirmSobrepagoModal() {
+    if (!sobrepagoModal) return;
+    if (sobrepagoModal.kind === "venta") {
+      const pending = ventaSavePendingRef.current;
+      ventaSavePendingRef.current = null;
+      setSobrepagoModal(null);
+      if (pending) mutation.mutate(pending);
+      return;
+    }
+    setSobrepagoModal(null);
+    liqMutation.mutate();
+  }
+
+  function handleRegistrarLiquidacionClick() {
+    let prep: ReturnType<typeof prepareLiquidacionInput>;
+    try {
+      prep = prepareLiquidacionInput();
+    } catch (err) {
+      alert((err as Error).message);
+      return;
+    }
+    const sobr = round2(Math.max(0, prep.monto - faltante));
+    if (sobr > EPSILON_DEUDA) {
+      if (form.operador_id == null) {
+        alert(
+          "Selecciona un operador en el ticket para acreditar el sobrepago como saldo a favor vinculado a este ticket.",
+        );
+        return;
+      }
+      setSobrepagoModal({ kind: "liq", amount: sobr });
+      return;
+    }
+    liqMutation.mutate();
   }
 
   if (!isNew && loadingVenta) {
@@ -1012,7 +1110,7 @@ export default function VentaForm({ id }: Props) {
                 </div>
                 <p className="field-hint" style={{ marginBottom: "8px" }}>
                   {isNew
-                    ? "Primero guarda la venta; después podrás registrar el abono vinculado a este ticket."
+                    ? "El abono se guarda vinculado a este ticket al pulsar «Registrar Venta»."
                     : "Queda registrado en este ticket y en el saldo del operador."}
                 </p>
                 <div className="venta-abono-en-venta-inner">
@@ -1025,7 +1123,6 @@ export default function VentaForm({ id }: Props) {
                     value={abonoMonto}
                     onFocus={(e) => e.target.select()}
                     onChange={(e) => setAbonoMonto(e.target.value)}
-                    disabled={isNew}
                   />
                   <input
                     type="text"
@@ -1033,16 +1130,17 @@ export default function VentaForm({ id }: Props) {
                     placeholder="Concepto (opcional)"
                     value={abonoConcepto}
                     onChange={(e) => setAbonoConcepto(e.target.value)}
-                    disabled={isNew}
                   />
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    disabled={abonoMutation.isPending || esCancelado || isNew}
-                    onClick={() => abonoMutation.mutate()}
-                  >
-                    {abonoMutation.isPending ? "Guardando…" : "Registrar abono"}
-                  </button>
+                  {!isNew && (
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      disabled={abonoMutation.isPending || esCancelado}
+                      onClick={() => abonoMutation.mutate()}
+                    >
+                      {abonoMutation.isPending ? "Guardando…" : "Registrar abono"}
+                    </button>
+                  )}
                 </div>
                 {abonoMutation.isError && (
                   <p className="field-hint" style={{ color: "#b91c1c", marginTop: "6px" }}>
@@ -1167,7 +1265,7 @@ export default function VentaForm({ id }: Props) {
                             )}
                           </td>
                           <td className="col-monto">
-                            {esLineaIva(item) ? (
+                            {esLineaIva(item) && isNew ? (
                               <input
                                 type="number"
                                 className="ticket-line-importe-iva"
@@ -1487,11 +1585,16 @@ export default function VentaForm({ id }: Props) {
               </div>
             )}
 
-            {/* Formulario de liquidación (solo si hay faltante) */}
-            {faltante > 0.005 && (
+            {/* Liquidación: con faltante o pago adicional (sobrepago → saldo a favor) */}
+            {!esCancelado && (
               <div className="liquidacion-form-wrap">
-                <div className="form-group-title" style={{ color: "#b91c1c" }}>
-                  💳 Registrar pago de liquidación — Faltante: {fmt(faltante)}
+                <div
+                  className="form-group-title"
+                  style={{ color: faltante > 0.005 ? "#b91c1c" : "#1d4ed8" }}
+                >
+                  {faltante > 0.005
+                    ? `💳 Registrar pago de liquidación — Faltante: ${fmt(faltante)}`
+                    : "💳 Pago adicional — acreditar saldo a favor"}
                 </div>
 
                 {liqMutation.isError && (
@@ -1512,13 +1615,15 @@ export default function VentaForm({ id }: Props) {
                       type="number"
                       min={0.01}
                       step={0.01}
-                      placeholder={fmt(faltante)}
+                      placeholder={faltante > 0.005 ? fmt(faltante) : "Monto a acreditar"}
                       value={liqForm.monto}
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => setLiqForm((p) => ({ ...p, monto: e.target.value }))}
                     />
                     <span className="field-hint">
-                      Faltante: {fmt(faltante)}. Si pagas más, el exceso se acredita como saldo a favor.
+                      {faltante > 0.005
+                        ? `Faltante: ${fmt(faltante)}. Si pagas más, el exceso se acredita como saldo a favor del operador vinculado a este ticket.`
+                        : "El ticket está al corriente. El monto indicado se registrará completo como saldo a favor (aparecerá en movimientos del ticket)."}
                     </span>
                   </div>
 
@@ -1635,7 +1740,7 @@ export default function VentaForm({ id }: Props) {
                   className="btn-primary"
                   style={{ marginTop: "12px" }}
                   disabled={liqMutation.isPending}
-                  onClick={() => liqMutation.mutate()}
+                  onClick={handleRegistrarLiquidacionClick}
                 >
                   {liqMutation.isPending ? "Registrando…" : "Registrar pago"}
                 </button>
@@ -1677,6 +1782,35 @@ export default function VentaForm({ id }: Props) {
           )}
         </div>
       </form>
+
+      {/* Confirmación de sobrepago → saldo a favor */}
+      {sobrepagoModal && (
+        <div className="modal-overlay" onClick={dismissSobrepagoModal}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h2 className="modal-title modal-title--info">Sobrepago</h2>
+            <p className="modal-desc">
+              Se agregará al operador saldo a favor:{" "}
+              <strong style={{ color: "#0f172a" }}>{fmt(sobrepagoModal.amount)}</strong>
+              {sobrepagoModal.kind === "venta"
+                ? ", vinculado a este ticket al guardar la venta."
+                : ", vinculado a este ticket."}
+            </p>
+            <div className="modal-actions">
+              <button type="button" className="btn-secondary" onClick={dismissSobrepagoModal}>
+                Modificar
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={mutation.isPending || liqMutation.isPending}
+                onClick={confirmSobrepagoModal}
+              >
+                Continuar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de cancelación */}
       {showCancelModal && (
