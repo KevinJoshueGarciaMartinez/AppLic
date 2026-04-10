@@ -1245,6 +1245,30 @@ export default function VentaForm({ id }: Props) {
                 </div>
               )}
 
+              {/* Desglose readonly al editar */}
+              {!isNew && form.forma_pago === "Dividida" && (
+                <div className="desglose-readonly">
+                  <div className="desglose-readonly__fila">
+                    <span>Efectivo</span>
+                    <span>{fmt(form.pago_efectivo)}</span>
+                  </div>
+                  <div className="desglose-readonly__fila">
+                    <span>Depósito</span>
+                    <span>{fmt(form.pago_deposito)}</span>
+                  </div>
+                  {form.numero_referencia && (
+                    <div className="desglose-readonly__fila desglose-readonly__ref">
+                      <span>Referencia</span>
+                      <span>{form.numero_referencia}</span>
+                    </div>
+                  )}
+                  <div className="desglose-readonly__fila">
+                    <span>Saldo operador</span>
+                    <span>{fmt(form.pago_saldo_operador)}</span>
+                  </div>
+                </div>
+              )}
+
               {form.forma_pago === "Deposito" && isNew && (
                 <div className="form-field">
                   <label>Referencia</label>
@@ -1261,6 +1285,16 @@ export default function VentaForm({ id }: Props) {
                       )
                     }
                   />
+                </div>
+              )}
+
+              {/* Referencia readonly al editar con depósito */}
+              {!isNew && form.forma_pago === "Deposito" && form.numero_referencia && (
+                <div className="desglose-readonly">
+                  <div className="desglose-readonly__fila desglose-readonly__ref">
+                    <span>Referencia</span>
+                    <span>{form.numero_referencia}</span>
+                  </div>
                 </div>
               )}
 

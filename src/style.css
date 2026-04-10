@@ -1726,6 +1726,40 @@ input[type="number"] {
   border-color: #a5b4fc;
 }
 
+/* ─── Desglose readonly (VentaForm edición) ─────────────────────── */
+
+.desglose-readonly {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.desglose-readonly__fila {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #475569;
+}
+
+.desglose-readonly__fila span:first-child {
+  color: #94a3b8;
+}
+
+.desglose-readonly__fila span:last-child {
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.desglose-readonly__ref span:last-child {
+  font-family: monospace;
+  font-size: 12px;
+}
+
 /* ─── Sección de liquidación (VentaForm) ─────────────────────────── */
 
 .liquidacion-section {
