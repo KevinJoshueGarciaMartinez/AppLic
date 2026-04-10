@@ -1033,47 +1033,43 @@ export default function VentaForm({ id }: Props) {
               </select>
             </div>
 
-            <div className="venta-add-service-bar">
-              <div className="form-group-title" style={{ marginBottom: "8px" }}>
-                Servicios
+            {isNew && (
+              <div className="venta-add-service-bar">
+                <div className="form-group-title" style={{ marginBottom: "8px" }}>
+                  Servicios
+                </div>
+                <div className="venta-add-service-inner">
+                  <select
+                    className="venta-draft-servicio"
+                    value={draftServicioId === "" ? "" : String(draftServicioId)}
+                    onChange={(e) =>
+                      setDraftServicioId(e.target.value === "" ? "" : Number(e.target.value))
+                    }
+                  >
+                    <option value="">— Seleccionar servicio —</option>
+                    {servicios.map((s) => (
+                      <option key={s.id_servicio} value={s.id_servicio}>
+                        {s.servicio}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    className="venta-draft-obs"
+                    placeholder="Nota del servicio (opcional, solo BD)"
+                    value={draftObservaciones}
+                    onChange={(e) => setDraftObservaciones(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="btn-primary venta-btn-add-line"
+                    onClick={addLineFromDraft}
+                  >
+                    + Agregar servicio
+                  </button>
+                </div>
               </div>
-              <div className="venta-add-service-inner">
-                <select
-                  className="venta-draft-servicio"
-                  value={draftServicioId === "" ? "" : String(draftServicioId)}
-                  onChange={(e) =>
-                    setDraftServicioId(e.target.value === "" ? "" : Number(e.target.value))
-                  }
-                >
-                  <option value="">— Seleccionar servicio —</option>
-                  {servicios.map((s) => (
-                    <option key={s.id_servicio} value={s.id_servicio}>
-                      {s.servicio}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  type="text"
-                  className="venta-draft-obs"
-                  placeholder="Nota del servicio (opcional, solo BD)"
-                  value={draftObservaciones}
-                  onChange={(e) => setDraftObservaciones(e.target.value)}
-                />
-                <button
-                  type="button"
-                  className="btn-primary venta-btn-add-line"
-                  disabled={!isNew}
-                  title={
-                    isNew
-                      ? undefined
-                      : "En edición no se agregan líneas; crea una venta nueva para más servicios"
-                  }
-                  onClick={addLineFromDraft}
-                >
-                  + Agregar servicio
-                </button>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* ── Derecha: ticket (desglose + cobro, pago, referencia en una sola tarjeta) ── */}
