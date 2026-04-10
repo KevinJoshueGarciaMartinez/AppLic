@@ -562,26 +562,6 @@ export default function VentaForm({ id }: Props) {
     },
   });
 
-  const abonoMutation = useMutation({
-    mutationFn: async () => {
-      if (operadorIdSaldo == null) throw new Error("Selecciona un operador.");
-      if (isNew || id == null) throw new Error("Guarda el ticket primero para registrar abonos vinculados.");
-      const m = Number(abonoMonto);
-      if (!Number.isFinite(m) || m <= 0) throw new Error("Indica un monto válido mayor a cero.");
-      await insertAbonoSaldo(operadorIdSaldo, m, abonoConcepto?.trim() || "Abono a favor", {
-        ventaId: ticketIdParaPagos ? null : id,
-        ticketId: ticketIdParaPagos,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["operador_saldos", operadorIdSaldo] });
-      queryClient.invalidateQueries({ queryKey: historialTicketQueryKey });
-      queryClient.invalidateQueries({ queryKey: ["operador_saldo_movs"] });
-      setAbonoMonto("");
-      setAbonoConcepto("");
-    },
-  });
-
   const saldoFavor = saldosOperador?.favor ?? 0;
   const saldoContra = saldosOperador?.contra ?? 0;
   const bloquearNuevaVentaPorDeuda =
@@ -1100,15 +1080,13 @@ export default function VentaForm({ id }: Props) {
                 Liquida primero los faltantes pendientes.
               </div>
             )}
-            {form.operador_id != null && (
+            {isNew && form.operador_id != null && (
               <div className="venta-abono-en-venta" style={{ marginTop: "12px" }}>
                 <div className="form-group-title" style={{ marginBottom: "6px" }}>
                   Abonar a favor
                 </div>
                 <p className="field-hint" style={{ marginBottom: "8px" }}>
-                  {isNew
-                    ? "El abono se guarda vinculado a este ticket al pulsar «Registrar Venta»."
-                    : "Queda registrado en este ticket y en el saldo del operador."}
+                  El abono se guarda vinculado a este ticket al pulsar «Registrar Venta».
                 </p>
                 <div className="venta-abono-en-venta-inner">
                   <input
@@ -1128,22 +1106,7 @@ export default function VentaForm({ id }: Props) {
                     value={abonoConcepto}
                     onChange={(e) => setAbonoConcepto(e.target.value)}
                   />
-                  {!isNew && (
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      disabled={abonoMutation.isPending || esCancelado}
-                      onClick={() => abonoMutation.mutate()}
-                    >
-                      {abonoMutation.isPending ? "Guardando…" : "Registrar abono"}
-                    </button>
-                  )}
                 </div>
-                {abonoMutation.isError && (
-                  <p className="field-hint" style={{ color: "#b91c1c", marginTop: "6px" }}>
-                    {(abonoMutation.error as Error).message}
-                  </p>
-                )}
               </div>
             )}
 
