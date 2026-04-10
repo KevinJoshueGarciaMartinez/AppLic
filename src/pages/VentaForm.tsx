@@ -6,7 +6,6 @@ import {
   fetchSaldoFavorWallet,
   fetchSaldoEnContraDeuda,
   fetchMovimientosSaldoTicket,
-  insertAbonoSaldo,
   insertAplicacionSaldoTicket,
   insertDevolucionCancelacion,
   type OperadorSaldoMovimientoRow,
@@ -261,8 +260,6 @@ export default function VentaForm({ id }: Props) {
   const [items, setItems] = useState<VentaItem[]>([]);
   const [draftServicioId, setDraftServicioId] = useState<number | "">("");
   const [draftObservaciones, setDraftObservaciones] = useState("");
-  const [abonoMonto, setAbonoMonto] = useState("");
-  const [abonoConcepto, setAbonoConcepto] = useState("");
   const [guardado, setGuardado] = useState(false);
 
   const emptyLiq = () => ({
@@ -279,13 +276,6 @@ export default function VentaForm({ id }: Props) {
   // ── Cancelación ───────────────────────────────────────────────────────────
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [motivoCancelacion, setMotivoCancelacion] = useState("");
-
-  type SobrepagoModalState = { kind: "venta" | "liq"; amount: number } | null;
-  const [sobrepagoModal, setSobrepagoModal] = useState<SobrepagoModalState>(null);
-  const ventaSavePendingRef = useRef<{
-    payload: VentaInsert;
-    aplicarSaldo: number;
-  } | null>(null);
 
   // Cargar venta existente
   const { isLoading: loadingVenta, data: ventaData } = useQuery({
@@ -476,6 +466,11 @@ export default function VentaForm({ id }: Props) {
   const liqMutation = useMutation({
     mutationFn: async () => {
       const { monto, pagoEfectivo, pagoDeposito, pagoSaldo } = prepareLiquidacionInput();
+      if (monto > faltante + EPSILON_DEUDA) {
+        throw new Error(
+          "No se permite sobrepago desde esta ventana. Registra solo hasta el faltante del ticket.",
+        );
+      }
 
       await registrarLiquidacion({
         ventaId: ticketIdParaPagos ? null : (id ?? null),
@@ -639,12 +634,6 @@ export default function VentaForm({ id }: Props) {
       if (validItems.length === 0) throw new Error("Agrega al menos un servicio.");
 
       const operadorId = payload.operador_id;
-      const abonoAlGuardar = Number(String(abonoMonto).trim().replace(",", "."));
-      const quiereAbono =
-        Number.isFinite(abonoAlGuardar) && abonoAlGuardar > EPSILON_DEUDA;
-      if (quiereAbono && operadorId == null) {
-        throw new Error("Selecciona un operador para registrar el abono a favor.");
-      }
       if (aplicarSaldo > EPSILON_DEUDA && operadorId == null) {
         throw new Error("Selecciona un operador para aplicar saldo a favor o saldo operador en pago dividido.");
       }
@@ -654,7 +643,6 @@ export default function VentaForm({ id }: Props) {
       const cobroEfectivo = round2(Math.min(totalCobro, totalItemsCalc));
       const ratioPago =
         totalCobro > EPSILON_DEUDA ? Math.min(1, cobroEfectivo / totalCobro) : 0;
-      const sobrepagoInicial = round2(Math.max(0, totalCobro - cobroEfectivo));
 
       const costos = validItems.map((i) => i.costo);
       const cobrosLinea = distribuirCobroEnCascada(costos, cobroEfectivo);
@@ -731,32 +719,11 @@ export default function VentaForm({ id }: Props) {
           if (pagoErr) throw new Error(`Error al registrar pago inicial: ${pagoErr.message}`);
         }
 
-        if (sobrepagoInicial > EPSILON_DEUDA) {
-          if (operadorId == null) {
-            throw new Error(
-              "Selecciona un operador para registrar el sobrepago como saldo a favor.",
-            );
-          }
-          await insertAbonoSaldo(operadorId, sobrepagoInicial, "Sobrepago (pago inicial)", {
-            ventaId: firstId,
-            ticketId,
-          });
-        }
-
         if (aplicarSaldo > EPSILON_DEUDA && operadorId != null) {
           await insertAplicacionSaldoTicket(operadorId, aplicarSaldo, {
             ticketId,
             ventaId: firstId,
           });
-        }
-
-        if (quiereAbono && operadorId != null) {
-          await insertAbonoSaldo(
-            operadorId,
-            abonoAlGuardar,
-            abonoConcepto.trim() || "Abono a favor",
-            { ventaId: firstId, ticketId },
-          );
         }
       } else {
         if (ticketIdEdit && validItems.some((it) => !it.ventaId)) {
@@ -804,10 +771,6 @@ export default function VentaForm({ id }: Props) {
       queryClient.invalidateQueries({ queryKey: historialTicketQueryKey });
       queryClient.invalidateQueries({ queryKey: ["operador_saldos"] });
       queryClient.invalidateQueries({ queryKey: ["operador_saldo_movs"] });
-      if (isNew) {
-        setAbonoMonto("");
-        setAbonoConcepto("");
-      }
       setGuardado(true);
       setTimeout(() => setGuardado(false), 3000);
       if (isNew) navigate("/ventas");
@@ -925,41 +888,15 @@ export default function VentaForm({ id }: Props) {
         }
       }
 
-      const sobrepagoEnVentaNueva = round2(
-        Math.max(0, form.cobro - Math.min(form.cobro, totalItems)),
-      );
-      if (sobrepagoEnVentaNueva > EPSILON_DEUDA) {
-        if (form.operador_id == null) {
-          alert(
-            "Para registrar el sobrepago como saldo a favor debes seleccionar un operador en el ticket.",
-          );
-          return;
-        }
-        ventaSavePendingRef.current = { payload: form, aplicarSaldo };
-        setSobrepagoModal({ kind: "venta", amount: sobrepagoEnVentaNueva });
+      if (form.cobro > totalItems + EPSILON_DEUDA) {
+        alert(
+          "No se permite sobrepago desde esta ventana. Ajusta el total cobrado al total del ticket.",
+        );
         return;
       }
     }
 
     mutation.mutate({ payload: form, aplicarSaldo });
-  }
-
-  function dismissSobrepagoModal() {
-    ventaSavePendingRef.current = null;
-    setSobrepagoModal(null);
-  }
-
-  function confirmSobrepagoModal() {
-    if (!sobrepagoModal) return;
-    if (sobrepagoModal.kind === "venta") {
-      const pending = ventaSavePendingRef.current;
-      ventaSavePendingRef.current = null;
-      setSobrepagoModal(null);
-      if (pending) mutation.mutate(pending);
-      return;
-    }
-    setSobrepagoModal(null);
-    liqMutation.mutate();
   }
 
   function handleRegistrarLiquidacionClick() {
@@ -972,13 +909,9 @@ export default function VentaForm({ id }: Props) {
     }
     const sobr = round2(Math.max(0, prep.monto - faltante));
     if (sobr > EPSILON_DEUDA) {
-      if (form.operador_id == null) {
-        alert(
-          "Selecciona un operador en el ticket para acreditar el sobrepago como saldo a favor vinculado a este ticket.",
-        );
-        return;
-      }
-      setSobrepagoModal({ kind: "liq", amount: sobr });
+      alert(
+        "No se permite sobrepago desde esta ventana. Registra solo hasta el faltante del ticket.",
+      );
       return;
     }
     liqMutation.mutate();
@@ -1081,36 +1014,6 @@ export default function VentaForm({ id }: Props) {
                 Liquida primero los faltantes pendientes.
               </div>
             )}
-            {isNew && form.operador_id != null && (
-              <div className="venta-abono-en-venta" style={{ marginTop: "12px" }}>
-                <div className="form-group-title" style={{ marginBottom: "6px" }}>
-                  Abonar a favor
-                </div>
-                <p className="field-hint" style={{ marginBottom: "8px" }}>
-                  El abono se guarda vinculado a este ticket al pulsar «Registrar Venta».
-                </p>
-                <div className="venta-abono-en-venta-inner">
-                  <input
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    className="venta-abono-monto"
-                    placeholder="Monto"
-                    value={abonoMonto}
-                    onFocus={(e) => e.target.select()}
-                    onChange={(e) => setAbonoMonto(e.target.value)}
-                  />
-                  <input
-                    type="text"
-                    className="venta-abono-concepto"
-                    placeholder="Concepto (opcional)"
-                    value={abonoConcepto}
-                    onChange={(e) => setAbonoConcepto(e.target.value)}
-                  />
-                </div>
-              </div>
-            )}
-
             <div className="form-group-title" style={{ marginTop: "1.25rem" }}>
               Promotor
             </div>
@@ -1741,35 +1644,6 @@ export default function VentaForm({ id }: Props) {
           )}
         </div>
       </form>
-
-      {/* Confirmación de sobrepago → saldo a favor */}
-      {sobrepagoModal && (
-        <div className="modal-overlay" onClick={dismissSobrepagoModal}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <h2 className="modal-title modal-title--info">Sobrepago</h2>
-            <p className="modal-desc">
-              Se agregará al operador saldo a favor:{" "}
-              <strong style={{ color: "#0f172a" }}>{fmt(sobrepagoModal.amount)}</strong>
-              {sobrepagoModal.kind === "venta"
-                ? ", vinculado a este ticket al guardar la venta."
-                : ", vinculado a este ticket."}
-            </p>
-            <div className="modal-actions">
-              <button type="button" className="btn-secondary" onClick={dismissSobrepagoModal}>
-                Modificar
-              </button>
-              <button
-                type="button"
-                className="btn-primary"
-                disabled={mutation.isPending || liqMutation.isPending}
-                onClick={confirmSobrepagoModal}
-              >
-                Continuar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modal de cancelación */}
       {showCancelModal && (
