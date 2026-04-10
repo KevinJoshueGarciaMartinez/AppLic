@@ -109,7 +109,7 @@ export default function Operadores() {
                     <td className="col-fecha">{op.fecha ?? "—"}</td>
                     <td>
                       <Link href={`/operadores/${op.numero_consecutivo}`}>
-                        <button className="btn-edit">Editar</button>
+                        <button className="btn-edit">Ver</button>
                       </Link>
                     </td>
                   </tr>
