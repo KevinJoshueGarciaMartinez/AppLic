@@ -1026,10 +1026,7 @@ export default function VentaForm({ id }: Props) {
                 Liquida primero los faltantes pendientes.
               </div>
             )}
-            <div className="form-group-title" style={{ marginTop: "1.25rem" }}>
-              Promotor
-            </div>
-            <div className="form-field">
+            <div className="form-field" style={{ marginTop: "1.25rem" }}>
               <label>Promotor *</label>
               {isNew ? (
                 <select
@@ -1055,7 +1052,6 @@ export default function VentaForm({ id }: Props) {
               ) : (
                 <div className="campo-financiero-bloqueado">
                   <span className="venta-total-cobro-readonly">{form.promotor ?? "— Sin promotor —"}</span>
-                  <span className="campo-financiero-hint">Solo lectura</span>
                 </div>
               )}
             </div>
