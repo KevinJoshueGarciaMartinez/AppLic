@@ -1198,7 +1198,6 @@ export default function VentaForm({ id }: Props) {
                     }`}>
                       {form.forma_pago === "Saldo" ? "Saldo a favor" : form.forma_pago}
                     </span>
-                    <span className="campo-financiero-hint">Solo modificable mediante pagos</span>
                   </div>
                 ) : (
                   <select
@@ -1339,7 +1338,6 @@ export default function VentaForm({ id }: Props) {
                 {!isNew ? (
                   <>
                     <div className="venta-total-cobro-readonly">{fmt(form.cobro)}</div>
-                    <span className="campo-financiero-hint">Solo modificable mediante pagos</span>
                   </>
                 ) : form.forma_pago === "Dividida" ? (
                   <>
