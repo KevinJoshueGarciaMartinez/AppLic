@@ -6,7 +6,6 @@ import {
   fetchSaldoFavorWallet,
   fetchSaldoEnContraDeuda,
   fetchMovimientosSaldo,
-  insertAbonoSaldo,
 } from "../lib/saldoOperador";
 import type { Operador, OperadorInsert, Promotor } from "../lib/types";
 
@@ -141,8 +140,6 @@ export default function OperadorForm({ id }: Props) {
   const [activeTab, setActiveTab] = useState(0);
   const [form, setForm] = useState<OperadorInsert>(emptyForm());
   const [guardado, setGuardado] = useState(false);
-  const [abonoMonto, setAbonoMonto] = useState("");
-  const [abonoConcepto, setAbonoConcepto] = useState("");
 
   // Load existing record
   const { isLoading: loadingOp, data: operadorData } = useQuery({
@@ -167,7 +164,6 @@ export default function OperadorForm({ id }: Props) {
   const {
     data: saldosOp,
     isLoading: saldosLoading,
-    refetch: refetchSaldos,
   } = useQuery({
     queryKey: ["operador_saldos", id],
     queryFn: async () => {
@@ -181,26 +177,10 @@ export default function OperadorForm({ id }: Props) {
     enabled: !isNew && !!id,
   });
 
-  const { data: movimientosSaldo = [], refetch: refetchMovs } = useQuery({
+  const { data: movimientosSaldo = [] } = useQuery({
     queryKey: ["operador_saldo_movs", id],
     queryFn: () => fetchMovimientosSaldo(id!),
     enabled: !isNew && !!id,
-  });
-
-  const abonoMutation = useMutation({
-    mutationFn: async () => {
-      if (!id) throw new Error("Sin operador.");
-      const m = Number(abonoMonto);
-      if (!Number.isFinite(m) || m <= 0) throw new Error("Monto inválido.");
-      await insertAbonoSaldo(id, m, abonoConcepto || null);
-    },
-    onSuccess: () => {
-      setAbonoMonto("");
-      setAbonoConcepto("");
-      refetchSaldos();
-      refetchMovs();
-      queryClient.invalidateQueries({ queryKey: ["operador_saldos"] });
-    },
   });
 
   // Save mutation
@@ -811,40 +791,10 @@ export default function OperadorForm({ id }: Props) {
                 <span className="saldo-mini-card__hint">Suma de faltantes en ventas del operador</span>
               </div>
             </div>
-
-            <div className="form-group-title">Registrar abono a favor</div>
-            <div className="venta-abono-en-venta-inner" style={{ marginBottom: "1.5rem" }}>
-              <input
-                type="number"
-                min={0}
-                step={0.01}
-                className="venta-abono-monto"
-                placeholder="Monto"
-                value={abonoMonto}
-                onFocus={(e) => e.target.select()}
-                onChange={(e) => setAbonoMonto(e.target.value)}
-              />
-              <input
-                type="text"
-                className="venta-abono-concepto"
-                placeholder="Concepto (opcional)"
-                value={abonoConcepto}
-                onChange={(e) => setAbonoConcepto(e.target.value)}
-              />
-              <button
-                type="button"
-                className="btn-primary"
-                disabled={abonoMutation.isPending}
-                onClick={() => abonoMutation.mutate()}
-              >
-                {abonoMutation.isPending ? "Guardando…" : "Registrar abono"}
-              </button>
-            </div>
-            {abonoMutation.isError && (
-              <p className="field-hint" style={{ color: "#b91c1c", marginBottom: "1rem" }}>
-                {(abonoMutation.error as Error).message}
-              </p>
-            )}
+            <p className="field-hint" style={{ marginBottom: "1.25rem" }}>
+              Los abonos a favor se registran desde <strong>Ventas</strong> al editar o crear una venta del
+              operador, para vincularlos al ticket.
+            </p>
 
             <div className="form-group-title">Historial de movimientos</div>
             <div className="table-wrapper">

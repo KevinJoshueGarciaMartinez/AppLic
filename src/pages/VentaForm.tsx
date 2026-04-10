@@ -1005,13 +1005,15 @@ export default function VentaForm({ id }: Props) {
                 Liquida primero los faltantes pendientes.
               </div>
             )}
-            {form.operador_id != null && !isNew && (
+            {form.operador_id != null && (
               <div className="venta-abono-en-venta" style={{ marginTop: "12px" }}>
                 <div className="form-group-title" style={{ marginBottom: "6px" }}>
                   Abonar a favor
                 </div>
                 <p className="field-hint" style={{ marginBottom: "8px" }}>
-                  Queda registrado en este ticket y en el saldo del operador.
+                  {isNew
+                    ? "Primero guarda la venta; después podrás registrar el abono vinculado a este ticket."
+                    : "Queda registrado en este ticket y en el saldo del operador."}
                 </p>
                 <div className="venta-abono-en-venta-inner">
                   <input
@@ -1023,6 +1025,7 @@ export default function VentaForm({ id }: Props) {
                     value={abonoMonto}
                     onFocus={(e) => e.target.select()}
                     onChange={(e) => setAbonoMonto(e.target.value)}
+                    disabled={isNew}
                   />
                   <input
                     type="text"
@@ -1030,11 +1033,12 @@ export default function VentaForm({ id }: Props) {
                     placeholder="Concepto (opcional)"
                     value={abonoConcepto}
                     onChange={(e) => setAbonoConcepto(e.target.value)}
+                    disabled={isNew}
                   />
                   <button
                     type="button"
                     className="btn-secondary"
-                    disabled={abonoMutation.isPending || esCancelado}
+                    disabled={abonoMutation.isPending || esCancelado || isNew}
                     onClick={() => abonoMutation.mutate()}
                   >
                     {abonoMutation.isPending ? "Guardando…" : "Registrar abono"}
