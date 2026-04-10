@@ -12,6 +12,14 @@ import type { Venta, VentaInsert, VentaItem, Servicio, Promotor, Operador } from
 
 const EPSILON_DEUDA = 0.005;
 
+/** `catalogo_servicios_costos.id_servicio` para IVA (línea de desglose; importe lo define el usuario). */
+const ID_SERVICIO_IVA = 57;
+
+function esLineaIva(item: VentaItem): boolean {
+  if (item.id_servicio === ID_SERVICIO_IVA) return true;
+  return item.servicio?.trim().toUpperCase() === "IVA";
+}
+
 // ── Fetchers ──────────────────────────────────────────────────────────────────
 
 async function fetchVenta(id: number): Promise<Venta> {
@@ -402,6 +410,17 @@ export default function VentaForm({ id }: Props) {
           : item,
       ),
     );
+  }
+
+  function updateItemCostoIva(idx: number, valueStr: string) {
+    setItems((prev) => {
+      const cur = prev[idx];
+      if (!cur || !esLineaIva(cur)) return prev;
+      const parsed = Number(valueStr.replace(",", "."));
+      const costo =
+        Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed * 100) / 100 : 0;
+      return prev.map((item, i) => (i === idx ? { ...item, costo } : item));
+    });
   }
 
   // ── Mutation ─────────────────────────────────────────────────────────────
@@ -837,7 +856,23 @@ export default function VentaForm({ id }: Props) {
                               ))}
                             </select>
                           </td>
-                          <td className="col-monto">{fmt(item.costo)}</td>
+                          <td className="col-monto">
+                            {esLineaIva(item) ? (
+                              <input
+                                type="number"
+                                className="ticket-line-importe-iva"
+                                min={0}
+                                step={0.01}
+                                value={item.costo}
+                                onFocus={(e) => e.target.select()}
+                                onChange={(e) => updateItemCostoIva(idx, e.target.value)}
+                                title="Importe de IVA (lo ingresa el usuario)"
+                                aria-label={`Importe IVA, ${item.servicio}`}
+                              />
+                            ) : (
+                              fmt(item.costo)
+                            )}
+                          </td>
                           <td className="col-acc">
                             <button
                               type="button"

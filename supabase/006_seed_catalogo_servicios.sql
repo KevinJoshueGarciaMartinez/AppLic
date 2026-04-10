@@ -2,6 +2,7 @@
 -- Fuente: exportación Access 26/03/2026 (54 registros)
 -- Columnas: id_servicio, orden, servicio, tipo_servicio, costo_base, precio_3, precio_4
 -- precio_5 a precio_17 se agregan con 0 donde no estaban en el reporte.
+-- Si la DB no tiene precio_3/precio_4 (tabla distinta a 001), ejecuta antes 018_catalogo_add_precio_columns.sql.
 
 INSERT INTO public.catalogo_servicios_costos
   (id_servicio, orden, servicio, tipo_servicio, costo_base,
@@ -10,16 +11,16 @@ INSERT INTO public.catalogo_servicios_costos
    precio_15, precio_16, precio_17)
 VALUES
 -- ── Médicos / licencias ────────────────────────────────────────
-(46,  1,  'Medico en mano',              1, 4000.00, 3800.00, 3800.00, 3800.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.00),
+(46,  1,  'Medico MNP',                  1, 13500.00, 13500.00, 13500.00, 13500.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.00),
 (29,  1,  'Paquete medico',              1,  700.00,  550.00,  550.00,  550.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
 (48,  1,  'Medicos terceros',            3, 4000.00, 3800.00, 3800.00, 3800.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.00),
-(47,  2,  'Licencia Digital',            1,  550.00,  500.00,  500.00,  500.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.00),
+(47,  2,  'Licencia Digital',            1,  550.00,  550.00,  550.00,  550.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.00),
 -- ── Citas / trámites ──────────────────────────────────────────
 ( 1,  7,  'Cita',                        1,  200.00,  170.00,  170.00,  170.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.00),
 (37,  8,  'Cita urgente',                1,  350.00,  300.00,  300.00,  300.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
 (30,  9,  'Tramite ventanilla unica',    1,  200.00,  170.00,  170.00,  170.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.00),
-(31, 10,  'Adicion',                     1,  200.00,  200.00,  200.00,  200.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.00),
-( 2, 11,  'Prechequeo medico',           1,  300.00,  270.00,  270.00,  270.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.00),
+(31, 10,  'Adicion categoria',           1,  200.00,  200.00,  200.00,  200.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.00),
+( 2, 11,  'Prechequeo',                  1, 1000.00, 1000.00, 1000.00, 1000.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.00),
 ( 3, 12,  'Doping',                      1,  250.00,  220.00,  220.00,  220.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
 ( 4, 13,  'Acta extravio',              1,   50.00,   40.00,   40.00,   40.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.00),
 ( 5, 14,  'Traslado sencillo',           1,  200.00,  180.00,  180.00,  180.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
@@ -51,8 +52,8 @@ VALUES
 (26, 35,  'R E TSR-TSS',                 2, 1000.00,  700.00, 1000.00,  700.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
 (56, 36,  'Renovacion Alternativo',      2, 1000.00,  700.00,  700.00,  700.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
 -- ── Liquidaciones ─────────────────────────────────────────────
-(49, 37,  'Liquidacion terceros',        3,    0.00,    0.00,    0.00,    0.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.00),
-(27, 37,  'Liquidacion servicios',       1,    0.00,    0.00,    0.00,    0.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.00),
+(49, 37,  'Liquidacion medico tercero',  3, 12500.00, 12500.00, 12500.00, 12500.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.00),
+(27, 37,  'Liquidacion medico SICT',     1, 3700.00, 3700.00, 3700.00, 3700.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.00),
 (28, 37,  'Liquidacion cursos',          2,    0.00,    0.00,    0.00,    0.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.00),
 (57, 37,  'IVA',                         1,    0.00,    0.00,    0.00,    0.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
 -- ── Egresos ───────────────────────────────────────────────────
@@ -69,9 +70,22 @@ VALUES
 (36, 46,  'Paquete renovacion y adici',  1, 1300.00, 1250.00, 1250.00, 1250.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
 (35, 46,  'Paquete adicion',             1,  800.00,  750.00,  750.00,  750.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
 (34, 46,  'Paquete duplicado',           1, 1100.00, 1050.00, 1050.00, 1050.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-(45, 46,  'Paquete Internacionalizacion',1, 2000.00, 1800.00, 1800.00, 1800.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.00),
+(45, 46,  'Internacional',               1, 2000.00, 2000.00, 2000.00, 2000.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.00),
 (33, 46,  'Paquete obtencion',           1, 1300.00, 1250.00, 1250.00, 1250.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-(32, 46,  'Paquete renovacion',          1, 1100.00, 1050.00, 1050.00, 1050.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+(32, 46,  'Paquete renovacion',          1, 1100.00, 1050.00, 1050.00, 1050.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+-- Lista precios 2026 (com_1 en migración 017)
+(58, 200, 'Cursos renovaciones',         2, 1200.00, 1200.00, 1200.00, 1200.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+(59, 201, 'Curso nuevo ingreso A',       2, 2100.00, 2100.00, 2100.00, 2100.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+(60, 202, 'Curso nuevo ingreso B',       2, 1700.00, 1700.00, 1700.00, 1700.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+(61, 203, 'Curso nuevo ingreso D',       2, 2100.00, 2100.00, 2100.00, 2100.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+(62, 204, 'Curso nuevo ingreso E full',  2, 1900.00, 1900.00, 1900.00, 1900.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+(63, 205, 'Curso nuevo ingreso E materiales', 2, 1700.00, 1700.00, 1700.00, 1700.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+(64, 206, 'Curso nuevo ingreso F',       2, 2100.00, 2100.00, 2100.00, 2100.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+(65, 207, 'Recuperacion de contraseña',  1,  200.00,  200.00,  200.00,  200.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+(66, 208, 'Cartas psiquiatria',          1, 6000.00, 6000.00, 6000.00, 6000.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+(67, 37,  'Liquidacion medico MNP',      1, 12500.00, 12500.00, 12500.00, 12500.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+(68, 1,  'Medico MNP nuevo ingreso',    1, 17000.00, 17000.00, 17000.00, 17000.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+(69, 37,  'Liquidacion medico MNP nuevo ingreso', 1, 16000.00, 16000.00, 16000.00, 16000.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 ON CONFLICT (id_servicio) DO UPDATE SET
   orden          = EXCLUDED.orden,
   servicio       = EXCLUDED.servicio,
@@ -80,4 +94,16 @@ ON CONFLICT (id_servicio) DO UPDATE SET
   precio_3       = EXCLUDED.precio_3,
   precio_4       = EXCLUDED.precio_4,
   precio_5       = EXCLUDED.precio_5,
+  precio_6       = EXCLUDED.precio_6,
+  precio_7       = EXCLUDED.precio_7,
+  precio_8       = EXCLUDED.precio_8,
+  precio_9       = EXCLUDED.precio_9,
+  precio_10      = EXCLUDED.precio_10,
+  precio_11      = EXCLUDED.precio_11,
+  precio_12      = EXCLUDED.precio_12,
+  precio_13      = EXCLUDED.precio_13,
+  precio_14      = EXCLUDED.precio_14,
+  precio_15      = EXCLUDED.precio_15,
+  precio_16      = EXCLUDED.precio_16,
+  precio_17      = EXCLUDED.precio_17,
   updated_at     = now();
