@@ -57,14 +57,6 @@ const MEDIOS_SOLICITUD = [
 
 const FORMAS_COBRO = ["Efectivo", "Transferencia", "Tarjeta", "Depósito"];
 
-const ANTIGUEDADES = [
-  "Menos de 1 año",
-  "1-2 años",
-  "2-5 años",
-  "5-10 años",
-  "Más de 10 años",
-];
-
 // ── default empty form ────────────────────────────────────────────────────────
 function emptyForm(): OperadorInsert {
   return {
@@ -391,19 +383,13 @@ export default function OperadorForm({ id }: Props) {
               </div>
               <div className="form-field">
                 <label>Antigüedad necesaria</label>
-                <select
+                <input
+                  type="date"
                   value={form.antiguedad_necesaria ?? ""}
                   onChange={(e) =>
                     set("antiguedad_necesaria", e.target.value || null)
                   }
-                >
-                  <option value="">— Seleccionar —</option>
-                  {ANTIGUEDADES.map((a) => (
-                    <option key={a} value={a}>
-                      {a}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
             </div>
 
