@@ -900,12 +900,7 @@ export default function VentaForm({ id }: Props) {
         }
       }
 
-      if (form.cobro > totalItems + EPSILON_DEUDA) {
-        alert(
-          "No se permite sobrepago desde esta ventana. Ajusta el total cobrado al total del ticket.",
-        );
-        return;
-      }
+      // Se permite capturar cobro mayor al total (cambio). El ticket siempre se registra por su total.
     }
 
     mutation.mutate({ payload: form, aplicarSaldo });
@@ -1359,8 +1354,8 @@ export default function VentaForm({ id }: Props) {
                       required
                     />
                     <span className="field-hint">
-                      Incluye todo lo que cubre el ticket. Si el monto supera el total de servicios, el
-                      exceso se registra como saldo a favor vinculado a este ticket.
+                      Incluye lo recibido del cliente. Si excede el total de servicios, se toma como
+                      cambio y no genera saldo a favor desde esta ventana.
                     </span>
                   </>
                 )}
