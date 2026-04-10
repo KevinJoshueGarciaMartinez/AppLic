@@ -92,25 +92,36 @@ export async function registrarLiquidacion(params: LiquidacionParams): Promise<v
   if (monto <= 0) throw new Error("El monto debe ser mayor a cero.");
   if (!ventaId && !ticketId) throw new Error("Se requiere venta_id o ticket_id.");
 
-  // ── 1. Obtener filas afectadas y sus faltantes actuales ──────────────────
-  let filas: { id: number; costo: number; cobro: number; faltante: number }[] = [];
+  // ── 1. Obtener filas afectadas y sus valores actuales ───────────────────
+  type FilaVenta = {
+    id: number;
+    costo: number;
+    cobro: number;
+    faltante: number;
+    pago_efectivo: number;
+    pago_deposito: number;
+    pago_saldo_operador: number;
+  };
+  let filas: FilaVenta[] = [];
+
+  const SELECT_COLS = "id, costo, cobro, faltante, pago_efectivo, pago_deposito, pago_saldo_operador";
 
   if (ticketId) {
     const { data, error } = await supabase
       .from("ventas")
-      .select("id, costo, cobro, faltante")
+      .select(SELECT_COLS)
       .eq("ticket_id", ticketId)
       .order("id", { ascending: true });
     if (error) throw new Error(error.message);
-    filas = (data ?? []) as typeof filas;
+    filas = (data ?? []) as FilaVenta[];
   } else {
     const { data, error } = await supabase
       .from("ventas")
-      .select("id, costo, cobro, faltante")
+      .select(SELECT_COLS)
       .eq("id", ventaId!)
       .single();
     if (error) throw new Error(error.message);
-    filas = [data as (typeof filas)[0]];
+    filas = [data as FilaVenta];
   }
 
   const totalFaltante = round2(filas.reduce((s, f) => s + Number(f.faltante ?? 0), 0));
@@ -124,17 +135,25 @@ export async function registrarLiquidacion(params: LiquidacionParams): Promise<v
   const faltantes = filas.map((f) => Number(f.faltante ?? 0));
   const deltas = distribuirEnFaltantes(faltantes, monto);
 
-  // ── 3. Actualizar cobro de cada fila ─────────────────────────────────────
+  // ── 3. Actualizar cobro y desglose acumulado en cada fila ───────────────
+  // Los campos pago_efectivo/deposito/saldo_operador en ventas representan
+  // el TOTAL acumulado de todos los pagos (inicial + liquidaciones).
+  // Para tickets, todas las filas comparten el mismo desglose (nivel ticket),
+  // por lo que reciben el mismo delta de desglose.
   for (let i = 0; i < filas.length; i++) {
     const delta = deltas[i] ?? 0;
-    if (delta <= 0) continue;
     const fila = filas[i]!;
-    const nuevoCobro = round2(Number(fila.cobro) + delta);
+    if (delta <= 0 && pagoEfectivo === 0 && pagoDeposito === 0 && pagoSaldo === 0) continue;
     const { error } = await supabase
       .from("ventas")
-      .update({ cobro: nuevoCobro })
+      .update({
+        cobro:               round2(Number(fila.cobro) + delta),
+        pago_efectivo:       round2(Number(fila.pago_efectivo       ?? 0) + pagoEfectivo),
+        pago_deposito:       round2(Number(fila.pago_deposito       ?? 0) + pagoDeposito),
+        pago_saldo_operador: round2(Number(fila.pago_saldo_operador ?? 0) + pagoSaldo),
+      })
       .eq("id", fila.id);
-    if (error) throw new Error(`Error actualizando cobro de venta ${fila.id}: ${error.message}`);
+    if (error) throw new Error(`Error actualizando venta ${fila.id}: ${error.message}`);
   }
 
   // ── 4. Insertar registro en ventas_pagos ─────────────────────────────────
