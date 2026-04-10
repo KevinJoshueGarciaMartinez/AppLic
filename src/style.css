@@ -751,6 +751,7 @@ body {
 }
 
 .badge--gray   { background: #f1f5f9; color: #475569; }
+.badge--amber  { background: #ffedd5; color: #c2410c; }
 .badge--blue   { background: #dbeafe; color: #1d4ed8; }
 .badge--green  { background: #dcfce7; color: #166534; }
 .badge--yellow { background: #fef9c3; color: #92400e; }
@@ -962,6 +963,29 @@ body {
   border: 1px solid var(--border, #c4c9d4);
   border-radius: 6px;
   background: var(--surface, #fff);
+}
+
+.venta-pago-dividido {
+  display: grid;
+  gap: 0.65rem;
+  margin-bottom: 0.5rem;
+}
+
+@media (min-width: 520px) {
+  .venta-pago-dividido {
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items: end;
+  }
+}
+
+.venta-total-cobro-readonly {
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border, #c4c9d4);
+  border-radius: 8px;
+  background: var(--surface-muted, #f4f6f9);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .ticket-desglose-table .col-monto {

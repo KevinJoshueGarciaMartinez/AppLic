@@ -370,7 +370,15 @@ export default function PeticionCursos() {
                         {fmt(c.faltante ?? 0)}
                       </td>
                       <td>
-                        <span className={`badge ${c.forma_pago === "Efectivo" ? "badge--gray" : "badge--blue"}`}>
+                        <span
+                          className={`badge ${
+                            c.forma_pago === "Efectivo"
+                              ? "badge--gray"
+                              : c.forma_pago === "Dividida"
+                                ? "badge--amber"
+                                : "badge--blue"
+                          }`}
+                        >
                           {c.forma_pago}
                         </span>
                       </td>

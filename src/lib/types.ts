@@ -149,7 +149,11 @@ export interface Venta {
   egreso: number;
   total_cobrado: number; // generated
 
-  forma_pago: "Efectivo" | "Deposito";
+  forma_pago: "Efectivo" | "Deposito" | "Dividida";
+  /** Desglose cuando forma_pago = Dividida (mismo valor en todas las filas del ticket). */
+  pago_efectivo: number;
+  pago_deposito: number;
+  pago_saldo_operador: number;
   numero_referencia: string | null;
 
   observaciones: string | null;
