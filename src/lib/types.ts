@@ -93,6 +93,8 @@ export interface Operador {
   proxima_llamada: string | null;
   estatus_seguimiento: string | null;
   notas_seguimiento: string | null;
+  /** Asesor comercial (seguimiento). */
+  asesor: string | null;
 
   created_at: string;
   updated_at: string;

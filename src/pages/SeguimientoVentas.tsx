@@ -13,10 +13,13 @@ const MEDIOS_CAPTACION = [
   "Otro",
 ] as const;
 
-const ESTATUS_SEGUIMIENTO = [
+const ESTATUS_SEGUIMIENTO_OPCIONES = [
   "Interesado",
   "Seguimiento",
   "Visita",
+  "Agendado",
+  "En espera de documentos",
+  "Pagado pero sin documentos",
   "Cerrada",
 ] as const;
 
@@ -32,6 +35,9 @@ type FilaSeguimiento = Pick<
   | "proxima_llamada"
   | "estatus_seguimiento"
   | "notas_seguimiento"
+  | "asesor"
+  | "num_exp_med_preventiva"
+  | "tramite_a_realizar"
 > & {
   promotores?: { nombre: string | null } | null;
 };
@@ -40,7 +46,7 @@ async function fetchProspectos(): Promise<FilaSeguimiento[]> {
   const { data, error } = await supabase
     .from("operadores")
     .select(
-      "numero_consecutivo, nombre, apellido_paterno, apellido_materno, telefono_1, medio_captacion, fecha_captacion, proxima_llamada, estatus_seguimiento, notas_seguimiento, promotores(nombre)",
+      "numero_consecutivo, nombre, apellido_paterno, apellido_materno, telefono_1, medio_captacion, fecha_captacion, proxima_llamada, estatus_seguimiento, notas_seguimiento, asesor, num_exp_med_preventiva, tramite_a_realizar, promotores(nombre)",
     )
     .eq("es_prospecto", true)
     .order("proxima_llamada", { ascending: true });
@@ -59,19 +65,18 @@ function hoyISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function badgeClassEstatus(s: string | null) {
-  switch (s) {
-    case "Interesado":
-      return "badge badge--blue";
-    case "Seguimiento":
-      return "badge badge--amber";
-    case "Visita":
-      return "badge badge--yellow";
-    case "Cerrada":
-      return "badge badge--gray";
-    default:
-      return "badge badge--gray";
+function truncar(s: string | null, max: number) {
+  if (!s) return "—";
+  const t = s.trim();
+  if (!t) return "—";
+  return t.length > max ? `${t.slice(0, max)}…` : t;
+}
+
+function estatusParaSelect(s: string | null): string {
+  if (s && (ESTATUS_SEGUIMIENTO_OPCIONES as readonly string[]).includes(s)) {
+    return s;
   }
+  return "Interesado";
 }
 
 /** Base para insert de prospecto (resto de columnas con valores por defecto). */
@@ -142,6 +147,7 @@ function baseProspectoInsert(): OperadorInsert {
     proxima_llamada: null,
     estatus_seguimiento: null,
     notas_seguimiento: null,
+    asesor: null,
   };
 }
 
@@ -155,6 +161,9 @@ type ModalProspecto = {
   proxima_llamada: string;
   estatus_seguimiento: string;
   notas: string;
+  asesor: string;
+  num_exp_med_preventiva: string;
+  tramite_a_realizar: string;
 };
 
 function emptyModalProspecto(): ModalProspecto {
@@ -169,6 +178,9 @@ function emptyModalProspecto(): ModalProspecto {
     proxima_llamada: hoy,
     estatus_seguimiento: "Interesado",
     notas: "",
+    asesor: "",
+    num_exp_med_preventiva: "",
+    tramite_a_realizar: "",
   };
 }
 
@@ -185,8 +197,17 @@ function modalToInsert(m: ModalProspecto): OperadorInsert {
     proxima_llamada: m.proxima_llamada.trim(),
     estatus_seguimiento: m.estatus_seguimiento || "Interesado",
     notas_seguimiento: m.notas.trim() || null,
+    asesor: m.asesor.trim() || null,
+    num_exp_med_preventiva: m.num_exp_med_preventiva.trim() || null,
+    tramite_a_realizar: m.tramite_a_realizar.trim() || null,
   };
 }
+
+type NotasModalState = {
+  id: number;
+  nombre: string;
+  texto: string;
+};
 
 export default function SeguimientoVentas() {
   const queryClient = useQueryClient();
@@ -195,6 +216,7 @@ export default function SeguimientoVentas() {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [modalForm, setModalForm] = useState<ModalProspecto>(emptyModalProspecto);
   const [modalError, setModalError] = useState<string | null>(null);
+  const [notasModal, setNotasModal] = useState<NotasModalState | null>(null);
 
   const { data = [], isLoading, isError, error } = useQuery({
     queryKey: ["seguimiento_operadores"],
@@ -217,14 +239,47 @@ export default function SeguimientoVentas() {
     },
   });
 
+  const patchEstatusMutation = useMutation({
+    mutationFn: async (p: { id: number; estatus: string | null }) => {
+      const { error: err } = await supabase
+        .from("operadores")
+        .update({ estatus_seguimiento: p.estatus })
+        .eq("numero_consecutivo", p.id);
+      if (err) throw new Error(err.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["seguimiento_operadores"] });
+      queryClient.invalidateQueries({ queryKey: ["operadores"] });
+    },
+  });
+
+  const patchNotasMutation = useMutation({
+    mutationFn: async (p: { id: number; texto: string | null }) => {
+      const { error: err } = await supabase
+        .from("operadores")
+        .update({ notas_seguimiento: p.texto })
+        .eq("numero_consecutivo", p.id);
+      if (err) throw new Error(err.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["seguimiento_operadores"] });
+      queryClient.invalidateQueries({ queryKey: ["operadores"] });
+      setNotasModal(null);
+    },
+  });
+
+  const overlayAbierto = modalAbierto || notasModal != null;
+
   useEffect(() => {
-    if (!modalAbierto) return;
+    if (!overlayAbierto) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setModalAbierto(false);
+      if (e.key !== "Escape") return;
+      if (notasModal && !patchNotasMutation.isPending) setNotasModal(null);
+      else if (modalAbierto && !insertMutation.isPending) setModalAbierto(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [modalAbierto]);
+  }, [overlayAbierto, notasModal, modalAbierto, insertMutation.isPending, patchNotasMutation.isPending]);
 
   function abrirModal() {
     insertMutation.reset();
@@ -282,8 +337,8 @@ export default function SeguimientoVentas() {
           </h1>
           <p className="page-subtitle">
             Prospectos registrados como operadores ligeros. Orden por próxima
-            llamada (vencidas primero). Al formalizar, completa CURP en el
-            expediente y desmarca «Prospecto».
+            llamada (vencidas primero). Cambia estatus y notas desde la tabla.
+            Al formalizar, completa CURP en el expediente y desmarca «Prospecto».
           </p>
         </div>
         <button className="btn-primary" type="button" onClick={abrirModal}>
@@ -367,6 +422,38 @@ export default function SeguimientoVentas() {
                   />
                 </div>
                 <div className="form-field">
+                  <label>Asesor</label>
+                  <input
+                    type="text"
+                    value={modalForm.asesor}
+                    onChange={(e) => setModal("asesor", e.target.value)}
+                    maxLength={120}
+                  />
+                </div>
+                <div className="form-field">
+                  <label>Núm. medicina preventiva</label>
+                  <input
+                    type="text"
+                    value={modalForm.num_exp_med_preventiva}
+                    onChange={(e) =>
+                      setModal("num_exp_med_preventiva", e.target.value)
+                    }
+                    maxLength={80}
+                  />
+                </div>
+                <div className="form-field form-field-full">
+                  <label>Trámite</label>
+                  <input
+                    type="text"
+                    value={modalForm.tramite_a_realizar}
+                    onChange={(e) =>
+                      setModal("tramite_a_realizar", e.target.value)
+                    }
+                    maxLength={200}
+                    placeholder="Trámite a realizar"
+                  />
+                </div>
+                <div className="form-field">
                   <label>Medio de captación</label>
                   <select
                     value={modalForm.medio_captacion}
@@ -409,7 +496,7 @@ export default function SeguimientoVentas() {
                       setModal("estatus_seguimiento", e.target.value)
                     }
                   >
-                    {ESTATUS_SEGUIMIENTO.map((s) => (
+                    {ESTATUS_SEGUIMIENTO_OPCIONES.map((s) => (
                       <option key={s} value={s}>
                         {s}
                       </option>
@@ -461,6 +548,79 @@ export default function SeguimientoVentas() {
         </div>
       )}
 
+      {notasModal && (
+        <div
+          className="modal-overlay"
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !patchNotasMutation.isPending) {
+              setNotasModal(null);
+            }
+          }}
+        >
+          <div
+            className="modal-card modal-card--lg"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-notas-titulo"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="modal-close"
+              aria-label="Cerrar"
+              disabled={patchNotasMutation.isPending}
+              onClick={() => setNotasModal(null)}
+            >
+              ×
+            </button>
+            <h2 id="modal-notas-titulo" className="modal-title modal-title--info">
+              Notas de seguimiento
+            </h2>
+            <p className="modal-desc">
+              <strong>#{notasModal.id}</strong> — {notasModal.nombre}
+            </p>
+            <textarea
+              className="modal-textarea"
+              style={{ marginTop: "12px", minHeight: "140px" }}
+              value={notasModal.texto}
+              onChange={(e) =>
+                setNotasModal((m) => (m ? { ...m, texto: e.target.value } : m))
+              }
+              placeholder="Escribe o edita las notas…"
+            />
+            {patchNotasMutation.isError && (
+              <div className="alert-error" style={{ marginTop: "12px" }}>
+                {(patchNotasMutation.error as Error).message}
+              </div>
+            )}
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={patchNotasMutation.isPending}
+                onClick={() => setNotasModal(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={patchNotasMutation.isPending}
+                onClick={() =>
+                  patchNotasMutation.mutate({
+                    id: notasModal.id,
+                    texto: notasModal.texto.trim() || null,
+                  })
+                }
+              >
+                {patchNotasMutation.isPending ? "Guardando…" : "Guardar notas"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="toolbar" style={{ flexWrap: "wrap", gap: "0.75rem" }}>
         <label className="checkbox-label" style={{ margin: 0 }}>
           <input
@@ -504,9 +664,16 @@ export default function SeguimientoVentas() {
         </div>
       )}
 
+      {patchEstatusMutation.isError && (
+        <div className="alert-error">
+          No se pudo actualizar el estatus:{" "}
+          {(patchEstatusMutation.error as Error).message}
+        </div>
+      )}
+
       {!isLoading && !isError && (
-        <div className="table-wrapper">
-          <table className="data-table">
+        <div className="table-wrapper table-wrapper--wide">
+          <table className="data-table data-table--seguimiento">
             <thead>
               <tr>
                 <th>#</th>
@@ -515,6 +682,9 @@ export default function SeguimientoVentas() {
                 <th>Captación</th>
                 <th>Fecha captación</th>
                 <th>Próx. llamada</th>
+                <th>Asesor</th>
+                <th>Med. prev.</th>
+                <th>Trámite</th>
                 <th>Estatus</th>
                 <th>Notas</th>
                 <th></th>
@@ -523,7 +693,7 @@ export default function SeguimientoVentas() {
             <tbody>
               {filas.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="table-empty">
+                  <td colSpan={12} className="table-empty">
                     No hay prospectos con estos filtros.
                   </td>
                 </tr>
@@ -533,6 +703,7 @@ export default function SeguimientoVentas() {
                     op.proxima_llamada != null &&
                     op.proxima_llamada < hoy &&
                     op.estatus_seguimiento !== "Cerrada";
+                  const estatusVal = estatusParaSelect(op.estatus_seguimiento);
                   return (
                     <tr
                       key={op.numero_consecutivo}
@@ -552,23 +723,53 @@ export default function SeguimientoVentas() {
                       </td>
                       <td className="col-fecha">{op.fecha_captacion ?? "—"}</td>
                       <td className="col-fecha">{op.proxima_llamada ?? "—"}</td>
-                      <td>
-                        <span className={badgeClassEstatus(op.estatus_seguimiento)}>
-                          {op.estatus_seguimiento ?? "—"}
-                        </span>
+                      <td>{truncar(op.asesor, 24)}</td>
+                      <td className="col-mono">{truncar(op.num_exp_med_preventiva, 16)}</td>
+                      <td style={{ maxWidth: "10rem", fontSize: "0.85rem" }}>
+                        {truncar(op.tramite_a_realizar, 40)}
                       </td>
-                      <td
-                        style={{
-                          maxWidth: "14rem",
-                          fontSize: "0.85rem",
-                          color: "#64748b",
-                        }}
-                      >
-                        {op.notas_seguimiento
-                          ? op.notas_seguimiento.length > 80
-                            ? `${op.notas_seguimiento.slice(0, 80)}…`
-                            : op.notas_seguimiento
-                          : "—"}
+                      <td>
+                        <select
+                          className="table-select-estatus"
+                          aria-label={`Estatus de ${nombreCompleto(op)}`}
+                          value={estatusVal}
+                          disabled={patchEstatusMutation.isPending}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            patchEstatusMutation.mutate({
+                              id: op.numero_consecutivo,
+                              estatus: v,
+                            });
+                          }}
+                        >
+                          {ESTATUS_SEGUIMIENTO_OPCIONES.map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
+                        <div className="seguimiento-notas-cell">
+                          <span className="seguimiento-notas-preview">
+                            {truncar(op.notas_seguimiento, 48)}
+                          </span>
+                          <button
+                            type="button"
+                            className="btn-link"
+                            onClick={() =>
+                              setNotasModal({
+                                id: op.numero_consecutivo,
+                                nombre: nombreCompleto(op),
+                                texto: op.notas_seguimiento ?? "",
+                              })
+                            }
+                          >
+                            {op.notas_seguimiento?.trim()
+                              ? "Editar notas"
+                              : "Agregar notas"}
+                          </button>
+                        </div>
                       </td>
                       <td>
                         <Link

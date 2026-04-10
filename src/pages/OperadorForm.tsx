@@ -68,6 +68,9 @@ const ESTATUS_SEGUIMIENTO = [
   "Interesado",
   "Seguimiento",
   "Visita",
+  "Agendado",
+  "En espera de documentos",
+  "Pagado pero sin documentos",
   "Cerrada",
 ] as const;
 
@@ -139,6 +142,7 @@ function emptyForm(): OperadorInsert {
     proxima_llamada: null,
     estatus_seguimiento: null,
     notas_seguimiento: null,
+    asesor: null,
   };
 }
 
@@ -274,6 +278,7 @@ export default function OperadorForm({ id }: Props) {
         : (form.curp ?? "").trim().toUpperCase(),
       medio_captacion: form.medio_captacion?.trim() || null,
       notas_seguimiento: form.notas_seguimiento?.trim() || null,
+      asesor: form.asesor?.trim() || null,
     };
     mutation.mutate(payload);
   }
@@ -430,6 +435,16 @@ export default function OperadorForm({ id }: Props) {
                 }
                 rows={2}
                 placeholder="Recordatorios para la próxima llamada…"
+              />
+            </div>
+            <div className="form-field form-field-full">
+              <label>Asesor</label>
+              <input
+                type="text"
+                value={form.asesor ?? ""}
+                onChange={(e) => set("asesor", e.target.value || null)}
+                maxLength={120}
+                placeholder="Quién da seguimiento al prospecto"
               />
             </div>
 
