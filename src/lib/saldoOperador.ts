@@ -51,6 +51,7 @@ export async function insertAbonoSaldo(
   operadorId: number,
   importe: number,
   concepto: string | null,
+  opts?: { ventaId?: number | null; ticketId?: number | null },
 ): Promise<void> {
   if (importe <= 0) throw new Error("El abono debe ser mayor a cero.");
   const { error } = await supabase.from("operador_saldo_movimientos").insert({
@@ -58,8 +59,31 @@ export async function insertAbonoSaldo(
     tipo: "abono",
     importe,
     concepto: concepto?.trim() || null,
+    venta_id: opts?.ventaId ?? null,
+    ticket_id: opts?.ticketId ?? null,
   });
   if (error) throw new Error(error.message);
+}
+
+/** Movimientos de saldo vinculados a un ticket o venta (abonos, sobrepagos, devoluciones). */
+export async function fetchMovimientosSaldoTicket(
+  ticketId: number | null,
+  ventaId: number | null,
+): Promise<OperadorSaldoMovimientoRow[]> {
+  if (!ticketId && ventaId == null) return [];
+  let q = supabase
+    .from("operador_saldo_movimientos")
+    .select("id, operador_id, tipo, importe, concepto, venta_id, ticket_id, created_at")
+    .in("tipo", ["abono", "devolucion_cancelacion"])
+    .order("created_at", { ascending: true });
+  if (ticketId) {
+    q = q.eq("ticket_id", ticketId);
+  } else {
+    q = q.eq("venta_id", ventaId!);
+  }
+  const { data, error } = await q;
+  if (error) throw new Error(error.message);
+  return (data ?? []) as OperadorSaldoMovimientoRow[];
 }
 
 /** Devuelve saldo a favor al operador al cancelar un ticket (importe positivo = crédito). */

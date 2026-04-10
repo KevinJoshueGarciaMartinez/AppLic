@@ -1,13 +1,15 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 import {
   fetchSaldoFavorWallet,
   fetchSaldoEnContraDeuda,
+  fetchMovimientosSaldoTicket,
   insertAbonoSaldo,
   insertAplicacionSaldoTicket,
   insertDevolucionCancelacion,
+  type OperadorSaldoMovimientoRow,
 } from "../lib/saldoOperador";
 import {
   fetchPagosDeVenta,
@@ -391,18 +393,39 @@ export default function VentaForm({ id }: Props) {
 
   // ── Historial de pagos de esta venta / ticket ─────────────────────────────
   const ticketIdParaPagos = ventaData?.ticket_id ?? null;
-  const pagosQueryKey = ticketIdParaPagos
-    ? (["ventas_pagos_ticket", ticketIdParaPagos] as const)
-    : (["ventas_pagos_venta", id] as const);
+  const historialTicketQueryKey = ["historial_ticket", ticketIdParaPagos, id] as const;
 
-  const { data: historialPagos = [] } = useQuery<VentaPago[]>({
-    queryKey: pagosQueryKey,
-    queryFn: () =>
-      ticketIdParaPagos
-        ? fetchPagosDeTicket(ticketIdParaPagos)
-        : fetchPagosDeVenta(id!),
+  const { data: historialTicketData } = useQuery({
+    queryKey: historialTicketQueryKey,
+    queryFn: async () => {
+      const [pagos, movsSaldo] = await Promise.all([
+        ticketIdParaPagos
+          ? fetchPagosDeTicket(ticketIdParaPagos)
+          : fetchPagosDeVenta(id!),
+        fetchMovimientosSaldoTicket(ticketIdParaPagos, ticketIdParaPagos ? null : id!),
+      ]);
+      return { pagos: pagos as VentaPago[], movsSaldo };
+    },
     enabled: !isNew && id != null,
   });
+
+  const historialPagos = historialTicketData?.pagos ?? [];
+  const movsSaldoTicket: OperadorSaldoMovimientoRow[] = historialTicketData?.movsSaldo ?? [];
+
+  const lineasHistorialTicket = useMemo(() => {
+    type Linea =
+      | { kind: "pago"; ts: string; pago: VentaPago }
+      | { kind: "saldo"; ts: string; mov: OperadorSaldoMovimientoRow };
+    const rows: Linea[] = [];
+    for (const p of historialPagos) {
+      rows.push({ kind: "pago", ts: p.created_at, pago: p });
+    }
+    for (const m of movsSaldoTicket) {
+      rows.push({ kind: "saldo", ts: m.created_at, mov: m });
+    }
+    rows.sort((a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime());
+    return rows;
+  }, [historialPagos, movsSaldoTicket]);
 
   // ── Mutación de liquidación ───────────────────────────────────────────────
   const liqMutation = useMutation({
@@ -451,7 +474,7 @@ export default function VentaForm({ id }: Props) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["venta", id] });
-      queryClient.invalidateQueries({ queryKey: pagosQueryKey });
+      queryClient.invalidateQueries({ queryKey: historialTicketQueryKey });
       queryClient.invalidateQueries({ queryKey: ["ventas"] });
       if (ticketIdParaPagos)
         queryClient.invalidateQueries({ queryKey: ["ticket_items", ticketIdParaPagos] });
@@ -512,7 +535,7 @@ export default function VentaForm({ id }: Props) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["venta", id] });
       queryClient.invalidateQueries({ queryKey: ["ventas"] });
-      queryClient.invalidateQueries({ queryKey: pagosQueryKey });
+      queryClient.invalidateQueries({ queryKey: historialTicketQueryKey });
       queryClient.invalidateQueries({ queryKey: ["operador_saldos", form.operador_id] });
       queryClient.invalidateQueries({ queryKey: ["operador_saldo_movs"] });
       setShowCancelModal(false);
@@ -523,12 +546,18 @@ export default function VentaForm({ id }: Props) {
   const abonoMutation = useMutation({
     mutationFn: async () => {
       if (operadorIdSaldo == null) throw new Error("Selecciona un operador.");
+      if (isNew || id == null) throw new Error("Guarda el ticket primero para registrar abonos vinculados.");
       const m = Number(abonoMonto);
       if (!Number.isFinite(m) || m <= 0) throw new Error("Indica un monto válido mayor a cero.");
-      await insertAbonoSaldo(operadorIdSaldo, m, abonoConcepto || null);
+      await insertAbonoSaldo(operadorIdSaldo, m, abonoConcepto?.trim() || "Abono a favor", {
+        ventaId: ticketIdParaPagos ? null : id,
+        ticketId: ticketIdParaPagos,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["operador_saldos", operadorIdSaldo] });
+      queryClient.invalidateQueries({ queryKey: historialTicketQueryKey });
+      queryClient.invalidateQueries({ queryKey: ["operador_saldo_movs"] });
       setAbonoMonto("");
       setAbonoConcepto("");
     },
@@ -616,11 +645,32 @@ export default function VentaForm({ id }: Props) {
       }
 
       const totalCobro = Math.max(0, Number(payload.cobro ?? 0));
+      const totalItemsCalc = validItems.reduce((s, i) => s + i.costo, 0);
+      const cobroEfectivo = round2(Math.min(totalCobro, totalItemsCalc));
+      const ratioPago =
+        totalCobro > EPSILON_DEUDA ? Math.min(1, cobroEfectivo / totalCobro) : 0;
+      const sobrepagoInicial = round2(Math.max(0, totalCobro - cobroEfectivo));
+
       const costos = validItems.map((i) => i.costo);
-      const cobrosLinea = distribuirCobroEnCascada(costos, totalCobro);
+      const cobrosLinea = distribuirCobroEnCascada(costos, cobroEfectivo);
 
       const isMulti = validItems.length > 1;
       const ticketIdEdit = ventaData?.ticket_id ?? null;
+
+      let peTicket = 0;
+      let pdTicket = 0;
+      let psTicket = 0;
+      if (payload.forma_pago === "Dividida") {
+        peTicket = round2(Number(payload.pago_efectivo ?? 0) * ratioPago);
+        pdTicket = round2(Number(payload.pago_deposito ?? 0) * ratioPago);
+        psTicket = round2(Number(payload.pago_saldo_operador ?? 0) * ratioPago);
+      } else if (payload.forma_pago === "Efectivo") {
+        peTicket = cobroEfectivo;
+      } else if (payload.forma_pago === "Deposito") {
+        pdTicket = cobroEfectivo;
+      } else if (payload.forma_pago === "Saldo") {
+        psTicket = cobroEfectivo;
+      }
 
       if (isNew) {
         let ticketId: number | null = null;
@@ -646,6 +696,9 @@ export default function VentaForm({ id }: Props) {
           cobro: cobrosLinea[idx] ?? 0,
           egreso: idx === 0 ? (payload.egreso ?? 0) : 0,
           observaciones: item.observaciones?.trim() || null,
+          pago_efectivo: peTicket,
+          pago_deposito: pdTicket,
+          pago_saldo_operador: psTicket,
         }));
 
         const { data: inserted, error } = await supabase
@@ -656,35 +709,28 @@ export default function VentaForm({ id }: Props) {
 
         const firstId = (inserted as { id: number }[] | null)?.[0]?.id ?? null;
 
-        // Registrar pago inicial en ventas_pagos (trazabilidad completa)
-        if (totalCobro > EPSILON_DEUDA) {
-          let peInicial = 0;
-          let pdInicial = 0;
-          let psInicial = 0;
-          if (payload.forma_pago === "Dividida") {
-            peInicial = Number(payload.pago_efectivo ?? 0);
-            pdInicial = Number(payload.pago_deposito ?? 0);
-            psInicial = Number(payload.pago_saldo_operador ?? 0);
-          } else if (payload.forma_pago === "Efectivo") {
-            peInicial = totalCobro;
-          } else if (payload.forma_pago === "Deposito") {
-            pdInicial = totalCobro;
-          } else if (payload.forma_pago === "Saldo") {
-            psInicial = totalCobro;
-          }
+        // Registrar pago inicial en ventas_pagos (solo lo que aplica al ticket)
+        if (cobroEfectivo > EPSILON_DEUDA) {
           const { error: pagoErr } = await supabase.from("ventas_pagos").insert({
             venta_id:      ticketId ? null : firstId,
             ticket_id:     ticketId,
             fecha:         payload.fecha ?? new Date().toISOString().slice(0, 10),
-            monto:         totalCobro,
+            monto:         cobroEfectivo,
             forma_pago:    payload.forma_pago,
-            pago_efectivo: peInicial,
-            pago_deposito: pdInicial,
-            pago_saldo:    psInicial,
+            pago_efectivo: peTicket,
+            pago_deposito: pdTicket,
+            pago_saldo:    psTicket,
             referencia:    payload.numero_referencia ?? null,
             concepto:      "Pago inicial",
           });
           if (pagoErr) throw new Error(`Error al registrar pago inicial: ${pagoErr.message}`);
+        }
+
+        if (sobrepagoInicial > EPSILON_DEUDA && operadorId != null) {
+          await insertAbonoSaldo(operadorId, sobrepagoInicial, "Sobrepago (pago inicial)", {
+            ventaId: firstId,
+            ticketId,
+          });
         }
 
         if (aplicarSaldo > EPSILON_DEUDA && operadorId != null) {
@@ -742,6 +788,7 @@ export default function VentaForm({ id }: Props) {
       queryClient.invalidateQueries({ queryKey: ["ventas"] });
       queryClient.invalidateQueries({ queryKey: ["ticket_items"] });
       if (id != null) queryClient.invalidateQueries({ queryKey: ["venta", id] });
+      queryClient.invalidateQueries({ queryKey: historialTicketQueryKey });
       queryClient.invalidateQueries({ queryKey: ["operador_saldos"] });
       queryClient.invalidateQueries({ queryKey: ["operador_saldo_movs"] });
       setGuardado(true);
@@ -829,14 +876,14 @@ export default function VentaForm({ id }: Props) {
       alert("Indica un total cobrado válido.");
       return;
     }
-    if (form.cobro > totalItems) {
-      alert("El cobro no puede ser mayor al total de servicios.");
-      return;
-    }
     if (form.cobro < 0) {
       alert("El cobro no puede ser negativo.");
       return;
     }
+
+    const cobroEfectivoTicket = round2(Math.min(form.cobro, totalItems));
+    const ratioCobro =
+      form.cobro > EPSILON_DEUDA ? Math.min(1, cobroEfectivoTicket / form.cobro) : 0;
 
     let aplicarSaldo = 0;
     if (form.forma_pago === "Dividida") {
@@ -845,22 +892,14 @@ export default function VentaForm({ id }: Props) {
         alert("En pago dividido, el total cobrado debe ser la suma de efectivo, depósito y saldo operador.");
         return;
       }
-      aplicarSaldo = round2(form.pago_saldo_operador);
-      if (aplicarSaldo < -EPSILON_DEUDA) {
-        alert("El saldo operador en el desglose no puede ser negativo.");
-        return;
-      }
-      if (aplicarSaldo > form.cobro + EPSILON_DEUDA) {
-        alert("Saldo operador no puede ser mayor al total cobrado.");
-        return;
-      }
-      if (aplicarSaldo > saldoFavor + EPSILON_DEUDA) {
+      aplicarSaldo = round2(form.pago_saldo_operador * ratioCobro);
+      if (form.pago_saldo_operador > EPSILON_DEUDA && aplicarSaldo > saldoFavor + EPSILON_DEUDA) {
         alert("Saldo a favor insuficiente para el monto indicado en saldo operador.");
         return;
       }
     } else if (form.forma_pago === "Saldo") {
-      aplicarSaldo = form.cobro;
-      if (aplicarSaldo > saldoFavor + EPSILON_DEUDA) {
+      aplicarSaldo = cobroEfectivoTicket;
+      if (form.cobro > EPSILON_DEUDA && aplicarSaldo > saldoFavor + EPSILON_DEUDA) {
         alert(`Saldo a favor insuficiente. Disponible: $${saldoFavor.toFixed(2)}`);
         return;
       }
@@ -966,11 +1005,14 @@ export default function VentaForm({ id }: Props) {
                 Liquida primero los faltantes pendientes.
               </div>
             )}
-            {form.operador_id != null && (
+            {form.operador_id != null && !isNew && (
               <div className="venta-abono-en-venta" style={{ marginTop: "12px" }}>
                 <div className="form-group-title" style={{ marginBottom: "6px" }}>
                   Abonar a favor
                 </div>
+                <p className="field-hint" style={{ marginBottom: "8px" }}>
+                  Queda registrado en este ticket y en el saldo del operador.
+                </p>
                 <div className="venta-abono-en-venta-inner">
                   <input
                     type="number"
@@ -992,7 +1034,7 @@ export default function VentaForm({ id }: Props) {
                   <button
                     type="button"
                     className="btn-secondary"
-                    disabled={abonoMutation.isPending}
+                    disabled={abonoMutation.isPending || esCancelado}
                     onClick={() => abonoMutation.mutate()}
                   >
                     {abonoMutation.isPending ? "Guardando…" : "Registrar abono"}
@@ -1330,7 +1372,6 @@ export default function VentaForm({ id }: Props) {
                     <input
                       type="number"
                       min={0}
-                      max={totalItems}
                       step={0.01}
                       value={form.cobro}
                       onFocus={(e) => e.target.select()}
@@ -1339,7 +1380,8 @@ export default function VentaForm({ id }: Props) {
                       required
                     />
                     <span className="field-hint">
-                      Incluye todo lo que cubre el ticket; indica abajo cuánto proviene del saldo a favor.
+                      Incluye todo lo que cubre el ticket. Si el monto supera el total de servicios, el
+                      exceso se registra como saldo a favor vinculado a este ticket.
                     </span>
                   </>
                 )}
@@ -1365,44 +1407,77 @@ export default function VentaForm({ id }: Props) {
         {!isNew && (
           <div className="liquidacion-section">
 
-            {/* Historial */}
-            {historialPagos.length > 0 && (
+            {/* Historial unificado: pagos + saldo a favor / devoluciones */}
+            {lineasHistorialTicket.length > 0 && (
               <div className="liquidacion-historial">
-                <div className="form-group-title">Historial de pagos</div>
+                <div className="form-group-title">Movimientos del ticket</div>
+                <p className="field-hint" style={{ marginBottom: "10px" }}>
+                  Pagos registrados, abonos a favor, sobrepagos y devoluciones vinculados a este ticket.
+                </p>
                 <table className="data-table liquidacion-table">
                   <thead>
                     <tr>
                       <th>Fecha</th>
-                      <th>Forma de pago</th>
+                      <th>Origen</th>
+                      <th>Detalle</th>
                       <th>Referencia</th>
-                      <th>Concepto</th>
                       <th className="col-money">Monto</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {historialPagos.map((p) => (
-                      <tr key={p.id}>
-                        <td>{p.fecha}</td>
-                        <td>
-                          <span
-                            className={`badge ${
-                              p.forma_pago === "Efectivo"
-                                ? "badge--gray"
-                                : p.forma_pago === "Deposito"
-                                  ? "badge--blue"
-                                  : p.forma_pago === "Saldo"
-                                    ? "badge--green"
-                                    : "badge--amber"
-                            }`}
-                          >
-                            {p.forma_pago}
-                          </span>
-                        </td>
-                        <td>{p.referencia ?? "—"}</td>
-                        <td>{p.concepto ?? "—"}</td>
-                        <td className="col-money col-money--green">{fmt(p.monto)}</td>
-                      </tr>
-                    ))}
+                    {lineasHistorialTicket.map((linea) =>
+                      linea.kind === "pago" ? (
+                        <tr key={`pago-${linea.pago.id}`} className={linea.pago.cancelado ? "fila-cancelada" : ""}>
+                          <td>{linea.pago.fecha}</td>
+                          <td>
+                            <span className="badge badge--blue">Pago</span>
+                            {linea.pago.cancelado && (
+                              <span className="badge badge--cancelado" style={{ marginLeft: "6px" }}>
+                                Anulado
+                              </span>
+                            )}
+                          </td>
+                          <td>
+                            <span
+                              className={`badge ${
+                                linea.pago.forma_pago === "Efectivo"
+                                  ? "badge--gray"
+                                  : linea.pago.forma_pago === "Deposito"
+                                    ? "badge--blue"
+                                    : linea.pago.forma_pago === "Saldo"
+                                      ? "badge--green"
+                                      : "badge--amber"
+                              }`}
+                            >
+                              {linea.pago.forma_pago}
+                            </span>{" "}
+                            {linea.pago.concepto ?? "—"}
+                          </td>
+                          <td>{linea.pago.referencia ?? "—"}</td>
+                          <td className="col-money col-money--green">{fmt(linea.pago.monto)}</td>
+                        </tr>
+                      ) : (
+                        <tr key={`saldo-${linea.mov.id}`}>
+                          <td>{linea.mov.created_at.slice(0, 10)}</td>
+                          <td>
+                            <span
+                              className={`badge ${
+                                linea.mov.tipo === "devolucion_cancelacion"
+                                  ? "badge--amber"
+                                  : "badge--green"
+                              }`}
+                            >
+                              {linea.mov.tipo === "devolucion_cancelacion"
+                                ? "Devolución"
+                                : "Saldo a favor"}
+                            </span>
+                          </td>
+                          <td>{linea.mov.concepto ?? "—"}</td>
+                          <td>—</td>
+                          <td className="col-money col-money--green">{fmt(linea.mov.importe)}</td>
+                        </tr>
+                      ),
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1432,14 +1507,15 @@ export default function VentaForm({ id }: Props) {
                     <input
                       type="number"
                       min={0.01}
-                      max={faltante}
                       step={0.01}
                       placeholder={fmt(faltante)}
                       value={liqForm.monto}
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => setLiqForm((p) => ({ ...p, monto: e.target.value }))}
                     />
-                    <span className="field-hint">Máx. {fmt(faltante)}</span>
+                    <span className="field-hint">
+                      Faltante: {fmt(faltante)}. Si pagas más, el exceso se acredita como saldo a favor.
+                    </span>
                   </div>
 
                   <div className="form-field">

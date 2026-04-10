@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import { insertAplicacionSaldoTicket } from "./saldoOperador";
+import { insertAplicacionSaldoTicket, insertAbonoSaldo } from "./saldoOperador";
 import type { VentaPago, VentaPagoInsert } from "./types";
 
 // ── Lectura ───────────────────────────────────────────────────────────────────
@@ -125,15 +125,17 @@ export async function registrarLiquidacion(params: LiquidacionParams): Promise<v
   }
 
   const totalFaltante = round2(filas.reduce((s, f) => s + Number(f.faltante ?? 0), 0));
-  if (monto > totalFaltante + 0.005) {
-    throw new Error(
-      `El pago ($${monto.toFixed(2)}) supera el faltante pendiente ($${totalFaltante.toFixed(2)}).`,
-    );
-  }
+  const montoLiquidar = round2(Math.min(monto, totalFaltante));
+  const sobrepago = round2(Math.max(0, monto - totalFaltante));
+  const ratio = monto > 0 ? montoLiquidar / monto : 0;
+
+  const peLiq = round2(pagoEfectivo * ratio);
+  const pdLiq = round2(pagoDeposito * ratio);
+  const psLiq = round2(pagoSaldo * ratio);
 
   // ── 2. Distribuir el pago en cascada sobre los faltantes ─────────────────
   const faltantes = filas.map((f) => Number(f.faltante ?? 0));
-  const deltas = distribuirEnFaltantes(faltantes, monto);
+  const deltas = distribuirEnFaltantes(faltantes, montoLiquidar);
 
   // ── 3. Actualizar cobro y desglose acumulado en cada fila ───────────────
   // Los campos pago_efectivo/deposito/saldo_operador en ventas representan
@@ -143,38 +145,48 @@ export async function registrarLiquidacion(params: LiquidacionParams): Promise<v
   for (let i = 0; i < filas.length; i++) {
     const delta = deltas[i] ?? 0;
     const fila = filas[i]!;
-    if (delta <= 0 && pagoEfectivo === 0 && pagoDeposito === 0 && pagoSaldo === 0) continue;
+    if (delta <= 0 && peLiq === 0 && pdLiq === 0 && psLiq === 0) continue;
     const { error } = await supabase
       .from("ventas")
       .update({
         cobro:               round2(Number(fila.cobro) + delta),
-        pago_efectivo:       round2(Number(fila.pago_efectivo       ?? 0) + pagoEfectivo),
-        pago_deposito:       round2(Number(fila.pago_deposito       ?? 0) + pagoDeposito),
-        pago_saldo_operador: round2(Number(fila.pago_saldo_operador ?? 0) + pagoSaldo),
+        pago_efectivo:       round2(Number(fila.pago_efectivo       ?? 0) + peLiq),
+        pago_deposito:       round2(Number(fila.pago_deposito       ?? 0) + pdLiq),
+        pago_saldo_operador: round2(Number(fila.pago_saldo_operador ?? 0) + psLiq),
       })
       .eq("id", fila.id);
     if (error) throw new Error(`Error actualizando venta ${fila.id}: ${error.message}`);
   }
 
-  // ── 4. Insertar registro en ventas_pagos ─────────────────────────────────
-  const pagoRecord: VentaPagoInsert = {
-    venta_id: ventaId,
-    ticket_id: ticketId,
-    fecha,
-    monto,
-    forma_pago: formaPago,
-    pago_efectivo: pagoEfectivo,
-    pago_deposito: pagoDeposito,
-    pago_saldo: pagoSaldo,
-    referencia: referencia?.trim() || null,
-    concepto: concepto?.trim() || null,
-  };
+  // ── 4. Insertar registro en ventas_pagos (solo lo que liquida deuda) ─────
+  if (montoLiquidar > 0.005) {
+    const pagoRecord: VentaPagoInsert = {
+      venta_id: ventaId,
+      ticket_id: ticketId,
+      fecha,
+      monto: montoLiquidar,
+      forma_pago: formaPago,
+      pago_efectivo: peLiq,
+      pago_deposito: pdLiq,
+      pago_saldo: psLiq,
+      referencia: referencia?.trim() || null,
+      concepto: concepto?.trim() || null,
+    };
 
-  const { error: pagoError } = await supabase.from("ventas_pagos").insert(pagoRecord);
-  if (pagoError) throw new Error(`Error registrando pago: ${pagoError.message}`);
+    const { error: pagoError } = await supabase.from("ventas_pagos").insert(pagoRecord);
+    if (pagoError) throw new Error(`Error registrando pago: ${pagoError.message}`);
+  }
 
-  // ── 5. Descontar saldo a favor del operador si aplica ────────────────────
-  const saldoUsado = round2(pagoSaldo);
+  // ── 5. Sobrepago → saldo a favor (abono vinculado al ticket) ─────────────
+  if (sobrepago > 0.005 && operadorId != null) {
+    await insertAbonoSaldo(operadorId, sobrepago, "Sobrepago (liquidación)", {
+      ventaId,
+      ticketId,
+    });
+  }
+
+  // ── 6. Descontar saldo a favor del operador (solo parte que liquidó) ────
+  const saldoUsado = round2(psLiq);
   if (saldoUsado > 0.005 && operadorId != null) {
     await insertAplicacionSaldoTicket(operadorId, saldoUsado, {
       ticketId,
