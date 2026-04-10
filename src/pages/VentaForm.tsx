@@ -1553,16 +1553,11 @@ export default function VentaForm({ id }: Props) {
               </div>
             )}
 
-            {/* Liquidación: con faltante o pago adicional (sobrepago → saldo a favor) */}
-            {!esCancelado && (
+            {/* Formulario de liquidación (solo si hay faltante) */}
+            {!esCancelado && faltante > 0.005 && (
               <div className="liquidacion-form-wrap">
-                <div
-                  className="form-group-title"
-                  style={{ color: faltante > 0.005 ? "#b91c1c" : "#1d4ed8" }}
-                >
-                  {faltante > 0.005
-                    ? `💳 Registrar pago de liquidación — Faltante: ${fmt(faltante)}`
-                    : "💳 Pago adicional — acreditar saldo a favor"}
+                <div className="form-group-title" style={{ color: "#b91c1c" }}>
+                  💳 Registrar pago de liquidación — Faltante: {fmt(faltante)}
                 </div>
 
                 {liqMutation.isError && (
@@ -1583,15 +1578,13 @@ export default function VentaForm({ id }: Props) {
                       type="number"
                       min={0.01}
                       step={0.01}
-                      placeholder={faltante > 0.005 ? fmt(faltante) : "Monto a acreditar"}
+                      placeholder={fmt(faltante)}
                       value={liqForm.monto}
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => setLiqForm((p) => ({ ...p, monto: e.target.value }))}
                     />
                     <span className="field-hint">
-                      {faltante > 0.005
-                        ? `Faltante: ${fmt(faltante)}. Si pagas más, el exceso se acredita como saldo a favor del operador vinculado a este ticket.`
-                        : "El ticket está al corriente. El monto indicado se registrará completo como saldo a favor (aparecerá en movimientos del ticket)."}
+                      Faltante: {fmt(faltante)}. Si pagas más, el exceso se acredita como saldo a favor del operador vinculado a este ticket.
                     </span>
                   </div>
 
