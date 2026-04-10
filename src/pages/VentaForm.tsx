@@ -424,6 +424,18 @@ export default function VentaForm({ id }: Props) {
     return rows;
   }, [historialPagos, movsSaldoTicket]);
 
+  const abonosTicket = useMemo(
+    () =>
+      movsSaldoTicket.filter(
+        (m) => m.tipo === "abono" && Number(m.importe ?? 0) > EPSILON_DEUDA,
+      ),
+    [movsSaldoTicket],
+  );
+  const totalAbonosTicket = useMemo(
+    () => round2(abonosTicket.reduce((s, m) => s + Number(m.importe ?? 0), 0)),
+    [abonosTicket],
+  );
+
   function prepareLiquidacionInput(): {
     monto: number;
     pagoEfectivo: number;
@@ -1372,6 +1384,23 @@ export default function VentaForm({ id }: Props) {
                   {fmt(faltante)}
                 </span>
               </div>
+
+              {!isNew && abonosTicket.length > 0 && (
+                <div className="desglose-readonly" style={{ marginTop: "10px" }}>
+                  <div className="desglose-readonly__fila">
+                    <span>Abono(s) saldo a favor vinculados</span>
+                    <span>{fmt(totalAbonosTicket)}</span>
+                  </div>
+                  {abonosTicket.map((mov) => (
+                    <div key={mov.id} className="desglose-readonly__fila desglose-readonly__ref">
+                      <span>{mov.concepto?.trim() || "Abono a favor"}</span>
+                      <span>
+                        {fmt(Number(mov.importe ?? 0))} · {mov.created_at.slice(0, 10)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1487,7 +1516,7 @@ export default function VentaForm({ id }: Props) {
                       onChange={(e) => setLiqForm((p) => ({ ...p, monto: e.target.value }))}
                     />
                     <span className="field-hint">
-                      Faltante: {fmt(faltante)}. Si pagas más, el exceso se acredita como saldo a favor del operador vinculado a este ticket.
+                      Faltante: {fmt(faltante)}. Solo se permite registrar pago hasta cubrir el faltante.
                     </span>
                   </div>
 
