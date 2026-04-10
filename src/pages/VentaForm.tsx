@@ -1037,7 +1037,7 @@ export default function VentaForm({ id }: Props) {
                     />
                   ) : (
                     <div className="campo-financiero-bloqueado">
-                      <span className="venta-total-cobro-readonly">
+                      <span className="venta-total-cobro-readonly operador-readonly-name">
                         {form.operador_nombre ?? "—"}
                       </span>
                       {form.operador_id != null && (

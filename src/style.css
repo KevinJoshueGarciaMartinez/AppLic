@@ -1027,6 +1027,13 @@ input[type="number"] {
   text-align: right;
 }
 
+.operador-readonly-name {
+  text-align: left;
+  font-size: 1rem;
+  line-height: 1.2;
+  white-space: normal;
+}
+
 .ticket-desglose-table .col-monto {
   text-align: right;
   white-space: nowrap;
