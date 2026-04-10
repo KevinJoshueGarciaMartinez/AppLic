@@ -207,4 +207,4 @@ export interface VentaPago {
   created_at: string;
 }
 
-export type VentaPagoInsert = Omit<VentaPago, "id" | "created_at">;
+export type VentaPagoInsert = Omit<VentaPago, "id" | "created_at" | "cancelado">;
