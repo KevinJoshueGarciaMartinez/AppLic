@@ -306,6 +306,9 @@ export default function VentaForm({ id }: Props) {
         catalogo_servicios_costos,
         ticket_id: tid,
         cobro: cobroRow,
+        cancelado: _cancelado,
+        motivo_cancelacion: _motivo,
+        cancelado_at: _cancelado_at,
         ...rest
       } = ventaData;
       const base = rest as VentaInsert;
