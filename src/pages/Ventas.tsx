@@ -8,11 +8,11 @@ function hoy() {
   return new Date().toISOString().slice(0, 10);
 }
 
-async function fetchVentas(fecha: string | null): Promise<Venta[]> {
+async function fetchVentas(fecha: string | null, verCanceladas: boolean): Promise<Venta[]> {
   let q = supabase
     .from("ventas")
     .select(
-      "id, fecha, operador_id, operador_nombre, servicio, costo, cobro, faltante, forma_pago, promotor, comision_pagada",
+      "id, fecha, operador_id, operador_nombre, servicio, costo, cobro, faltante, forma_pago, promotor, comision_pagada, cancelado, motivo_cancelacion",
     )
     .order("fecha", { ascending: false })
     .order("id", { ascending: false });
@@ -21,6 +21,10 @@ async function fetchVentas(fecha: string | null): Promise<Venta[]> {
     q = q.eq("fecha", fecha);
   } else {
     q = q.limit(500);
+  }
+
+  if (!verCanceladas) {
+    q = q.eq("cancelado", false);
   }
 
   const { data, error } = await q;
@@ -40,6 +44,7 @@ export default function Ventas() {
   const [, navigate] = useLocation();
   const [busqueda, setBusqueda] = useState("");
   const [fechaFiltro, setFechaFiltro] = useState<string | null>(hoy());
+  const [verCanceladas, setVerCanceladas] = useState(false);
 
   const {
     data: ventas = [],
@@ -47,8 +52,8 @@ export default function Ventas() {
     isError,
     error,
   } = useQuery({
-    queryKey: ["ventas", fechaFiltro],
-    queryFn: () => fetchVentas(fechaFiltro),
+    queryKey: ["ventas", fechaFiltro, verCanceladas],
+    queryFn: () => fetchVentas(fechaFiltro, verCanceladas),
   });
 
   const filtradas = ventas.filter((v) => {
@@ -119,6 +124,13 @@ export default function Ventas() {
             Ver todas
           </button>
         )}
+        <button
+          className={`btn-secondary ${verCanceladas ? "btn-secondary--active" : ""}`}
+          style={{ whiteSpace: "nowrap" }}
+          onClick={() => setVerCanceladas((v) => !v)}
+        >
+          {verCanceladas ? "Ocultar canceladas" : "Ver canceladas"}
+        </button>
         <span className="record-count">
           {isLoading
             ? "Cargando..."
@@ -191,7 +203,7 @@ export default function Ventas() {
                 </tr>
               ) : (
                 filtradas.map((v) => (
-                  <tr key={v.id}>
+                  <tr key={v.id} className={v.cancelado ? "fila-cancelada" : ""}>
                     <td className="col-id">{v.id}</td>
                     <td className="col-fecha">{v.fecha}</td>
                     <td>{v.operador_nombre ?? "—"}</td>
@@ -204,17 +216,23 @@ export default function Ventas() {
                       {fmt(v.faltante ?? 0)}
                     </td>
                     <td>
-                      <span
-                        className={`badge ${
-                          v.forma_pago === "Efectivo"
-                            ? "badge--gray"
-                            : v.forma_pago === "Dividida"
-                              ? "badge--amber"
-                              : "badge--blue"
-                        }`}
-                      >
-                        {v.forma_pago}
-                      </span>
+                      {v.cancelado ? (
+                        <span className="badge badge--cancelado" title={v.motivo_cancelacion ?? ""}>
+                          ⛔ Cancelada
+                        </span>
+                      ) : (
+                        <span
+                          className={`badge ${
+                            v.forma_pago === "Efectivo"
+                              ? "badge--gray"
+                              : v.forma_pago === "Dividida"
+                                ? "badge--amber"
+                                : "badge--blue"
+                          }`}
+                        >
+                          {v.forma_pago}
+                        </span>
+                      )}
                     </td>
                     <td>{v.promotor ?? "—"}</td>
                     <td>

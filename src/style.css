@@ -1567,6 +1567,165 @@ input[type="number"] {
   }
 }
 
+/* ─── Cancelación ────────────────────────────────────────────────── */
+
+.cancelado-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 20px;
+  background: #fef2f2;
+  border: 1.5px solid #fca5a5;
+  border-radius: 10px;
+  padding: 12px 18px;
+  margin-bottom: 16px;
+}
+
+.cancelado-banner__titulo {
+  font-weight: 700;
+  color: #b91c1c;
+  font-size: 15px;
+}
+
+.cancelado-banner__motivo {
+  color: #7f1d1d;
+  font-size: 13px;
+}
+
+.cancelado-banner__fecha {
+  color: #9ca3af;
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.campo-financiero-bloqueado {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.campo-financiero-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.btn-cancelar-ticket {
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  padding: 8px 16px;
+  background: #fff1f2;
+  color: #b91c1c;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.btn-cancelar-ticket:hover {
+  background: #fee2e2;
+}
+
+.btn-danger {
+  border: none;
+  border-radius: 6px;
+  padding: 8px 18px;
+  background: #dc2626;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
+}
+
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 28px 32px;
+  max-width: 460px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #b91c1c;
+  margin: 0 0 8px;
+}
+
+.modal-desc {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.modal-textarea {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  resize: vertical;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.modal-textarea:focus {
+  outline: none;
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(147,197,253,0.3);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+/* Fila cancelada en la tabla */
+.fila-cancelada {
+  opacity: 0.55;
+  background: #fafafa;
+}
+
+.badge--cancelado {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.btn-secondary--active {
+  background: #e0e7ff;
+  color: #3730a3;
+  border-color: #a5b4fc;
+}
+
 /* ─── Sección de liquidación (VentaForm) ─────────────────────────── */
 
 .liquidacion-section {

@@ -160,6 +160,10 @@ export interface Venta {
   fecha_solicitud_curso: string | null;
   fecha_pago: string | null;
 
+  cancelado: boolean;
+  motivo_cancelacion: string | null;
+  cancelado_at: string | null;
+
   created_at: string;
   updated_at: string;
 }
@@ -174,6 +178,9 @@ export type VentaInsert = Omit<
   | "total_cobrado"
   | "promotores"
   | "catalogo_servicios_costos"
+  | "cancelado"
+  | "motivo_cancelacion"
+  | "cancelado_at"
 >;
 
 // ── Pagos / Liquidaciones ─────────────────────────────────────────────────────

@@ -274,6 +274,10 @@ export default function VentaForm({ id }: Props) {
   });
   const [liqForm, setLiqForm] = useState(emptyLiq);
 
+  // ── Cancelación ───────────────────────────────────────────────────────────
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [motivoCancelacion, setMotivoCancelacion] = useState("");
+
   // Cargar venta existente
   const { isLoading: loadingVenta, data: ventaData } = useQuery({
     queryKey: ["venta", id],
@@ -451,6 +455,38 @@ export default function VentaForm({ id }: Props) {
       queryClient.invalidateQueries({ queryKey: ["operador_saldos", form.operador_id] });
       queryClient.invalidateQueries({ queryKey: ["operador_saldo_movs"] });
       setLiqForm(emptyLiq);
+    },
+  });
+
+  const esCancelado = ventaData?.cancelado === true;
+
+  const cancelMutation = useMutation({
+    mutationFn: async () => {
+      if (!motivoCancelacion.trim()) throw new Error("Indica el motivo de cancelación.");
+      const updateData = {
+        cancelado: true,
+        motivo_cancelacion: motivoCancelacion.trim(),
+        cancelado_at: new Date().toISOString(),
+      };
+      if (ticketIdParaPagos) {
+        const { error } = await supabase
+          .from("ventas")
+          .update(updateData)
+          .eq("ticket_id", ticketIdParaPagos);
+        if (error) throw new Error(error.message);
+      } else {
+        const { error } = await supabase
+          .from("ventas")
+          .update(updateData)
+          .eq("id", id!);
+        if (error) throw new Error(error.message);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["venta", id] });
+      queryClient.invalidateQueries({ queryKey: ["ventas"] });
+      setShowCancelModal(false);
+      setMotivoCancelacion("");
     },
   });
 
@@ -848,6 +884,20 @@ export default function VentaForm({ id }: Props) {
         </div>
       </div>
 
+      {esCancelado && (
+        <div className="cancelado-banner">
+          <span className="cancelado-banner__titulo">⛔ TICKET CANCELADO</span>
+          <span className="cancelado-banner__motivo">
+            Motivo: {ventaData?.motivo_cancelacion ?? "—"}
+          </span>
+          {ventaData?.cancelado_at && (
+            <span className="cancelado-banner__fecha">
+              {new Date(ventaData.cancelado_at).toLocaleString("es-MX")}
+            </span>
+          )}
+        </div>
+      )}
+
       {mutation.isError && (
         <div className="alert-error">
           Error al guardar: {(mutation.error as Error).message}
@@ -1105,19 +1155,30 @@ export default function VentaForm({ id }: Props) {
 
               <div className="form-field">
                 <label>Forma de pago</label>
-                <select
-                  value={form.forma_pago}
-                  onChange={(e) =>
-                    setFormaPago(e.target.value as VentaInsert["forma_pago"])
-                  }
-                >
-                  <option value="Efectivo">Efectivo</option>
-                  <option value="Deposito">Depósito</option>
-                  <option value="Dividida">Dividida</option>
-                </select>
+                {!isNew ? (
+                  <div className="campo-financiero-bloqueado">
+                    <span className={`badge ${
+                      form.forma_pago === "Efectivo" ? "badge--gray"
+                      : form.forma_pago === "Dividida" ? "badge--amber"
+                      : "badge--blue"
+                    }`}>{form.forma_pago}</span>
+                    <span className="campo-financiero-hint">Solo modificable mediante pagos</span>
+                  </div>
+                ) : (
+                  <select
+                    value={form.forma_pago}
+                    onChange={(e) =>
+                      setFormaPago(e.target.value as VentaInsert["forma_pago"])
+                    }
+                  >
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Deposito">Depósito</option>
+                    <option value="Dividida">Dividida</option>
+                  </select>
+                )}
               </div>
 
-              {form.forma_pago === "Dividida" && (
+              {form.forma_pago === "Dividida" && isNew && (
                 <div className="venta-pago-dividido">
                   <div className="form-field">
                     <label>Efectivo (MXN)</label>
@@ -1181,7 +1242,7 @@ export default function VentaForm({ id }: Props) {
                 </div>
               )}
 
-              {form.forma_pago === "Deposito" && (
+              {form.forma_pago === "Deposito" && isNew && (
                 <div className="form-field">
                   <label>Referencia</label>
                   <input
@@ -1204,7 +1265,12 @@ export default function VentaForm({ id }: Props) {
 
               <div className="form-field">
                 <label>Total cobrado (MXN)</label>
-                {form.forma_pago === "Dividida" ? (
+                {!isNew ? (
+                  <>
+                    <div className="venta-total-cobro-readonly">{fmt(form.cobro)}</div>
+                    <span className="campo-financiero-hint">Solo modificable mediante pagos</span>
+                  </>
+                ) : form.forma_pago === "Dividida" ? (
                   <>
                     <div className="venta-total-cobro-readonly">{fmt(form.cobro)}</div>
                     <span className="field-hint">
@@ -1231,7 +1297,7 @@ export default function VentaForm({ id }: Props) {
                 )}
               </div>
 
-              {form.forma_pago !== "Dividida" && (
+              {isNew && form.forma_pago !== "Dividida" && (
                 <div className="form-field">
                   <label>De eso, desde saldo a favor (MXN)</label>
                   <input
@@ -1474,21 +1540,77 @@ export default function VentaForm({ id }: Props) {
             className="btn-secondary"
             onClick={() => navigate("/ventas")}
           >
-            Cancelar
+            Volver
           </button>
-          <button
-            type="submit"
-            className="btn-primary"
-            disabled={mutation.isPending || bloquearNuevaVentaPorDeuda}
-          >
-            {mutation.isPending
-              ? "Guardando…"
-              : isNew
-                ? "Registrar Venta"
-                : "Guardar cambios"}
-          </button>
+          {!isNew && !esCancelado && (
+            <button
+              type="button"
+              className="btn-cancelar-ticket"
+              onClick={() => setShowCancelModal(true)}
+            >
+              ⛔ Cancelar ticket
+            </button>
+          )}
+          {!esCancelado && (
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={mutation.isPending || bloquearNuevaVentaPorDeuda}
+            >
+              {mutation.isPending
+                ? "Guardando…"
+                : isNew
+                  ? "Registrar Venta"
+                  : "Guardar cambios"}
+            </button>
+          )}
         </div>
       </form>
+
+      {/* Modal de cancelación */}
+      {showCancelModal && (
+        <div className="modal-overlay" onClick={() => setShowCancelModal(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h2 className="modal-title">⛔ Cancelar ticket</h2>
+            <p className="modal-desc">
+              Esta acción es irreversible. El ticket quedará cancelado y no se podrán
+              registrar más pagos. El historial se conserva.
+            </p>
+            <div className="form-field" style={{ marginTop: "12px" }}>
+              <label>Motivo de cancelación *</label>
+              <textarea
+                className="modal-textarea"
+                rows={3}
+                placeholder="Ej. Error en el servicio, duplicado, solicitud del cliente…"
+                value={motivoCancelacion}
+                onChange={(e) => setMotivoCancelacion(e.target.value)}
+              />
+            </div>
+            {cancelMutation.isError && (
+              <p style={{ color: "#b91c1c", marginTop: "8px", fontSize: "13px" }}>
+                {(cancelMutation.error as Error).message}
+              </p>
+            )}
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => { setShowCancelModal(false); setMotivoCancelacion(""); }}
+              >
+                No, volver
+              </button>
+              <button
+                type="button"
+                className="btn-danger"
+                disabled={cancelMutation.isPending}
+                onClick={() => cancelMutation.mutate()}
+              >
+                {cancelMutation.isPending ? "Cancelando…" : "Sí, cancelar ticket"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
