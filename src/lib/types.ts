@@ -199,7 +199,7 @@ export type VentaInsert = Omit<
 /** Tipo de forma de pago para liquidaciones (saldo = usa saldo a favor del operador). */
 export type FormaPagoLiquidacion = "Efectivo" | "Deposito" | "Saldo" | "Dividida";
 
-/** Registro en `ventas_pagos`: un pago posterior al cobro inicial de la venta. */
+/** Registro en `ventas_pagos` (pago inicial y liquidaciones). */
 export interface VentaPago {
   id: number;
   /** Nulo cuando el pago es a nivel ticket. */
@@ -215,7 +215,13 @@ export interface VentaPago {
   referencia: string | null;
   concepto: string | null;
   cancelado: boolean;
+  /** Revisión contra estado de cuenta (depósito / transferencia). */
+  comprobado: boolean;
+  comprobado_at: string | null;
   created_at: string;
 }
 
-export type VentaPagoInsert = Omit<VentaPago, "id" | "created_at" | "cancelado">;
+export type VentaPagoInsert = Omit<
+  VentaPago,
+  "id" | "created_at" | "cancelado" | "comprobado" | "comprobado_at"
+>;

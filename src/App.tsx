@@ -11,6 +11,7 @@ import Comisiones from "./pages/Comisiones";
 import Reportes from "./pages/Reportes";
 import PeticionCursos from "./pages/PeticionCursos";
 import SeguimientoVentas from "./pages/SeguimientoVentas";
+import ComprobacionTransferencias from "./pages/ComprobacionTransferencias";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -36,6 +37,13 @@ const NAV_ITEMS: NavItem[] = [
     icon: "💰",
     description:
       "Registro de ventas vinculadas a un operador. Servicio, costo, cobro y forma de pago.",
+  },
+  {
+    href: "/comprobacion-transferencias",
+    label: "Comprobación",
+    icon: "🏦",
+    description:
+      "Revisar depósitos y transferencias contra el banco: pendientes y por fecha.",
   },
   {
     href: "/seguimiento",
@@ -323,6 +331,10 @@ export default function App() {
           <VentaEditWrapper />
         </Route>
 
+        <Route path="/comprobacion-transferencias">
+          <ComprobacionTransferencias />
+        </Route>
+
         <Route path="/seguimiento">
           <SeguimientoVentas />
         </Route>
@@ -341,9 +353,14 @@ export default function App() {
         {/* ── Resto de módulos (placeholders) ── */}
         {NAV_ITEMS.filter(
           (n) =>
-            !["/", "/operadores", "/ventas", "/seguimiento", "/reportes"].includes(
-              n.href,
-            ),
+            ![
+              "/",
+              "/operadores",
+              "/ventas",
+              "/comprobacion-transferencias",
+              "/seguimiento",
+              "/reportes",
+            ].includes(n.href),
         ).map(
           (item) => (
             <Route key={item.href} path={item.href}>

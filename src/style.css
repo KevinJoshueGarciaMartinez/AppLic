@@ -1827,6 +1827,11 @@ input[type="number"] {
   background: #fafafa;
 }
 
+/* Comprobación bancaria: pendiente de revisar */
+.fila-pendiente-comprobacion {
+  background: #fffbeb;
+}
+
 .badge--cancelado {
   background: #fee2e2;
   color: #b91c1c;
