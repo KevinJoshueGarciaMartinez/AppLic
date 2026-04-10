@@ -1065,7 +1065,7 @@ export default function VentaForm({ id }: Props) {
                       <tr>
                         <th>Servicio</th>
                         <th className="col-monto">Importe</th>
-                        <th className="col-acc" aria-label="Quitar" />
+                        {isNew && <th className="col-acc" aria-label="Quitar" />}
                       </tr>
                     </thead>
                     <tbody>
@@ -1114,21 +1114,18 @@ export default function VentaForm({ id }: Props) {
                               fmt(item.costo)
                             )}
                           </td>
-                          <td className="col-acc">
-                            <button
-                              type="button"
-                              className="btn-remove-item"
-                              disabled={!isNew}
-                              onClick={() => removeItem(idx)}
-                              title={
-                                isNew
-                                  ? "Quitar del ticket"
-                                  : "No se quitan líneas al editar; usa una venta nueva si aplica"
-                              }
-                            >
-                              ×
-                            </button>
-                          </td>
+                          {isNew && (
+                            <td className="col-acc">
+                              <button
+                                type="button"
+                                className="btn-remove-item"
+                                onClick={() => removeItem(idx)}
+                                title="Quitar del ticket"
+                              >
+                                ×
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
