@@ -716,7 +716,6 @@ export default function VentaForm({ id }: Props) {
       if (id != null) queryClient.invalidateQueries({ queryKey: ["venta", id] });
       queryClient.invalidateQueries({ queryKey: ["operador_saldos"] });
       queryClient.invalidateQueries({ queryKey: ["operador_saldo_movs"] });
-      setAplicarSaldoStr("");
       setGuardado(true);
       setTimeout(() => setGuardado(false), 3000);
       if (isNew) navigate("/ventas");
