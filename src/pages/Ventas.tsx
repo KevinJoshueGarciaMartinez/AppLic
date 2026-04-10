@@ -44,7 +44,7 @@ export default function Ventas() {
   const [, navigate] = useLocation();
   const [busqueda, setBusqueda] = useState("");
   const [fechaFiltro, setFechaFiltro] = useState<string | null>(hoy());
-  const [verCanceladas, setVerCanceladas] = useState(false);
+  const [verCanceladas, setVerCanceladas] = useState(true);
 
   const {
     data: ventas = [],
