@@ -875,6 +875,7 @@ export default function VentaForm({ id }: Props) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!isNew) return;
     if (!form.operador_id) {
       alert("Selecciona un operador antes de guardar.");
       return;
@@ -1727,7 +1728,7 @@ export default function VentaForm({ id }: Props) {
               ⛔ Cancelar ticket
             </button>
           )}
-          {!esCancelado && (
+          {isNew && !esCancelado && (
             <button
               type="submit"
               className="btn-primary"
@@ -1735,9 +1736,7 @@ export default function VentaForm({ id }: Props) {
             >
               {mutation.isPending
                 ? "Guardando…"
-                : isNew
-                  ? "Registrar Venta"
-                  : "Guardar cambios"}
+                : "Registrar Venta"}
             </button>
           )}
         </div>

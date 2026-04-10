@@ -243,7 +243,7 @@ export default function Ventas() {
                     </td>
                     <td className="col-actions">
                       <Link href={`/ventas/${v.id}`}>
-                        <button className="btn-edit">Editar</button>
+                        <button className="btn-edit">Ver</button>
                       </Link>
                       {(v.faltante ?? 0) > 0.005 && (
                         <button
