@@ -7,6 +7,7 @@ import {
   fetchSaldoEnContraDeuda,
   insertAbonoSaldo,
   insertAplicacionSaldoTicket,
+  insertDevolucionCancelacion,
 } from "../lib/saldoOperador";
 import {
   fetchPagosDeVenta,
@@ -465,28 +466,55 @@ export default function VentaForm({ id }: Props) {
   const cancelMutation = useMutation({
     mutationFn: async () => {
       if (!motivoCancelacion.trim()) throw new Error("Indica el motivo de cancelación.");
-      const updateData = {
+
+      const ahora = new Date().toISOString();
+      const updateVenta = {
         cancelado: true,
         motivo_cancelacion: motivoCancelacion.trim(),
-        cancelado_at: new Date().toISOString(),
+        cancelado_at: ahora,
       };
+
+      // 1. Cancelar las ventas
       if (ticketIdParaPagos) {
         const { error } = await supabase
-          .from("ventas")
-          .update(updateData)
-          .eq("ticket_id", ticketIdParaPagos);
+          .from("ventas").update(updateVenta).eq("ticket_id", ticketIdParaPagos);
         if (error) throw new Error(error.message);
       } else {
         const { error } = await supabase
-          .from("ventas")
-          .update(updateData)
-          .eq("id", id!);
+          .from("ventas").update(updateVenta).eq("id", id!);
         if (error) throw new Error(error.message);
+      }
+
+      // 2. Obtener pagos del ticket/venta y marcarlos como cancelados
+      const { data: pagos, error: pagosErr } = ticketIdParaPagos
+        ? await supabase.from("ventas_pagos").select("id, pago_saldo").eq("ticket_id", ticketIdParaPagos)
+        : await supabase.from("ventas_pagos").select("id, pago_saldo").eq("venta_id", id!);
+      if (pagosErr) throw new Error(pagosErr.message);
+
+      if (pagos && pagos.length > 0) {
+        const ids = pagos.map((p: { id: number }) => p.id);
+        const { error: markErr } = await supabase
+          .from("ventas_pagos").update({ cancelado: true }).in("id", ids);
+        if (markErr) throw new Error(markErr.message);
+
+        // 3. Devolver saldo a favor si se usó en algún pago
+        const totalSaldoUsado = pagos.reduce(
+          (s: number, p: { pago_saldo: number }) => s + Number(p.pago_saldo ?? 0), 0,
+        );
+        if (totalSaldoUsado > 0.005 && form.operador_id != null) {
+          await insertDevolucionCancelacion(form.operador_id, totalSaldoUsado, {
+            ticketId: ticketIdParaPagos,
+            ventaId: ticketIdParaPagos ? null : (id ?? null),
+          });
+        }
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["venta", id] });
       queryClient.invalidateQueries({ queryKey: ["ventas"] });
+      queryClient.invalidateQueries({ queryKey: pagosQueryKey });
+      queryClient.invalidateQueries({ queryKey: ["operador_saldos", form.operador_id] });
+      queryClient.invalidateQueries({ queryKey: ["operador_saldo_movs"] });
       setShowCancelModal(false);
       setMotivoCancelacion("");
     },

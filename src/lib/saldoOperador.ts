@@ -62,6 +62,24 @@ export async function insertAbonoSaldo(
   if (error) throw new Error(error.message);
 }
 
+/** Devuelve saldo a favor al operador al cancelar un ticket (importe positivo = crédito). */
+export async function insertDevolucionCancelacion(
+  operadorId: number,
+  importePositivo: number,
+  opts: { ticketId: number | null; ventaId: number | null },
+): Promise<void> {
+  if (importePositivo <= 0) return;
+  const { error } = await supabase.from("operador_saldo_movimientos").insert({
+    operador_id: operadorId,
+    tipo: "devolucion_cancelacion",
+    importe: importePositivo,
+    concepto: "Devolución por cancelación de ticket",
+    ticket_id: opts.ticketId,
+    venta_id: opts.ventaId,
+  });
+  if (error) throw new Error(error.message);
+}
+
 /** Registra uso de saldo a favor al liquidar (importe en pesos positivos → se guarda negativo). */
 export async function insertAplicacionSaldoTicket(
   operadorId: number,

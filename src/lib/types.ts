@@ -203,6 +203,7 @@ export interface VentaPago {
   pago_saldo: number;
   referencia: string | null;
   concepto: string | null;
+  cancelado: boolean;
   created_at: string;
 }
 
