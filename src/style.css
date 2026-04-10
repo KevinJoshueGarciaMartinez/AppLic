@@ -966,16 +966,23 @@ body {
 }
 
 .venta-pago-dividido {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 0.65rem;
   margin-bottom: 0.5rem;
+  min-width: 0;
+  width: 100%;
 }
 
-@media (min-width: 520px) {
-  .venta-pago-dividido {
-    grid-template-columns: 1fr 1fr 1fr;
-    align-items: end;
-  }
+.venta-pago-dividido .form-field {
+  min-width: 0;
+}
+
+.venta-pago-dividido-input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .venta-total-cobro-readonly {
@@ -1158,6 +1165,8 @@ body {
   gap: 12px;
   position: sticky;
   top: 20px;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .calc-row {

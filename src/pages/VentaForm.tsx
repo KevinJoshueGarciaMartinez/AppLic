@@ -996,6 +996,7 @@ export default function VentaForm({ id }: Props) {
                     <label>Efectivo (MXN)</label>
                     <input
                       type="number"
+                      className="venta-pago-dividido-input"
                       min={0}
                       step={0.01}
                       value={form.pago_efectivo}
@@ -1007,6 +1008,7 @@ export default function VentaForm({ id }: Props) {
                     <label>Depósito (MXN)</label>
                     <input
                       type="number"
+                      className="venta-pago-dividido-input"
                       min={0}
                       step={0.01}
                       value={form.pago_deposito}
@@ -1015,9 +1017,27 @@ export default function VentaForm({ id }: Props) {
                     />
                   </div>
                   <div className="form-field">
+                    <label>Referencia (depósito)</label>
+                    <input
+                      type="text"
+                      className="venta-pago-dividido-input"
+                      inputMode="text"
+                      autoComplete="off"
+                      placeholder="Ej. folio, transferencia, CLABE…"
+                      value={form.numero_referencia ?? ""}
+                      onChange={(e) =>
+                        set(
+                          "numero_referencia",
+                          e.target.value.trim() === "" ? null : e.target.value,
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="form-field">
                     <label>Saldo operador (MXN)</label>
                     <input
                       type="number"
+                      className="venta-pago-dividido-input"
                       min={0}
                       step={0.01}
                       value={form.pago_saldo_operador}
@@ -1034,8 +1054,7 @@ export default function VentaForm({ id }: Props) {
                 </div>
               )}
 
-              {(form.forma_pago === "Deposito" ||
-                (form.forma_pago === "Dividida" && form.pago_deposito > EPSILON_DEUDA)) && (
+              {form.forma_pago === "Deposito" && (
                 <div className="form-field">
                   <label>Referencia</label>
                   <input
