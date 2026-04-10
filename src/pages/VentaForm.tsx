@@ -1116,26 +1116,33 @@ export default function VentaForm({ id }: Props) {
             </div>
             <div className="form-field">
               <label>Promotor *</label>
-              <select
-                className="select-promotor-wide"
-                value={form.id_promotor ?? ""}
-                onChange={(e) =>
-                  e.target.value
-                    ? handlePromotorChange(Number(e.target.value))
-                    : setForm((prev) => ({
-                        ...prev,
-                        id_promotor: null,
-                        promotor: null,
-                      }))
-                }
-              >
-                <option value="">— Sin promotor —</option>
-                {promotores.map((p) => (
-                  <option key={p.id_promotor} value={p.id_promotor}>
-                    {p.nombre}
-                  </option>
-                ))}
-              </select>
+              {isNew ? (
+                <select
+                  className="select-promotor-wide"
+                  value={form.id_promotor ?? ""}
+                  onChange={(e) =>
+                    e.target.value
+                      ? handlePromotorChange(Number(e.target.value))
+                      : setForm((prev) => ({
+                          ...prev,
+                          id_promotor: null,
+                          promotor: null,
+                        }))
+                  }
+                >
+                  <option value="">— Sin promotor —</option>
+                  {promotores.map((p) => (
+                    <option key={p.id_promotor} value={p.id_promotor}>
+                      {p.nombre}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="campo-financiero-bloqueado">
+                  <span className="venta-total-cobro-readonly">{form.promotor ?? "— Sin promotor —"}</span>
+                  <span className="campo-financiero-hint">Solo lectura</span>
+                </div>
+              )}
             </div>
 
             {isNew && (
