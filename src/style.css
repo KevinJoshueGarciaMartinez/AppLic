@@ -438,6 +438,26 @@ body {
   background: #dbeafe;
 }
 
+.btn-liquidar {
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  padding: 5px 12px;
+  background: #fffbeb;
+  color: #92400e;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  margin-left: 6px;
+}
+
+.btn-liquidar:hover {
+  background: #fef3c7;
+}
+
+.col-actions {
+  white-space: nowrap;
+}
+
 /* ─── Toolbar (list pages) ───────────────────────────────────── */
 
 .toolbar {
@@ -1533,4 +1553,39 @@ body {
   .sidebar {
     display: none;
   }
+}
+
+/* ─── Sección de liquidación (VentaForm) ─────────────────────────── */
+
+.liquidacion-section {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.liquidacion-historial {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px 20px;
+}
+
+.liquidacion-table {
+  margin-top: 10px;
+  font-size: 13px;
+}
+
+.liquidacion-form-wrap {
+  background: #fff7ed;
+  border: 1.5px solid #fcd34d;
+  border-radius: 10px;
+  padding: 18px 20px;
+}
+
+.liquidacion-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
 }

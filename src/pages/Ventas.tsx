@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 import type { Venta } from "../lib/types";
@@ -37,6 +37,7 @@ function fmt(n: number) {
 }
 
 export default function Ventas() {
+  const [, navigate] = useLocation();
   const [busqueda, setBusqueda] = useState("");
   const [fechaFiltro, setFechaFiltro] = useState<string | null>(hoy());
 
@@ -223,10 +224,19 @@ export default function Ventas() {
                         {v.comision_pagada ? "Pagada" : "Pend."}
                       </span>
                     </td>
-                    <td>
+                    <td className="col-actions">
                       <Link href={`/ventas/${v.id}`}>
                         <button className="btn-edit">Editar</button>
                       </Link>
+                      {(v.faltante ?? 0) > 0.005 && (
+                        <button
+                          className="btn-liquidar"
+                          title="Registrar pago de liquidación"
+                          onClick={() => navigate(`/ventas/${v.id}`)}
+                        >
+                          💳 Liquidar
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))

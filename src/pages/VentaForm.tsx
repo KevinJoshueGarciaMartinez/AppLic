@@ -8,7 +8,21 @@ import {
   insertAbonoSaldo,
   insertAplicacionSaldoTicket,
 } from "../lib/saldoOperador";
-import type { Venta, VentaInsert, VentaItem, Servicio, Promotor, Operador } from "../lib/types";
+import {
+  fetchPagosDeVenta,
+  fetchPagosDeTicket,
+  registrarLiquidacion,
+} from "../lib/ventasPagos";
+import type {
+  Venta,
+  VentaInsert,
+  VentaItem,
+  VentaPago,
+  FormaPagoLiquidacion,
+  Servicio,
+  Promotor,
+  Operador,
+} from "../lib/types";
 
 const EPSILON_DEUDA = 0.005;
 
@@ -249,6 +263,17 @@ export default function VentaForm({ id }: Props) {
   const [aplicarSaldoStr, setAplicarSaldoStr] = useState("");
   const [guardado, setGuardado] = useState(false);
 
+  const emptyLiq = () => ({
+    monto: "",
+    formaPago: "Efectivo" as FormaPagoLiquidacion,
+    pagoEfectivo: "",
+    pagoDeposito: "",
+    pagoSaldo: "",
+    referencia: "",
+    concepto: "",
+  });
+  const [liqForm, setLiqForm] = useState(emptyLiq);
+
   // Cargar venta existente
   const { isLoading: loadingVenta, data: ventaData } = useQuery({
     queryKey: ["venta", id],
@@ -355,6 +380,78 @@ export default function VentaForm({ id }: Props) {
       return { favor, contra };
     },
     enabled: operadorIdSaldo != null,
+  });
+
+  // ── Historial de pagos de esta venta / ticket ─────────────────────────────
+  const ticketIdParaPagos = ventaData?.ticket_id ?? null;
+  const pagosQueryKey = ticketIdParaPagos
+    ? (["ventas_pagos_ticket", ticketIdParaPagos] as const)
+    : (["ventas_pagos_venta", id] as const);
+
+  const { data: historialPagos = [] } = useQuery<VentaPago[]>({
+    queryKey: pagosQueryKey,
+    queryFn: () =>
+      ticketIdParaPagos
+        ? fetchPagosDeTicket(ticketIdParaPagos)
+        : fetchPagosDeVenta(id!),
+    enabled: !isNew && id != null,
+  });
+
+  // ── Mutación de liquidación ───────────────────────────────────────────────
+  const liqMutation = useMutation({
+    mutationFn: async () => {
+      const monto = parseMontoInput(liqForm.monto);
+      if (monto <= 0) throw new Error("Indica un monto mayor a cero.");
+
+      let pagoEfectivo = 0;
+      let pagoDeposito = 0;
+      let pagoSaldo = 0;
+
+      if (liqForm.formaPago === "Dividida") {
+        pagoEfectivo = parseMontoInput(liqForm.pagoEfectivo);
+        pagoDeposito = parseMontoInput(liqForm.pagoDeposito);
+        pagoSaldo    = parseMontoInput(liqForm.pagoSaldo);
+        const sum = round2(pagoEfectivo + pagoDeposito + pagoSaldo);
+        if (Math.abs(sum - monto) > 0.02)
+          throw new Error(
+            "En pago dividido, la suma de los parciales debe igualar el monto total.",
+          );
+        if (pagoSaldo > saldoFavor + EPSILON_DEUDA)
+          throw new Error("Saldo a favor insuficiente para la parte de saldo.");
+      } else if (liqForm.formaPago === "Saldo") {
+        pagoSaldo = monto;
+        if (pagoSaldo > saldoFavor + EPSILON_DEUDA)
+          throw new Error("Saldo a favor insuficiente.");
+      } else if (liqForm.formaPago === "Efectivo") {
+        pagoEfectivo = monto;
+      } else {
+        pagoDeposito = monto;
+      }
+
+      await registrarLiquidacion({
+        ventaId:   ticketIdParaPagos ? null : (id ?? null),
+        ticketId:  ticketIdParaPagos,
+        operadorId: form.operador_id,
+        fecha:     hoyLocal(),
+        monto,
+        formaPago:    liqForm.formaPago,
+        pagoEfectivo,
+        pagoDeposito,
+        pagoSaldo,
+        referencia: liqForm.referencia.trim() || null,
+        concepto:   liqForm.concepto.trim()   || null,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["venta", id] });
+      queryClient.invalidateQueries({ queryKey: pagosQueryKey });
+      queryClient.invalidateQueries({ queryKey: ["ventas"] });
+      if (ticketIdParaPagos)
+        queryClient.invalidateQueries({ queryKey: ["ticket_items", ticketIdParaPagos] });
+      queryClient.invalidateQueries({ queryKey: ["operador_saldos", form.operador_id] });
+      queryClient.invalidateQueries({ queryKey: ["operador_saldo_movs"] });
+      setLiqForm(emptyLiq);
+    },
   });
 
   const abonoMutation = useMutation({
@@ -1136,6 +1233,209 @@ export default function VentaForm({ id }: Props) {
             </div>
           </div>
         </div>
+
+        {/* ── Historial de pagos + Liquidación (solo al editar) ── */}
+        {!isNew && (
+          <div className="liquidacion-section">
+
+            {/* Historial */}
+            {historialPagos.length > 0 && (
+              <div className="liquidacion-historial">
+                <div className="form-group-title">Historial de pagos</div>
+                <table className="data-table liquidacion-table">
+                  <thead>
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Forma de pago</th>
+                      <th>Referencia</th>
+                      <th>Concepto</th>
+                      <th className="col-money">Monto</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historialPagos.map((p) => (
+                      <tr key={p.id}>
+                        <td>{p.fecha}</td>
+                        <td>
+                          <span
+                            className={`badge ${
+                              p.forma_pago === "Efectivo"
+                                ? "badge--gray"
+                                : p.forma_pago === "Deposito"
+                                  ? "badge--blue"
+                                  : p.forma_pago === "Saldo"
+                                    ? "badge--green"
+                                    : "badge--amber"
+                            }`}
+                          >
+                            {p.forma_pago}
+                          </span>
+                        </td>
+                        <td>{p.referencia ?? "—"}</td>
+                        <td>{p.concepto ?? "—"}</td>
+                        <td className="col-money col-money--green">{fmt(p.monto)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Formulario de liquidación (solo si hay faltante) */}
+            {faltante > 0.005 && (
+              <div className="liquidacion-form-wrap">
+                <div className="form-group-title" style={{ color: "#b91c1c" }}>
+                  💳 Registrar pago de liquidación — Faltante: {fmt(faltante)}
+                </div>
+
+                {liqMutation.isError && (
+                  <div className="alert-error" style={{ marginBottom: "10px" }}>
+                    {(liqMutation.error as Error).message}
+                  </div>
+                )}
+                {liqMutation.isSuccess && (
+                  <div className="alert-success" style={{ marginBottom: "10px" }}>
+                    Pago registrado correctamente.
+                  </div>
+                )}
+
+                <div className="liquidacion-form-grid">
+                  <div className="form-field">
+                    <label>Monto a pagar (MXN) *</label>
+                    <input
+                      type="number"
+                      min={0.01}
+                      max={faltante}
+                      step={0.01}
+                      placeholder={fmt(faltante)}
+                      value={liqForm.monto}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => setLiqForm((p) => ({ ...p, monto: e.target.value }))}
+                    />
+                    <span className="field-hint">Máx. {fmt(faltante)}</span>
+                  </div>
+
+                  <div className="form-field">
+                    <label>Forma de pago</label>
+                    <select
+                      value={liqForm.formaPago}
+                      onChange={(e) =>
+                        setLiqForm((p) => ({
+                          ...p,
+                          formaPago: e.target.value as FormaPagoLiquidacion,
+                          pagoEfectivo: "",
+                          pagoDeposito: "",
+                          pagoSaldo: "",
+                        }))
+                      }
+                    >
+                      <option value="Efectivo">Efectivo</option>
+                      <option value="Deposito">Depósito</option>
+                      <option value="Saldo">Saldo a favor</option>
+                      <option value="Dividida">Dividida</option>
+                    </select>
+                  </div>
+
+                  {(liqForm.formaPago === "Deposito" ||
+                    liqForm.formaPago === "Dividida") && (
+                    <div className="form-field">
+                      <label>Referencia (depósito)</label>
+                      <input
+                        type="text"
+                        placeholder="Folio / CLABE / transferencia…"
+                        value={liqForm.referencia}
+                        onChange={(e) =>
+                          setLiqForm((p) => ({ ...p, referencia: e.target.value }))
+                        }
+                      />
+                    </div>
+                  )}
+
+                  <div className="form-field">
+                    <label>Concepto (opcional)</label>
+                    <input
+                      type="text"
+                      placeholder="Nota libre…"
+                      value={liqForm.concepto}
+                      onChange={(e) =>
+                        setLiqForm((p) => ({ ...p, concepto: e.target.value }))
+                      }
+                    />
+                  </div>
+                </div>
+
+                {/* Desglose dividida */}
+                {liqForm.formaPago === "Dividida" && (
+                  <div className="venta-pago-dividido" style={{ marginTop: "10px" }}>
+                    <div className="form-field">
+                      <label>Efectivo (MXN)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        className="venta-pago-dividido-input"
+                        value={liqForm.pagoEfectivo}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) =>
+                          setLiqForm((p) => ({ ...p, pagoEfectivo: e.target.value }))
+                        }
+                      />
+                    </div>
+                    <div className="form-field">
+                      <label>Depósito (MXN)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        className="venta-pago-dividido-input"
+                        value={liqForm.pagoDeposito}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) =>
+                          setLiqForm((p) => ({ ...p, pagoDeposito: e.target.value }))
+                        }
+                      />
+                    </div>
+                    <div className="form-field">
+                      <label>Saldo operador (MXN)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        className="venta-pago-dividido-input"
+                        value={liqForm.pagoSaldo}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) =>
+                          setLiqForm((p) => ({ ...p, pagoSaldo: e.target.value }))
+                        }
+                      />
+                      {saldoFavor > EPSILON_DEUDA && (
+                        <span className="field-hint">
+                          Disponible a favor: {fmt(saldoFavor)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {liqForm.formaPago === "Saldo" && saldoFavor > EPSILON_DEUDA && (
+                  <p className="field-hint" style={{ marginTop: "4px" }}>
+                    Saldo disponible: {fmt(saldoFavor)}
+                  </p>
+                )}
+
+                <button
+                  type="button"
+                  className="btn-primary"
+                  style={{ marginTop: "12px" }}
+                  disabled={liqMutation.isPending}
+                  onClick={() => liqMutation.mutate()}
+                >
+                  {liqMutation.isPending ? "Registrando…" : "Registrar pago"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Actions */}
         <div className="form-actions">

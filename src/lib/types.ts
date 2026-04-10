@@ -175,3 +175,28 @@ export type VentaInsert = Omit<
   | "promotores"
   | "catalogo_servicios_costos"
 >;
+
+// ── Pagos / Liquidaciones ─────────────────────────────────────────────────────
+
+/** Tipo de forma de pago para liquidaciones (saldo = usa saldo a favor del operador). */
+export type FormaPagoLiquidacion = "Efectivo" | "Deposito" | "Saldo" | "Dividida";
+
+/** Registro en `ventas_pagos`: un pago posterior al cobro inicial de la venta. */
+export interface VentaPago {
+  id: number;
+  /** Nulo cuando el pago es a nivel ticket. */
+  venta_id: number | null;
+  /** Nulo cuando el pago es a una sola venta (sin ticket). */
+  ticket_id: number | null;
+  fecha: string;
+  monto: number;
+  forma_pago: FormaPagoLiquidacion;
+  pago_efectivo: number;
+  pago_deposito: number;
+  pago_saldo: number;
+  referencia: string | null;
+  concepto: string | null;
+  created_at: string;
+}
+
+export type VentaPagoInsert = Omit<VentaPago, "id" | "created_at">;
