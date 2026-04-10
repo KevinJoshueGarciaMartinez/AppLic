@@ -571,6 +571,18 @@ body {
   padding: 40px 0;
 }
 
+/* Quitar flechas spinner de inputs numéricos */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 .spinner {
   width: 20px;
   height: 20px;

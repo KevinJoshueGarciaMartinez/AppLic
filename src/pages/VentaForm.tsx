@@ -588,8 +588,38 @@ export default function VentaForm({ id }: Props) {
           .select("id");
         if (error) throw new Error(error.message);
 
+        const firstId = (inserted as { id: number }[] | null)?.[0]?.id ?? null;
+
+        // Registrar pago inicial en ventas_pagos (trazabilidad completa)
+        if (totalCobro > EPSILON_DEUDA) {
+          let peInicial = 0;
+          let pdInicial = 0;
+          let psInicial = 0;
+          if (payload.forma_pago === "Dividida") {
+            peInicial = Number(payload.pago_efectivo ?? 0);
+            pdInicial = Number(payload.pago_deposito ?? 0);
+            psInicial = Number(payload.pago_saldo_operador ?? 0);
+          } else if (payload.forma_pago === "Efectivo") {
+            peInicial = totalCobro;
+          } else {
+            pdInicial = totalCobro;
+          }
+          const { error: pagoErr } = await supabase.from("ventas_pagos").insert({
+            venta_id:      ticketId ? null : firstId,
+            ticket_id:     ticketId,
+            fecha:         payload.fecha ?? new Date().toISOString().slice(0, 10),
+            monto:         totalCobro,
+            forma_pago:    payload.forma_pago,
+            pago_efectivo: peInicial,
+            pago_deposito: pdInicial,
+            pago_saldo:    psInicial,
+            referencia:    payload.numero_referencia ?? null,
+            concepto:      "Pago inicial",
+          });
+          if (pagoErr) throw new Error(`Error al registrar pago inicial: ${pagoErr.message}`);
+        }
+
         if (aplicarSaldo > EPSILON_DEUDA && operadorId != null) {
-          const firstId = (inserted as { id: number }[] | null)?.[0]?.id ?? null;
           await insertAplicacionSaldoTicket(operadorId, aplicarSaldo, {
             ticketId,
             ventaId: firstId,
