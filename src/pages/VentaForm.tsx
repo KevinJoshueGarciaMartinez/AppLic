@@ -277,7 +277,9 @@ export default function VentaForm({ id }: Props) {
   // ── Cancelación ───────────────────────────────────────────────────────────
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [motivoCancelacion, setMotivoCancelacion] = useState("");
-  const [confirmSobrepagoMonto, setConfirmSobrepagoMonto] = useState<number | null>(null);
+  const [confirmSobrepago, setConfirmSobrepago] = useState<
+    { kind: "venta" | "liq"; amount: number } | null
+  >(null);
   const ventaSavePendingRef = useRef<VentaSaveVars | null>(null);
 
   // Cargar venta existente
@@ -925,7 +927,7 @@ export default function VentaForm({ id }: Props) {
           return;
         }
         ventaSavePendingRef.current = { payload: form, aplicarSaldo };
-        setConfirmSobrepagoMonto(sobrepagoEnNuevaVenta);
+        setConfirmSobrepago({ kind: "venta", amount: sobrepagoEnNuevaVenta });
         return;
       }
     }
@@ -935,14 +937,20 @@ export default function VentaForm({ id }: Props) {
 
   function dismissConfirmSobrepago() {
     ventaSavePendingRef.current = null;
-    setConfirmSobrepagoMonto(null);
+    setConfirmSobrepago(null);
   }
 
   function confirmSobrepagoAndSave() {
-    const pending = ventaSavePendingRef.current;
-    ventaSavePendingRef.current = null;
-    setConfirmSobrepagoMonto(null);
-    if (pending) mutation.mutate(pending);
+    if (!confirmSobrepago) return;
+    if (confirmSobrepago.kind === "venta") {
+      const pending = ventaSavePendingRef.current;
+      ventaSavePendingRef.current = null;
+      setConfirmSobrepago(null);
+      if (pending) mutation.mutate(pending);
+      return;
+    }
+    setConfirmSobrepago(null);
+    liqMutation.mutate();
   }
 
   function handleRegistrarLiquidacionClick() {
@@ -955,9 +963,7 @@ export default function VentaForm({ id }: Props) {
     }
     const sobr = round2(Math.max(0, prep.monto - faltante));
     if (sobr > EPSILON_DEUDA) {
-      alert(
-        "No se permite sobrepago desde esta ventana. Registra solo hasta el faltante del ticket.",
-      );
+      setConfirmSobrepago({ kind: "liq", amount: sobr });
       return;
     }
     liqMutation.mutate();
@@ -1544,7 +1550,7 @@ export default function VentaForm({ id }: Props) {
                       onChange={(e) => setLiqForm((p) => ({ ...p, monto: e.target.value }))}
                     />
                     <span className="field-hint">
-                      Faltante: {fmt(faltante)}. Solo se permite registrar pago hasta cubrir el faltante.
+                      Faltante: {fmt(faltante)}. Si pagas más, el exceso se registrará como saldo a favor del operador.
                     </span>
                   </div>
 
@@ -1703,13 +1709,13 @@ export default function VentaForm({ id }: Props) {
       </form>
 
       {/* Confirmación de sobrepago (nueva venta) */}
-      {confirmSobrepagoMonto != null && (
+      {confirmSobrepago != null && (
         <div className="modal-overlay" onClick={dismissConfirmSobrepago}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <h2 className="modal-title modal-title--info">Confirmar sobrepago</h2>
             <p className="modal-desc">
               Se agregará al operador saldo a favor:{" "}
-              <strong style={{ color: "#0f172a" }}>{fmt(confirmSobrepagoMonto)}</strong>.
+              <strong style={{ color: "#0f172a" }}>{fmt(confirmSobrepago.amount)}</strong>.
             </p>
             <div className="modal-actions">
               <button type="button" className="btn-secondary" onClick={dismissConfirmSobrepago}>
