@@ -1027,13 +1027,24 @@ export default function VentaForm({ id }: Props) {
               <div className="venta-operador-busqueda">
                 <div className="form-field" style={{ marginBottom: 0 }}>
                   <label>Buscar operador *</label>
-                  <OperadorSearch
-                    operadorId={form.operador_id}
-                    operadorNombre={form.operador_nombre}
-                    onChange={(opId, nombre) =>
-                      setForm((prev) => ({ ...prev, operador_id: opId, operador_nombre: nombre }))
-                    }
-                  />
+                  {isNew ? (
+                    <OperadorSearch
+                      operadorId={form.operador_id}
+                      operadorNombre={form.operador_nombre}
+                      onChange={(opId, nombre) =>
+                        setForm((prev) => ({ ...prev, operador_id: opId, operador_nombre: nombre }))
+                      }
+                    />
+                  ) : (
+                    <div className="campo-financiero-bloqueado">
+                      <span className="venta-total-cobro-readonly">
+                        {form.operador_nombre ?? "—"}
+                      </span>
+                      {form.operador_id != null && (
+                        <span className="field-hint">ID: #{form.operador_id}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
               {form.operador_id != null && (
