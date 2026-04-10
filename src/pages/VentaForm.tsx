@@ -1091,24 +1091,30 @@ export default function VentaForm({ id }: Props) {
                       {items.map((item, idx) => (
                         <tr key={idx}>
                           <td>
-                            <select
-                              className="ticket-line-servicio"
-                              value={item.id_servicio ?? ""}
-                              onChange={(e) =>
-                                updateItemServicio(
-                                  idx,
-                                  e.target.value ? Number(e.target.value) : null,
-                                )
-                              }
-                              title="Cambiar servicio"
-                            >
-                              <option value="">— Servicio —</option>
-                              {servicios.map((s) => (
-                                <option key={s.id_servicio} value={s.id_servicio}>
-                                  {s.servicio}
-                                </option>
-                              ))}
-                            </select>
+                            {!isNew ? (
+                              <span className="ticket-line-servicio-readonly">
+                                {item.servicio || "—"}
+                              </span>
+                            ) : (
+                              <select
+                                className="ticket-line-servicio"
+                                value={item.id_servicio ?? ""}
+                                onChange={(e) =>
+                                  updateItemServicio(
+                                    idx,
+                                    e.target.value ? Number(e.target.value) : null,
+                                  )
+                                }
+                                title="Cambiar servicio"
+                              >
+                                <option value="">— Servicio —</option>
+                                {servicios.map((s) => (
+                                  <option key={s.id_servicio} value={s.id_servicio}>
+                                    {s.servicio}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
                           </td>
                           <td className="col-monto">
                             {esLineaIva(item) ? (

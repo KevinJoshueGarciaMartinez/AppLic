@@ -1755,6 +1755,13 @@ input[type="number"] {
   color: #1e293b;
 }
 
+.ticket-line-servicio-readonly {
+  display: inline-block;
+  padding: 4px 0;
+  font-size: 14px;
+  color: #1e293b;
+}
+
 .desglose-readonly__ref span:last-child {
   font-family: monospace;
   font-size: 12px;
