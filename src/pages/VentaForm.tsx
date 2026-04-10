@@ -814,13 +814,7 @@ export default function VentaForm({ id }: Props) {
           if (error) throw new Error(error.message);
         }
 
-        if (aplicarSaldo > EPSILON_DEUDA && operadorId != null) {
-          const firstVentaId = sorted[0]?.ventaId ?? (id != null ? id : null);
-          await insertAplicacionSaldoTicket(operadorId, aplicarSaldo, {
-            ticketId: ticketIdEdit,
-            ventaId: firstVentaId,
-          });
-        }
+        // No aplicar saldo a favor aquí: en creación ya se registró; en edición los cobros extra van por liquidación.
       }
     },
     onSuccess: () => {
@@ -924,43 +918,46 @@ export default function VentaForm({ id }: Props) {
       return;
     }
 
-    const cobroEfectivoTicket = round2(Math.min(form.cobro, totalItems));
-    const ratioCobro =
-      form.cobro > EPSILON_DEUDA ? Math.min(1, cobroEfectivoTicket / form.cobro) : 0;
-
+    /** En edición el cobro y la forma de pago ya están fijados; los pagos nuevos van por «Registrar pago». */
     let aplicarSaldo = 0;
-    if (form.forma_pago === "Dividida") {
-      const sum = round2(form.pago_efectivo + form.pago_deposito + form.pago_saldo_operador);
-      if (Math.abs(form.cobro - sum) > 0.02) {
-        alert("En pago dividido, el total cobrado debe ser la suma de efectivo, depósito y saldo operador.");
-        return;
-      }
-      aplicarSaldo = round2(form.pago_saldo_operador * ratioCobro);
-      if (form.pago_saldo_operador > EPSILON_DEUDA && aplicarSaldo > saldoFavor + EPSILON_DEUDA) {
-        alert("Saldo a favor insuficiente para el monto indicado en saldo operador.");
-        return;
-      }
-    } else if (form.forma_pago === "Saldo") {
-      aplicarSaldo = cobroEfectivoTicket;
-      if (form.cobro > EPSILON_DEUDA && aplicarSaldo > saldoFavor + EPSILON_DEUDA) {
-        alert(`Saldo a favor insuficiente. Disponible: $${saldoFavor.toFixed(2)}`);
-        return;
-      }
-    }
+    if (isNew) {
+      const cobroEfectivoTicket = round2(Math.min(form.cobro, totalItems));
+      const ratioCobro =
+        form.cobro > EPSILON_DEUDA ? Math.min(1, cobroEfectivoTicket / form.cobro) : 0;
 
-    const sobrepagoEnVentaNueva = round2(
-      Math.max(0, form.cobro - Math.min(form.cobro, totalItems)),
-    );
-    if (isNew && sobrepagoEnVentaNueva > EPSILON_DEUDA) {
-      if (form.operador_id == null) {
-        alert(
-          "Para registrar el sobrepago como saldo a favor debes seleccionar un operador en el ticket.",
-        );
+      if (form.forma_pago === "Dividida") {
+        const sum = round2(form.pago_efectivo + form.pago_deposito + form.pago_saldo_operador);
+        if (Math.abs(form.cobro - sum) > 0.02) {
+          alert("En pago dividido, el total cobrado debe ser la suma de efectivo, depósito y saldo operador.");
+          return;
+        }
+        aplicarSaldo = round2(form.pago_saldo_operador * ratioCobro);
+        if (form.pago_saldo_operador > EPSILON_DEUDA && aplicarSaldo > saldoFavor + EPSILON_DEUDA) {
+          alert("Saldo a favor insuficiente para el monto indicado en saldo operador.");
+          return;
+        }
+      } else if (form.forma_pago === "Saldo") {
+        aplicarSaldo = cobroEfectivoTicket;
+        if (form.cobro > EPSILON_DEUDA && aplicarSaldo > saldoFavor + EPSILON_DEUDA) {
+          alert(`Saldo a favor insuficiente. Disponible: $${saldoFavor.toFixed(2)}`);
+          return;
+        }
+      }
+
+      const sobrepagoEnVentaNueva = round2(
+        Math.max(0, form.cobro - Math.min(form.cobro, totalItems)),
+      );
+      if (sobrepagoEnVentaNueva > EPSILON_DEUDA) {
+        if (form.operador_id == null) {
+          alert(
+            "Para registrar el sobrepago como saldo a favor debes seleccionar un operador en el ticket.",
+          );
+          return;
+        }
+        ventaSavePendingRef.current = { payload: form, aplicarSaldo };
+        setSobrepagoModal({ kind: "venta", amount: sobrepagoEnVentaNueva });
         return;
       }
-      ventaSavePendingRef.current = { payload: form, aplicarSaldo };
-      setSobrepagoModal({ kind: "venta", amount: sobrepagoEnVentaNueva });
-      return;
     }
 
     mutation.mutate({ payload: form, aplicarSaldo });
