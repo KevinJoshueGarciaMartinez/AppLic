@@ -223,14 +223,13 @@ export default function Ventas() {
                       ) : (
                         <span
                           className={`badge ${
-                            v.forma_pago === "Efectivo"
-                              ? "badge--gray"
-                              : v.forma_pago === "Dividida"
-                                ? "badge--amber"
-                                : "badge--blue"
+                            v.forma_pago === "Efectivo" ? "badge--gray"
+                            : v.forma_pago === "Dividida" ? "badge--amber"
+                            : v.forma_pago === "Saldo" ? "badge--green"
+                            : "badge--blue"
                           }`}
                         >
-                          {v.forma_pago}
+                          {v.forma_pago === "Saldo" ? "Saldo a favor" : v.forma_pago}
                         </span>
                       )}
                     </td>

@@ -260,7 +260,6 @@ export default function VentaForm({ id }: Props) {
   const [draftObservaciones, setDraftObservaciones] = useState("");
   const [abonoMonto, setAbonoMonto] = useState("");
   const [abonoConcepto, setAbonoConcepto] = useState("");
-  const [aplicarSaldoStr, setAplicarSaldoStr] = useState("");
   const [guardado, setGuardado] = useState(false);
 
   const emptyLiq = () => ({
@@ -640,8 +639,10 @@ export default function VentaForm({ id }: Props) {
             psInicial = Number(payload.pago_saldo_operador ?? 0);
           } else if (payload.forma_pago === "Efectivo") {
             peInicial = totalCobro;
-          } else {
+          } else if (payload.forma_pago === "Deposito") {
             pdInicial = totalCobro;
+          } else if (payload.forma_pago === "Saldo") {
+            psInicial = totalCobro;
           }
           const { error: pagoErr } = await supabase.from("ventas_pagos").insert({
             venta_id:      ticketId ? null : firstId,
@@ -730,19 +731,10 @@ export default function VentaForm({ id }: Props) {
     setForm((prev) => {
       if (val === "Dividida") {
         const sum = round2(prev.pago_efectivo + prev.pago_deposito + prev.pago_saldo_operador);
-        return {
-          ...prev,
-          forma_pago: val,
-          cobro: sum > 0 ? sum : prev.cobro,
-        };
+        return { ...prev, forma_pago: val, cobro: sum > 0 ? sum : prev.cobro };
       }
-      return {
-        ...prev,
-        forma_pago: val,
-        pago_efectivo: 0,
-        pago_deposito: 0,
-        pago_saldo_operador: 0,
-      };
+      // Al cambiar a cualquier otra forma, limpiar desglose
+      return { ...prev, forma_pago: val, pago_efectivo: 0, pago_deposito: 0, pago_saldo_operador: 0 };
     });
   }
 
@@ -823,9 +815,7 @@ export default function VentaForm({ id }: Props) {
     if (form.forma_pago === "Dividida") {
       const sum = round2(form.pago_efectivo + form.pago_deposito + form.pago_saldo_operador);
       if (Math.abs(form.cobro - sum) > 0.02) {
-        alert(
-          "En pago dividido, el total cobrado debe ser la suma de efectivo, depósito y saldo operador.",
-        );
+        alert("En pago dividido, el total cobrado debe ser la suma de efectivo, depósito y saldo operador.");
         return;
       }
       aplicarSaldo = round2(form.pago_saldo_operador);
@@ -841,19 +831,10 @@ export default function VentaForm({ id }: Props) {
         alert("Saldo a favor insuficiente para el monto indicado en saldo operador.");
         return;
       }
-    } else {
-      const aplicarRaw = aplicarSaldoStr.trim() === "" ? 0 : Number(aplicarSaldoStr.replace(",", "."));
-      aplicarSaldo = Number.isFinite(aplicarRaw) ? Math.round(aplicarRaw * 100) / 100 : 0;
-      if (aplicarSaldo < -EPSILON_DEUDA) {
-        alert("El monto a aplicar desde saldo a favor no puede ser negativo.");
-        return;
-      }
-      if (aplicarSaldo > form.cobro + EPSILON_DEUDA) {
-        alert("No puedes aplicar más saldo a favor que el total cobrado del ticket.");
-        return;
-      }
+    } else if (form.forma_pago === "Saldo") {
+      aplicarSaldo = form.cobro;
       if (aplicarSaldo > saldoFavor + EPSILON_DEUDA) {
-        alert("Saldo a favor insuficiente para ese monto.");
+        alert(`Saldo a favor insuficiente. Disponible: $${saldoFavor.toFixed(2)}`);
         return;
       }
     }
@@ -1169,8 +1150,11 @@ export default function VentaForm({ id }: Props) {
                     <span className={`badge ${
                       form.forma_pago === "Efectivo" ? "badge--gray"
                       : form.forma_pago === "Dividida" ? "badge--amber"
+                      : form.forma_pago === "Saldo" ? "badge--green"
                       : "badge--blue"
-                    }`}>{form.forma_pago}</span>
+                    }`}>
+                      {form.forma_pago === "Saldo" ? "Saldo a favor" : form.forma_pago}
+                    </span>
                     <span className="campo-financiero-hint">Solo modificable mediante pagos</span>
                   </div>
                 ) : (
@@ -1182,6 +1166,7 @@ export default function VentaForm({ id }: Props) {
                   >
                     <option value="Efectivo">Efectivo</option>
                     <option value="Deposito">Depósito</option>
+                    <option value="Saldo">Saldo a favor</option>
                     <option value="Dividida">Dividida</option>
                   </select>
                 )}
@@ -1340,27 +1325,10 @@ export default function VentaForm({ id }: Props) {
                 )}
               </div>
 
-              {isNew && form.forma_pago !== "Dividida" && (
-                <div className="form-field">
-                  <label>De eso, desde saldo a favor (MXN)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={Math.min(saldoFavor, form.cobro, totalItems)}
-                    step={0.01}
-                    value={aplicarSaldoStr}
-                    onFocus={(e) => e.target.select()}
-                    onChange={(e) => setAplicarSaldoStr(e.target.value)}
-                    disabled={form.operador_id == null || saldoFavor <= EPSILON_DEUDA}
-                    title="Se descuenta del saldo a favor del operador y no puede superar el total cobrado"
-                    placeholder="0"
-                  />
-                  {form.operador_id != null && saldoFavor > EPSILON_DEUDA && (
-                    <span className="field-hint">
-                      Máx. {fmt(Math.min(saldoFavor, form.cobro))} (saldo disponible y total cobrado).
-                    </span>
-                  )}
-                </div>
+              {isNew && form.forma_pago === "Saldo" && form.operador_id != null && (
+                <p className="field-hint" style={{ marginTop: "2px" }}>
+                  Saldo disponible: {saldoLoading ? "…" : fmt(saldoFavor)}
+                </p>
               )}
 
               <div className="calc-row">
