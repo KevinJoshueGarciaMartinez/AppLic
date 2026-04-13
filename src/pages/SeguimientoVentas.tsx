@@ -215,7 +215,6 @@ type DetallesModalState = {
   nombre: string;
   medio_captacion: string | null;
   num_exp_med_preventiva: string | null;
-  tramite_a_realizar: string | null;
   notas: string;
 };
 
@@ -593,8 +592,9 @@ export default function SeguimientoVentas() {
               <strong>#{detallesModal.id}</strong> — {detallesModal.nombre}
             </p>
             <p className="field-hint" style={{ marginTop: "-4px", marginBottom: "12px" }}>
-              Captación, médico y trámite son solo consulta aquí; cámbialos en el expediente
-              del operador. Solo las <strong>notas</strong> se guardan con el botón de abajo.
+              Captación y médico son solo consulta; el resto del expediente (trámite, documentos,
+              etc.) lo ves y editas con el botón. Las <strong>notas</strong> se guardan con
+              «Guardar notas».
             </p>
 
             <div className="seguimiento-detalles-meta">
@@ -612,14 +612,6 @@ export default function SeguimientoVentas() {
                     : "—"}
                 </span>
               </div>
-              <div className="seguimiento-detalles-meta__row">
-                <span className="seguimiento-detalles-meta__label">Expediente</span>
-                <span className="seguimiento-detalles-meta__valor">
-                  {detallesModal.tramite_a_realizar?.trim()
-                    ? detallesModal.tramite_a_realizar.trim()
-                    : "—"}
-                </span>
-              </div>
             </div>
 
             <div className="seguimiento-detalles-expediente-wrap">
@@ -628,17 +620,10 @@ export default function SeguimientoVentas() {
                   Abrir expediente
                 </button>
               </Link>
-              <p className="field-hint" style={{ marginTop: "6px", marginBottom: 0 }}>
-                Formulario completo del operador (datos personales, documentos, etc.).
-              </p>
             </div>
 
             <div className="form-field form-field-full" style={{ marginTop: "1rem" }}>
-              <label>Notas de seguimiento</label>
-              <p className="field-hint" style={{ marginBottom: "6px" }}>
-                Este es el único campo editable en esta ventana; al guardar solo se actualizan
-                las notas.
-              </p>
+              <label>Notas</label>
               <textarea
                 className="modal-textarea"
                 rows={5}
@@ -648,7 +633,7 @@ export default function SeguimientoVentas() {
                     m ? { ...m, notas: e.target.value } : m,
                   )
                 }
-                placeholder="Agrega o edita notas de seguimiento…"
+                placeholder="Escribe o edita las notas de seguimiento…"
               />
             </div>
 
@@ -824,8 +809,6 @@ export default function SeguimientoVentas() {
                               medio_captacion: op.medio_captacion ?? null,
                               num_exp_med_preventiva:
                                 op.num_exp_med_preventiva ?? null,
-                              tramite_a_realizar:
-                                op.tramite_a_realizar ?? null,
                               notas: op.notas_seguimiento ?? "",
                             })
                           }
