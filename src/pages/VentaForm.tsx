@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import type { WheelEventHandler } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
@@ -31,6 +32,11 @@ import HistorialVentasOperador, {
 } from "../components/HistorialVentasOperador";
 
 const EPSILON_DEUDA = 0.005;
+
+/** Quita el foco para que la rueda del ratón no incremente/decremente el valor (type="number"). */
+const blurNumberInputOnWheel: WheelEventHandler<HTMLInputElement> = (e) => {
+  e.currentTarget.blur();
+};
 
 /** `catalogo_servicios_costos.id_servicio` para IVA (línea de desglose; importe lo define el usuario). */
 const ID_SERVICIO_IVA = 57;
@@ -1250,6 +1256,7 @@ export default function VentaForm({ id }: Props) {
                                 min={0}
                                 step={0.01}
                                 value={item.costo}
+                                onWheel={blurNumberInputOnWheel}
                                 onFocus={(e) => e.target.select()}
                                 onChange={(e) => updateItemCostoIva(idx, e.target.value)}
                                 title="Importe de IVA (lo ingresa el usuario)"
@@ -1323,6 +1330,7 @@ export default function VentaForm({ id }: Props) {
                       min={0}
                       step={0.01}
                       value={form.pago_efectivo}
+                      onWheel={blurNumberInputOnWheel}
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => updatePagoDividida("pago_efectivo", e.target.value)}
                     />
@@ -1335,6 +1343,7 @@ export default function VentaForm({ id }: Props) {
                       min={0}
                       step={0.01}
                       value={form.pago_deposito}
+                      onWheel={blurNumberInputOnWheel}
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => updatePagoDividida("pago_deposito", e.target.value)}
                     />
@@ -1364,6 +1373,7 @@ export default function VentaForm({ id }: Props) {
                       min={0}
                       step={0.01}
                       value={form.pago_saldo_operador}
+                      onWheel={blurNumberInputOnWheel}
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => updatePagoDividida("pago_saldo_operador", e.target.value)}
                       title="Parte del pago cubierta con saldo a favor del operador"
@@ -1452,6 +1462,7 @@ export default function VentaForm({ id }: Props) {
                       min={0}
                       step={0.01}
                       value={form.cobro}
+                      onWheel={blurNumberInputOnWheel}
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => set("cobro", Number(e.target.value))}
                       title="Suma aplicada al ticket (efectivo, depósito y/o saldo a favor)"
@@ -1606,6 +1617,7 @@ export default function VentaForm({ id }: Props) {
                       step={0.01}
                       placeholder={fmt(faltante)}
                       value={liqForm.monto}
+                      onWheel={blurNumberInputOnWheel}
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => setLiqForm((p) => ({ ...p, monto: e.target.value }))}
                     />
@@ -1674,6 +1686,7 @@ export default function VentaForm({ id }: Props) {
                         step={0.01}
                         className="venta-pago-dividido-input"
                         value={liqForm.pagoEfectivo}
+                        onWheel={blurNumberInputOnWheel}
                         onFocus={(e) => e.target.select()}
                         onChange={(e) =>
                           setLiqForm((p) => ({ ...p, pagoEfectivo: e.target.value }))
@@ -1688,6 +1701,7 @@ export default function VentaForm({ id }: Props) {
                         step={0.01}
                         className="venta-pago-dividido-input"
                         value={liqForm.pagoDeposito}
+                        onWheel={blurNumberInputOnWheel}
                         onFocus={(e) => e.target.select()}
                         onChange={(e) =>
                           setLiqForm((p) => ({ ...p, pagoDeposito: e.target.value }))
@@ -1702,6 +1716,7 @@ export default function VentaForm({ id }: Props) {
                         step={0.01}
                         className="venta-pago-dividido-input"
                         value={liqForm.pagoSaldo}
+                        onWheel={blurNumberInputOnWheel}
                         onFocus={(e) => e.target.select()}
                         onChange={(e) =>
                           setLiqForm((p) => ({ ...p, pagoSaldo: e.target.value }))
