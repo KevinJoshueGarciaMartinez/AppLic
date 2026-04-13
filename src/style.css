@@ -939,18 +939,6 @@ input[type="number"] {
   font-size: 0.75rem;
 }
 
-.operadores-acciones {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-}
-
-.btn-secondary--small {
-  padding: 5px 10px;
-  font-size: 0.75rem;
-}
-
 /* ─── Money columns ──────────────────────────────────────────────────────────── */
 
 .col-money        { font-variant-numeric: tabular-nums; text-align: right; }

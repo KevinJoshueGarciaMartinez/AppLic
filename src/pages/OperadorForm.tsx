@@ -10,6 +10,10 @@ import {
 import type { Operador, OperadorInsert, Promotor } from "../lib/types";
 import HistorialVentasOperador from "../components/HistorialVentasOperador";
 
+/** Pestaña «Ventas» (historial) antes de «Saldo»; índices 0–4 son fijos. */
+const TAB_IDX_VENTAS = 5;
+const TAB_IDX_SALDO = 6;
+
 function fmtSaldo(n: number) {
   return new Intl.NumberFormat("es-MX", {
     style: "currency",
@@ -199,13 +203,14 @@ export default function OperadorForm({ id }: Props) {
 
   useEffect(() => {
     if (isNew || !id) return;
-    if (window.location.hash !== "#historial-ventas-operador") return;
-    setActiveTab(0);
+    const h = window.location.hash;
+    if (h !== "#historial-ventas-operador" && h !== "#ventas") return;
+    setActiveTab(TAB_IDX_VENTAS);
     const t = window.setTimeout(() => {
       document
         .getElementById("historial-ventas-operador")
         ?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 200);
+    }, 250);
     return () => window.clearTimeout(t);
   }, [id, isNew]);
 
@@ -304,7 +309,7 @@ export default function OperadorForm({ id }: Props) {
     "Licencia y médico",
     "Cita SCT",
     "Curso",
-    ...(isNew ? [] : ["Saldo"]),
+    ...(isNew ? [] : ["Ventas", "Saldo"]),
   ];
 
   if (!isNew && loadingOp) {
@@ -587,10 +592,6 @@ export default function OperadorForm({ id }: Props) {
                 rows={2}
               />
             </div>
-
-            {!isNew && id != null && (
-              <HistorialVentasOperador operadorId={id} />
-            )}
 
           </div>
         )}
@@ -949,7 +950,13 @@ export default function OperadorForm({ id }: Props) {
           </div>
         )}
 
-        {!isNew && activeTab === 5 && (
+        {!isNew && activeTab === TAB_IDX_VENTAS && (
+          <div className="form-section">
+            {id != null && <HistorialVentasOperador operadorId={id} />}
+          </div>
+        )}
+
+        {!isNew && activeTab === TAB_IDX_SALDO && (
           <div className="form-section">
             <div className="venta-saldos-cards operador-saldo-resumen" style={{ marginBottom: "1.25rem" }}>
               <div className="saldo-mini-card saldo-mini-card--favor">
