@@ -160,10 +160,18 @@ interface Props {
   id?: number;
 }
 
+const TABS_FIJAS = [
+  "Datos personales",
+  "Documentación",
+  "Licencia y médico",
+  "Cita SCT",
+  "Curso",
+] as const;
+
 export default function OperadorForm({ id }: Props) {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
-  const isNew = !id;
+  const isNew = id == null;
   const [activeTab, setActiveTab] = useState(0);
   const [form, setForm] = useState<OperadorInsert>(emptyForm());
   const [guardado, setGuardado] = useState(false);
@@ -303,14 +311,9 @@ export default function OperadorForm({ id }: Props) {
 
   const volverHref = fromSeguimientoQuery() ? "/seguimiento" : "/operadores";
 
-  const tabs = [
-    "Datos personales",
-    "Documentación",
-    "Licencia y médico",
-    "Cita SCT",
-    "Curso",
-    ...(isNew ? [] : ["Ventas", "Saldo"]),
-  ];
+  const tabs: string[] = isNew
+    ? [...TABS_FIJAS]
+    : [...TABS_FIJAS, "Ventas", "Saldo"];
 
   if (!isNew && loadingOp) {
     return (
@@ -324,7 +327,10 @@ export default function OperadorForm({ id }: Props) {
   }
 
   return (
-    <div className="page-container">
+    <div
+      className="page-container"
+      key={isNew ? "operador-nuevo" : `operador-${id}`}
+    >
       {/* Header */}
       <div className="page-header">
         <div>
