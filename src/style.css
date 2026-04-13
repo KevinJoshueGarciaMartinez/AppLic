@@ -1128,6 +1128,12 @@ input[type="number"] {
   border-radius: 12px;
 }
 
+/* Bloque Servicios encima del ticket (columna derecha en nueva venta) */
+.venta-add-service-bar--above-ticket {
+  margin-top: 0;
+  margin-bottom: 18px;
+}
+
 .venta-add-service-inner {
   display: flex;
   flex-wrap: wrap;

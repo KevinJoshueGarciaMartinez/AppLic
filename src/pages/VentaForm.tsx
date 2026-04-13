@@ -96,6 +96,7 @@ async function buscarOperadores(texto: string): Promise<Operador[]> {
     .select(
       "numero_consecutivo, nombre, apellido_paterno, apellido_materno, curp, telefono_1, es_prospecto",
     )
+    .eq("es_prospecto", false)
     .or(
       `curp.ilike.%${texto}%,nombre.ilike.%${texto}%,apellido_paterno.ilike.%${texto}%,telefono_1.ilike.%${texto}%`,
     )
@@ -1026,7 +1027,7 @@ export default function VentaForm({ id }: Props) {
 
       <form onSubmit={handleSubmit} className="record-form">
         <div className="form-grid-ventas">
-          {/* ── Izquierda: operador, promotor, alta de servicios ── */}
+          {/* ── Izquierda: operador y promotor (espacio reservado debajo para más secciones) ── */}
           <div>
             <div className="form-group-title">Operador</div>
             <div className="venta-operador-bloque">
@@ -1112,9 +1113,12 @@ export default function VentaForm({ id }: Props) {
                 </div>
               )}
             </div>
+          </div>
 
+          {/* ── Derecha: alta de servicios (nueva venta), ticket y cobro ── */}
+          <div>
             {isNew && (
-              <div className="venta-add-service-bar">
+              <div className="venta-add-service-bar venta-add-service-bar--above-ticket">
                 <div className="form-group-title" style={{ marginBottom: "8px" }}>
                   Servicios
                 </div>
@@ -1150,16 +1154,13 @@ export default function VentaForm({ id }: Props) {
                 </div>
               </div>
             )}
-          </div>
 
-          {/* ── Derecha: ticket (desglose + cobro, pago, referencia en una sola tarjeta) ── */}
-          <div>
             <div className="cobro-card">
               <div className="form-group-title">Ticket</div>
 
               {items.length === 0 ? (
                 <p className="ticket-empty-hint">
-                  Usa «Servicios» a la izquierda para agregar líneas al ticket.
+                  Usa «Servicios» arriba para agregar líneas al ticket.
                 </p>
               ) : (
                 <div className="ticket-desglose-wrap">
