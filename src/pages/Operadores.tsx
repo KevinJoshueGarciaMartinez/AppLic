@@ -7,7 +7,8 @@ import type { Operador } from "../lib/types";
 async function fetchOperadores(): Promise<Operador[]> {
   const { data, error } = await supabase
     .from("operadores")
-    .select("numero_consecutivo, fecha, nombre, apellido_paterno, apellido_materno, curp, telefono_1, licencia_numero, es_prospecto, promotores(nombre)")
+    .select("numero_consecutivo, fecha, nombre, apellido_paterno, apellido_materno, curp, telefono_1, licencia_numero, promotores(nombre)")
+    .eq("es_prospecto", false)
     .order("numero_consecutivo", { ascending: false });
 
   if (error) throw new Error(error.message);
@@ -38,8 +39,8 @@ export default function Operadores() {
             <span className="page-icon">👤</span> Operadores
           </h1>
           <p className="page-subtitle">
-            Registro y consulta de operadores. Datos personales, documentos,
-            licencia y curso.
+            Registro y consulta de operadores formalizados. Datos personales, documentos,
+            licencia y curso. Los prospectos no aparecen aquí; úsalos en Seguimiento.
           </p>
         </div>
         <Link href="/operadores/nuevo">
@@ -77,7 +78,6 @@ export default function Operadores() {
                 <th>Teléfono</th>
                 <th>Promotor</th>
                 <th>Licencia</th>
-                <th>Tipo</th>
                 <th>Fecha</th>
                 <th></th>
               </tr>
@@ -85,7 +85,7 @@ export default function Operadores() {
             <tbody>
               {filtrados.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="table-empty">
+                  <td colSpan={8} className="table-empty">
                     {busqueda
                       ? "No hay resultados para la búsqueda."
                       : "No hay operadores registrados. Crea el primero."}
@@ -108,13 +108,6 @@ export default function Operadores() {
                         : "—"}
                     </td>
                     <td>{op.licencia_numero ?? "—"}</td>
-                    <td>
-                      {op.es_prospecto ? (
-                        <span className="badge badge--amber">Prospecto</span>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
                     <td className="col-fecha">{op.fecha ?? "—"}</td>
                     <td>
                       <Link href={`/operadores/${op.numero_consecutivo}`}>
