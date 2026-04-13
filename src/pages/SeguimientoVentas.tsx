@@ -592,6 +592,10 @@ export default function SeguimientoVentas() {
             <p className="modal-desc">
               <strong>#{detallesModal.id}</strong> — {detallesModal.nombre}
             </p>
+            <p className="field-hint" style={{ marginTop: "-4px", marginBottom: "12px" }}>
+              Captación, médico y trámite son solo consulta aquí; cámbialos en el expediente
+              del operador. Solo las <strong>notas</strong> se guardan con el botón de abajo.
+            </p>
 
             <div className="seguimiento-detalles-meta">
               <div className="seguimiento-detalles-meta__row">
@@ -621,13 +625,20 @@ export default function SeguimientoVentas() {
             <div className="seguimiento-detalles-expediente-wrap">
               <Link href={`/operadores/${detallesModal.id}?from=seguimiento`}>
                 <button type="button" className="btn-edit">
-                  Expediente
+                  Abrir expediente
                 </button>
               </Link>
+              <p className="field-hint" style={{ marginTop: "6px", marginBottom: 0 }}>
+                Formulario completo del operador (datos personales, documentos, etc.).
+              </p>
             </div>
 
             <div className="form-field form-field-full" style={{ marginTop: "1rem" }}>
-              <label>Notas</label>
+              <label>Notas de seguimiento</label>
+              <p className="field-hint" style={{ marginBottom: "6px" }}>
+                Este es el único campo editable en esta ventana; al guardar solo se actualizan
+                las notas.
+              </p>
               <textarea
                 className="modal-textarea"
                 rows={5}
@@ -666,7 +677,7 @@ export default function SeguimientoVentas() {
                   })
                 }
               >
-                {patchNotasMutation.isPending ? "Guardando…" : "Guardar"}
+                {patchNotasMutation.isPending ? "Guardando notas…" : "Guardar notas"}
               </button>
             </div>
           </div>
