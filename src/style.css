@@ -879,14 +879,23 @@ input[type="number"] {
 }
 
 .data-table--seguimiento {
-  min-width: 1100px;
+  min-width: 1240px;
+}
+
+/* Columna Estatus: ancho para frases largas del desplegable */
+.data-table--seguimiento th:nth-child(10),
+.data-table--seguimiento td:nth-child(10) {
+  min-width: 12.5rem;
 }
 
 .table-select-estatus {
-  max-width: 12rem;
+  display: block;
+  min-width: 12.5rem;
+  max-width: 22rem;
   width: 100%;
+  box-sizing: border-box;
   font-size: 0.8125rem;
-  padding: 5px 8px;
+  padding: 6px 10px;
   border: 1px solid #e2e8f0;
   border-radius: 6px;
   background: #fff;
