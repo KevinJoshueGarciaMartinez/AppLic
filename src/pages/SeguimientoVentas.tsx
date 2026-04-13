@@ -210,10 +210,13 @@ function modalToInsert(m: ModalProspecto): OperadorInsert {
   };
 }
 
-type NotasModalState = {
+type DetallesModalState = {
   id: number;
   nombre: string;
-  texto: string;
+  medio_captacion: string | null;
+  num_exp_med_preventiva: string | null;
+  tramite_a_realizar: string | null;
+  notas: string;
 };
 
 export default function SeguimientoVentas() {
@@ -223,7 +226,7 @@ export default function SeguimientoVentas() {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [modalForm, setModalForm] = useState<ModalProspecto>(emptyModalProspecto);
   const [modalError, setModalError] = useState<string | null>(null);
-  const [notasModal, setNotasModal] = useState<NotasModalState | null>(null);
+  const [detallesModal, setDetallesModal] = useState<DetallesModalState | null>(null);
 
   const { data = [], isLoading, isError, error } = useQuery({
     queryKey: ["seguimiento_operadores"],
@@ -271,22 +274,22 @@ export default function SeguimientoVentas() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["seguimiento_operadores"] });
       queryClient.invalidateQueries({ queryKey: ["operadores"] });
-      setNotasModal(null);
+      setDetallesModal(null);
     },
   });
 
-  const overlayAbierto = modalAbierto || notasModal != null;
+  const overlayAbierto = modalAbierto || detallesModal != null;
 
   useEffect(() => {
     if (!overlayAbierto) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      if (notasModal && !patchNotasMutation.isPending) setNotasModal(null);
+      if (detallesModal && !patchNotasMutation.isPending) setDetallesModal(null);
       else if (modalAbierto && !insertMutation.isPending) setModalAbierto(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [overlayAbierto, notasModal, modalAbierto, insertMutation.isPending, patchNotasMutation.isPending]);
+  }, [overlayAbierto, detallesModal, modalAbierto, insertMutation.isPending, patchNotasMutation.isPending]);
 
   function abrirModal() {
     insertMutation.reset();
@@ -344,8 +347,9 @@ export default function SeguimientoVentas() {
           </h1>
           <p className="page-subtitle">
             Prospectos registrados como operadores ligeros. Orden por próxima
-            llamada (vencidas primero). Cambia estatus y notas desde la tabla.
-            Al formalizar, completa CURP en el expediente y desmarca «Prospecto».
+            llamada (vencidas primero). Cambia estatus en la tabla; captación, médico,
+            trámite y notas en «Detalles». Al formalizar, completa CURP en el expediente
+            y desmarca «Prospecto».
           </p>
         </div>
         <button className="btn-primary" type="button" onClick={abrirModal}>
@@ -556,13 +560,13 @@ export default function SeguimientoVentas() {
         </div>
       )}
 
-      {notasModal && (
+      {detallesModal && (
         <div
           className="modal-overlay"
           role="presentation"
           onClick={(e) => {
             if (e.target === e.currentTarget && !patchNotasMutation.isPending) {
-              setNotasModal(null);
+              setDetallesModal(null);
             }
           }}
         >
@@ -570,7 +574,7 @@ export default function SeguimientoVentas() {
             className="modal-card modal-card--lg"
             role="dialog"
             aria-modal="true"
-            aria-labelledby="modal-notas-titulo"
+            aria-labelledby="modal-detalles-titulo"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -578,25 +582,57 @@ export default function SeguimientoVentas() {
               className="modal-close"
               aria-label="Cerrar"
               disabled={patchNotasMutation.isPending}
-              onClick={() => setNotasModal(null)}
+              onClick={() => setDetallesModal(null)}
             >
               ×
             </button>
-            <h2 id="modal-notas-titulo" className="modal-title modal-title--info">
-              Notas de seguimiento
+            <h2 id="modal-detalles-titulo" className="modal-title modal-title--info">
+              Detalles
             </h2>
             <p className="modal-desc">
-              <strong>#{notasModal.id}</strong> — {notasModal.nombre}
+              <strong>#{detallesModal.id}</strong> — {detallesModal.nombre}
             </p>
-            <textarea
-              className="modal-textarea"
-              style={{ marginTop: "12px", minHeight: "140px" }}
-              value={notasModal.texto}
-              onChange={(e) =>
-                setNotasModal((m) => (m ? { ...m, texto: e.target.value } : m))
-              }
-              placeholder="Escribe o edita las notas…"
-            />
+
+            <div className="seguimiento-detalles-meta">
+              <div className="seguimiento-detalles-meta__row">
+                <span className="seguimiento-detalles-meta__label">Captación</span>
+                <span className="seguimiento-detalles-meta__valor">
+                  {etiquetaMedioCaptacion(detallesModal.medio_captacion)}
+                </span>
+              </div>
+              <div className="seguimiento-detalles-meta__row">
+                <span className="seguimiento-detalles-meta__label">Med. prev.</span>
+                <span className="seguimiento-detalles-meta__valor">
+                  {detallesModal.num_exp_med_preventiva?.trim()
+                    ? detallesModal.num_exp_med_preventiva.trim()
+                    : "—"}
+                </span>
+              </div>
+              <div className="seguimiento-detalles-meta__row">
+                <span className="seguimiento-detalles-meta__label">Expediente</span>
+                <span className="seguimiento-detalles-meta__valor">
+                  {detallesModal.tramite_a_realizar?.trim()
+                    ? detallesModal.tramite_a_realizar.trim()
+                    : "—"}
+                </span>
+              </div>
+            </div>
+
+            <div className="form-field form-field-full" style={{ marginTop: "1rem" }}>
+              <label>Notas</label>
+              <textarea
+                className="modal-textarea"
+                rows={5}
+                value={detallesModal.notas}
+                onChange={(e) =>
+                  setDetallesModal((m) =>
+                    m ? { ...m, notas: e.target.value } : m,
+                  )
+                }
+                placeholder="Agrega o edita notas de seguimiento…"
+              />
+            </div>
+
             {patchNotasMutation.isError && (
               <div className="alert-error" style={{ marginTop: "12px" }}>
                 {(patchNotasMutation.error as Error).message}
@@ -607,7 +643,7 @@ export default function SeguimientoVentas() {
                 type="button"
                 className="btn-secondary"
                 disabled={patchNotasMutation.isPending}
-                onClick={() => setNotasModal(null)}
+                onClick={() => setDetallesModal(null)}
               >
                 Cancelar
               </button>
@@ -617,12 +653,12 @@ export default function SeguimientoVentas() {
                 disabled={patchNotasMutation.isPending}
                 onClick={() =>
                   patchNotasMutation.mutate({
-                    id: notasModal.id,
-                    texto: notasModal.texto.trim() || null,
+                    id: detallesModal.id,
+                    texto: detallesModal.notas.trim() || null,
                   })
                 }
               >
-                {patchNotasMutation.isPending ? "Guardando…" : "Guardar notas"}
+                {patchNotasMutation.isPending ? "Guardando…" : "Guardar"}
               </button>
             </div>
           </div>
@@ -702,21 +738,17 @@ export default function SeguimientoVentas() {
                 <th>#</th>
                 <th>Nombre</th>
                 <th>Teléfono</th>
-                <th>Captación</th>
                 <th>Fecha captación</th>
                 <th>Próx. llamada</th>
                 <th>Asesor</th>
-                <th>Med. prev.</th>
-                <th>Trámite</th>
                 <th>Estatus</th>
-                <th>Notas</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {filas.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="table-empty">
+                  <td colSpan={8} className="table-empty">
                     No hay prospectos con estos filtros.
                   </td>
                 </tr>
@@ -731,7 +763,6 @@ export default function SeguimientoVentas() {
                       <td className="col-id">{op.numero_consecutivo}</td>
                       <td className="col-nombre">{nombreCompleto(op)}</td>
                       <td>{op.telefono_1 ?? "—"}</td>
-                      <td>{etiquetaMedioCaptacion(op.medio_captacion)}</td>
                       <td className="col-fecha">{op.fecha_captacion ?? "—"}</td>
                       <td className="col-fecha">{op.proxima_llamada ?? "—"}</td>
                       <td>
@@ -741,10 +772,6 @@ export default function SeguimientoVentas() {
                         >
                           {truncar(op.asesor, 24)}
                         </span>
-                      </td>
-                      <td className="col-mono">{truncar(op.num_exp_med_preventiva, 16)}</td>
-                      <td style={{ maxWidth: "10rem", fontSize: "0.85rem" }}>
-                        {truncar(op.tramite_a_realizar, 40)}
                       </td>
                       <td>
                         <select
@@ -768,35 +795,33 @@ export default function SeguimientoVentas() {
                         </select>
                       </td>
                       <td>
-                        <div className="seguimiento-notas-cell">
-                          <span className="seguimiento-notas-preview">
-                            {truncar(op.notas_seguimiento, 48)}
-                          </span>
+                        <div className="seguimiento-fila-acciones">
                           <button
                             type="button"
-                            className="btn-link"
+                            className="btn-secondary"
                             onClick={() =>
-                              setNotasModal({
+                              setDetallesModal({
                                 id: op.numero_consecutivo,
                                 nombre: nombreCompleto(op),
-                                texto: op.notas_seguimiento ?? "",
+                                medio_captacion: op.medio_captacion ?? null,
+                                num_exp_med_preventiva:
+                                  op.num_exp_med_preventiva ?? null,
+                                tramite_a_realizar:
+                                  op.tramite_a_realizar ?? null,
+                                notas: op.notas_seguimiento ?? "",
                               })
                             }
                           >
-                            {op.notas_seguimiento?.trim()
-                              ? "Editar notas"
-                              : "Agregar notas"}
+                            Detalles
                           </button>
+                          <Link
+                            href={`/operadores/${op.numero_consecutivo}?from=seguimiento`}
+                          >
+                            <button className="btn-edit" type="button">
+                              Expediente
+                            </button>
+                          </Link>
                         </div>
-                      </td>
-                      <td>
-                        <Link
-                          href={`/operadores/${op.numero_consecutivo}?from=seguimiento`}
-                        >
-                          <button className="btn-edit" type="button">
-                            Expediente
-                          </button>
-                        </Link>
                       </td>
                     </tr>
                   );
