@@ -3,15 +3,7 @@ import { Link } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 import type { Operador, OperadorInsert } from "../lib/types";
-
-const MEDIOS_CAPTACION = [
-  "Email",
-  "Telefono",
-  "Redes",
-  "Presencial",
-  "Referido",
-  "Otro",
-] as const;
+import { MEDIOS_CAPTACION, etiquetaMedioCaptacion } from "../lib/mediosCaptacion";
 
 const ESTATUS_SEGUIMIENTO_OPCIONES = [
   "Interesado",
@@ -475,11 +467,7 @@ export default function SeguimientoVentas() {
                     <option value="">— Seleccionar —</option>
                     {MEDIOS_CAPTACION.map((m) => (
                       <option key={m} value={m}>
-                        {m === "Telefono"
-                          ? "Teléfono"
-                          : m === "Redes"
-                            ? "Redes sociales"
-                            : m}
+                        {m}
                       </option>
                     ))}
                   </select>
@@ -725,15 +713,7 @@ export default function SeguimientoVentas() {
                       <td className="col-id">{op.numero_consecutivo}</td>
                       <td className="col-nombre">{nombreCompleto(op)}</td>
                       <td>{op.telefono_1 ?? "—"}</td>
-                      <td>
-                        {op.medio_captacion
-                          ? op.medio_captacion === "Telefono"
-                            ? "Teléfono"
-                            : op.medio_captacion === "Redes"
-                              ? "Redes"
-                              : op.medio_captacion
-                          : "—"}
-                      </td>
+                      <td>{etiquetaMedioCaptacion(op.medio_captacion)}</td>
                       <td className="col-fecha">{op.fecha_captacion ?? "—"}</td>
                       <td className="col-fecha">{op.proxima_llamada ?? "—"}</td>
                       <td>{truncar(op.asesor, 24)}</td>

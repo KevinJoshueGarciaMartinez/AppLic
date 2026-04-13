@@ -8,6 +8,11 @@ import {
   fetchMovimientosSaldo,
 } from "../lib/saldoOperador";
 import type { Operador, OperadorInsert, Promotor } from "../lib/types";
+import {
+  MEDIOS_CAPTACION,
+  etiquetaMedioCaptacion,
+  esMedioCaptacionCatalogoActual,
+} from "../lib/mediosCaptacion";
 import HistorialVentasOperador from "../components/HistorialVentasOperador";
 
 /** Pestaña «Ventas» (historial) antes de «Saldo»; índices 0–4 son fijos. */
@@ -59,15 +64,6 @@ const MEDIOS_SOLICITUD = [
   "Correo",
   "Referido",
 ];
-
-const MEDIOS_CAPTACION = [
-  "Email",
-  "Telefono",
-  "Redes",
-  "Presencial",
-  "Referido",
-  "Otro",
-] as const;
 
 const ESTATUS_SEGUIMIENTO = [
   "Interesado",
@@ -402,9 +398,16 @@ export default function OperadorForm({ id }: Props) {
                   }
                 >
                   <option value="">— Seleccionar —</option>
+                  {form.medio_captacion != null &&
+                    form.medio_captacion !== "" &&
+                    !esMedioCaptacionCatalogoActual(form.medio_captacion) && (
+                      <option value={form.medio_captacion}>
+                        {etiquetaMedioCaptacion(form.medio_captacion)} (anterior)
+                      </option>
+                    )}
                   {MEDIOS_CAPTACION.map((m) => (
                     <option key={m} value={m}>
-                      {m === "Telefono" ? "Teléfono" : m === "Redes" ? "Redes sociales" : m}
+                      {m}
                     </option>
                   ))}
                 </select>
