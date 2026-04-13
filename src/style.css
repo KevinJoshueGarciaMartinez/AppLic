@@ -1003,6 +1003,18 @@ input[type="number"] {
   align-items: start;
 }
 
+/* Nueva venta: servicios + ticket hasta operador y revisión de promotor */
+fieldset.venta-flujo-bloque {
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+fieldset.venta-flujo-bloque:disabled {
+  opacity: 0.55;
+}
+
 /* Operador + saldos en venta */
 .venta-operador-bloque {
   display: flex;

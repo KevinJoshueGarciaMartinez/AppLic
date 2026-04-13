@@ -180,10 +180,12 @@ function OperadorSearch({
   operadorId,
   operadorNombre,
   onChange,
+  autoFocus,
 }: {
   operadorId: number | null;
   operadorNombre: string | null;
   onChange: (id: number, nombre: string) => void;
+  autoFocus?: boolean;
 }) {
   const [texto, setTexto] = useState(operadorNombre ?? "");
   const [resultados, setResultados] = useState<Operador[]>([]);
@@ -227,6 +229,7 @@ function OperadorSearch({
         onFocus={() => texto.length >= 2 && setAbierto(resultados.length > 0)}
         onBlur={() => setTimeout(() => setAbierto(false), 150)}
         placeholder="Buscar por nombre, CURP o teléfono..."
+        autoFocus={!!autoFocus}
       />
       {abierto && (
         <ul className="autocomplete-list">
@@ -267,6 +270,8 @@ export default function VentaForm({ id }: Props) {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const isNew = !id;
+  /** En nueva venta: el usuario debe enfocar el promotor antes de servicios/ticket (incluye «Sin promotor»). */
+  const [promotorRevisado, setPromotorRevisado] = useState(false);
   const [form, setForm] = useState<VentaInsert>(emptyForm());
   const [items, setItems] = useState<VentaItem[]>([]);
   const [draftServicioId, setDraftServicioId] = useState<number | "">("");
@@ -338,6 +343,11 @@ export default function VentaForm({ id }: Props) {
       setForm(base);
     }
   }, [ventaData]);
+
+  useEffect(() => {
+    if (!isNew) return;
+    setPromotorRevisado(false);
+  }, [form.operador_id, isNew]);
 
   useEffect(() => {
     if (itemsData && itemsData.length > 0) {
@@ -1044,6 +1054,7 @@ export default function VentaForm({ id }: Props) {
                     <OperadorSearch
                       operadorId={form.operador_id}
                       operadorNombre={form.operador_nombre}
+                      autoFocus={isNew}
                       onChange={(opId, nombre) =>
                         setForm((prev) => ({ ...prev, operador_id: opId, operador_nombre: nombre }))
                       }
@@ -1095,16 +1106,25 @@ export default function VentaForm({ id }: Props) {
               {isNew ? (
                 <select
                   className="select-promotor-wide"
+                  disabled={isNew && form.operador_id == null}
                   value={form.id_promotor ?? ""}
-                  onChange={(e) =>
-                    e.target.value
-                      ? handlePromotorChange(Number(e.target.value))
-                      : setForm((prev) => ({
-                          ...prev,
-                          id_promotor: null,
-                          promotor: null,
-                        }))
-                  }
+                  onFocus={() => {
+                    if (isNew && form.operador_id != null) {
+                      setPromotorRevisado(true);
+                    }
+                  }}
+                  onChange={(e) => {
+                    if (isNew && form.operador_id != null) setPromotorRevisado(true);
+                    if (e.target.value) {
+                      handlePromotorChange(Number(e.target.value));
+                    } else {
+                      setForm((prev) => ({
+                        ...prev,
+                        id_promotor: null,
+                        promotor: null,
+                      }));
+                    }
+                  }}
                 >
                   <option value="">— Sin promotor —</option>
                   {promotores.map((p) => (
@@ -1119,6 +1139,12 @@ export default function VentaForm({ id }: Props) {
                 </div>
               )}
             </div>
+            {isNew && form.operador_id != null && !promotorRevisado && (
+              <p className="field-hint" style={{ marginTop: "10px" }}>
+                Haz clic en el campo «Promotor» (elige promotor o deja «Sin promotor») para habilitar
+                servicios y ticket.
+              </p>
+            )}
 
             {form.operador_id != null && (
               <HistorialVentasOperador operadorId={form.operador_id} compact />
@@ -1127,6 +1153,13 @@ export default function VentaForm({ id }: Props) {
 
           {/* ── Derecha: alta de servicios (nueva venta), ticket y cobro ── */}
           <div>
+            <fieldset
+              className="venta-flujo-bloque"
+              disabled={
+                isNew &&
+                (form.operador_id == null || !promotorRevisado)
+              }
+            >
             {isNew && (
               <div className="venta-add-service-bar venta-add-service-bar--above-ticket">
                 <div className="form-group-title" style={{ marginBottom: "8px" }}>
@@ -1464,6 +1497,7 @@ export default function VentaForm({ id }: Props) {
                 </div>
               )}
             </div>
+            </fieldset>
           </div>
         </div>
 
@@ -1726,7 +1760,12 @@ export default function VentaForm({ id }: Props) {
             <button
               type="submit"
               className="btn-primary"
-              disabled={mutation.isPending || bloquearNuevaVentaPorDeuda}
+              disabled={
+                mutation.isPending ||
+                bloquearNuevaVentaPorDeuda ||
+                form.operador_id == null ||
+                !promotorRevisado
+              }
             >
               {mutation.isPending
                 ? "Guardando…"
