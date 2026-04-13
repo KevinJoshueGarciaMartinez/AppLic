@@ -26,6 +26,9 @@ import type {
   Promotor,
   Operador,
 } from "../lib/types";
+import HistorialVentasOperador, {
+  VENTAS_POR_OPERADOR_QUERY_KEY,
+} from "../components/HistorialVentasOperador";
 
 const EPSILON_DEUDA = 0.005;
 
@@ -514,6 +517,7 @@ export default function VentaForm({ id }: Props) {
       queryClient.invalidateQueries({ queryKey: ["venta", id] });
       queryClient.invalidateQueries({ queryKey: historialTicketQueryKey });
       queryClient.invalidateQueries({ queryKey: ["ventas"] });
+      queryClient.invalidateQueries({ queryKey: [VENTAS_POR_OPERADOR_QUERY_KEY] });
       if (ticketIdParaPagos)
         queryClient.invalidateQueries({ queryKey: ["ticket_items", ticketIdParaPagos] });
       queryClient.invalidateQueries({ queryKey: ["operador_saldos", form.operador_id] });
@@ -574,6 +578,7 @@ export default function VentaForm({ id }: Props) {
       queryClient.invalidateQueries({ queryKey: ["venta", id] });
       queryClient.invalidateQueries({ queryKey: ["ventas"] });
       queryClient.invalidateQueries({ queryKey: historialTicketQueryKey });
+      queryClient.invalidateQueries({ queryKey: [VENTAS_POR_OPERADOR_QUERY_KEY] });
       queryClient.invalidateQueries({ queryKey: ["operador_saldos", form.operador_id] });
       queryClient.invalidateQueries({ queryKey: ["operador_saldo_movs"] });
       setShowCancelModal(false);
@@ -806,6 +811,7 @@ export default function VentaForm({ id }: Props) {
       queryClient.invalidateQueries({ queryKey: ["ticket_items"] });
       if (id != null) queryClient.invalidateQueries({ queryKey: ["venta", id] });
       queryClient.invalidateQueries({ queryKey: historialTicketQueryKey });
+      queryClient.invalidateQueries({ queryKey: [VENTAS_POR_OPERADOR_QUERY_KEY] });
       queryClient.invalidateQueries({ queryKey: ["operador_saldos"] });
       queryClient.invalidateQueries({ queryKey: ["operador_saldo_movs"] });
       setGuardado(true);
@@ -1113,6 +1119,10 @@ export default function VentaForm({ id }: Props) {
                 </div>
               )}
             </div>
+
+            {form.operador_id != null && (
+              <HistorialVentasOperador operadorId={form.operador_id} compact />
+            )}
           </div>
 
           {/* ── Derecha: alta de servicios (nueva venta), ticket y cobro ── */}

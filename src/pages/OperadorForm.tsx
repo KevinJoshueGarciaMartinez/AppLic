@@ -8,6 +8,7 @@ import {
   fetchMovimientosSaldo,
 } from "../lib/saldoOperador";
 import type { Operador, OperadorInsert, Promotor } from "../lib/types";
+import HistorialVentasOperador from "../components/HistorialVentasOperador";
 
 function fmtSaldo(n: number) {
   return new Intl.NumberFormat("es-MX", {
@@ -195,6 +196,18 @@ export default function OperadorForm({ id }: Props) {
       curp: "",
     }));
   }, [isNew]);
+
+  useEffect(() => {
+    if (isNew || !id) return;
+    if (window.location.hash !== "#historial-ventas-operador") return;
+    setActiveTab(0);
+    const t = window.setTimeout(() => {
+      document
+        .getElementById("historial-ventas-operador")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 200);
+    return () => window.clearTimeout(t);
+  }, [id, isNew]);
 
   // Promotores list
   const { data: promotores = [] } = useQuery({
@@ -574,6 +587,10 @@ export default function OperadorForm({ id }: Props) {
                 rows={2}
               />
             </div>
+
+            {!isNew && id != null && (
+              <HistorialVentasOperador operadorId={id} />
+            )}
 
           </div>
         )}

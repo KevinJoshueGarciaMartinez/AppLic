@@ -39,7 +39,7 @@ export default function Operadores() {
           </h1>
           <p className="page-subtitle">
             Registro y consulta de operadores. Datos personales, documentos,
-            licencia y curso.
+            licencia y curso. Usa «Ventas» para ir al historial de ventas del operador.
           </p>
         </div>
         <Link href="/operadores/nuevo">
@@ -117,9 +117,20 @@ export default function Operadores() {
                     </td>
                     <td className="col-fecha">{op.fecha ?? "—"}</td>
                     <td>
-                      <Link href={`/operadores/${op.numero_consecutivo}`}>
-                        <button className="btn-edit">Ver</button>
-                      </Link>
+                      <div className="operadores-acciones">
+                        <Link href={`/operadores/${op.numero_consecutivo}`}>
+                          <button type="button" className="btn-edit">
+                            Ver
+                          </button>
+                        </Link>
+                        <Link
+                          href={`/operadores/${op.numero_consecutivo}#historial-ventas-operador`}
+                        >
+                          <button type="button" className="btn-secondary btn-secondary--small">
+                            Ventas
+                          </button>
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))

@@ -852,6 +852,105 @@ input[type="number"] {
   color: #1e40af;
 }
 
+/* Historial de ventas por operador (VentaForm / OperadorForm) */
+.historial-ventas-op {
+  margin-top: 1.25rem;
+  padding: 14px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.historial-ventas-op--compact {
+  margin-top: 0;
+  padding: 12px 14px;
+}
+
+.historial-ventas-op__hint {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin: 0 0 4px;
+  line-height: 1.4;
+}
+
+.historial-ventas-op__scroll {
+  max-height: 260px;
+  overflow: auto;
+  margin-top: 8px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.historial-ventas-op--compact .historial-ventas-op__scroll {
+  max-height: 220px;
+}
+
+.historial-ventas-op__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.historial-ventas-op__table th,
+.historial-ventas-op__table td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.historial-ventas-op__table th {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  background: #f8fafc;
+  position: sticky;
+  top: 0;
+}
+
+.historial-ventas-op__table .col-monto {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.historial-ventas-op__fila-cancelada td {
+  opacity: 0.65;
+}
+
+.historial-ventas-op__ticket-hint {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.historial-ventas-op__forma {
+  display: block;
+  font-size: 0.78rem;
+}
+
+.historial-ventas-op__badge-cancel {
+  margin-top: 4px;
+  display: inline-block;
+}
+
+.btn-edit--small {
+  padding: 4px 10px;
+  font-size: 0.75rem;
+}
+
+.operadores-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.btn-secondary--small {
+  padding: 5px 10px;
+  font-size: 0.75rem;
+}
+
 /* ─── Money columns ──────────────────────────────────────────────────────────── */
 
 .col-money        { font-variant-numeric: tabular-nums; text-align: right; }
