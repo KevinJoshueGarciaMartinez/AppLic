@@ -212,6 +212,7 @@ export default function SeguimientoVentas() {
   const queryClient = useQueryClient();
   const [soloPendientes, setSoloPendientes] = useState(true);
   const [diaFiltro, setDiaFiltro] = useState("");
+  const [asesorFiltro, setAsesorFiltro] = useState("");
   const [modalAbierto, setModalAbierto] = useState(false);
   const [modalForm, setModalForm] = useState<ModalProspecto>(emptyModalProspecto);
   const [modalError, setModalError] = useState<string | null>(null);
@@ -305,6 +306,16 @@ export default function SeguimientoVentas() {
     insertMutation.mutate(modalToInsert(modalForm));
   }
 
+  const asesoresOpcionesFiltro = useMemo(() => {
+    const set = new Set<string>();
+    for (const a of ASESORES_OPCIONES) set.add(a);
+    for (const r of data) {
+      const t = r.asesor?.trim();
+      if (t) set.add(t);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b, "es"));
+  }, [data]);
+
   const filas = useMemo(() => {
     let rows = [...data];
     if (soloPendientes) {
@@ -312,6 +323,11 @@ export default function SeguimientoVentas() {
     }
     if (diaFiltro) {
       rows = rows.filter((r) => r.proxima_llamada === diaFiltro);
+    }
+    if (asesorFiltro === "__sin_asesor__") {
+      rows = rows.filter((r) => !r.asesor?.trim());
+    } else if (asesorFiltro) {
+      rows = rows.filter((r) => (r.asesor ?? "").trim() === asesorFiltro);
     }
     rows.sort((a, b) => {
       const pa = a.proxima_llamada;
@@ -325,7 +341,7 @@ export default function SeguimientoVentas() {
       return pa < pb ? -1 : 1;
     });
     return rows;
-  }, [data, soloPendientes, diaFiltro, hoy]);
+  }, [data, soloPendientes, diaFiltro, asesorFiltro, hoy]);
 
   return (
     <div className="page-container">
@@ -687,6 +703,34 @@ export default function SeguimientoVentas() {
             onClick={() => setDiaFiltro("")}
           >
             Quitar filtro de día
+          </button>
+        )}
+        <div className="form-field" style={{ margin: 0, minWidth: "12rem" }}>
+          <label style={{ fontSize: "0.75rem", display: "block", marginBottom: "0.25rem" }}>
+            Filtrar por asesor
+          </label>
+          <select
+            className="search-input"
+            style={{ width: "100%", padding: "8px 10px", cursor: "pointer" }}
+            value={asesorFiltro}
+            onChange={(e) => setAsesorFiltro(e.target.value)}
+          >
+            <option value="">Todos los asesores</option>
+            <option value="__sin_asesor__">Sin asesor</option>
+            {asesoresOpcionesFiltro.map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
+            ))}
+          </select>
+        </div>
+        {asesorFiltro && (
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => setAsesorFiltro("")}
+          >
+            Quitar filtro de asesor
           </button>
         )}
         <span className="record-count">
