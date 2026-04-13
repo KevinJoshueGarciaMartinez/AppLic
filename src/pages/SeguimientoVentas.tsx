@@ -23,6 +23,14 @@ const ESTATUS_SEGUIMIENTO_OPCIONES = [
   "Cerrada",
 ] as const;
 
+const ASESORES_OPCIONES = [
+  "AME - VAL",
+  "JESSE - VERO",
+  "JESSE - RENATA",
+  "ADRIAN",
+  "ARANZA",
+] as const;
+
 type FilaSeguimiento = Pick<
   Operador,
   | "numero_consecutivo"
@@ -423,12 +431,17 @@ export default function SeguimientoVentas() {
                 </div>
                 <div className="form-field">
                   <label>Asesor</label>
-                  <input
-                    type="text"
+                  <select
                     value={modalForm.asesor}
                     onChange={(e) => setModal("asesor", e.target.value)}
-                    maxLength={120}
-                  />
+                  >
+                    <option value="">— Seleccionar —</option>
+                    {ASESORES_OPCIONES.map((a) => (
+                      <option key={a} value={a}>
+                        {a}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="form-field">
                   <label>Núm. medicina preventiva</label>
