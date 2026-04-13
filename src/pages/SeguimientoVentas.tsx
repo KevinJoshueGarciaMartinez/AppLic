@@ -225,6 +225,13 @@ export default function SeguimientoVentas() {
 
   const hoy = hoyISO();
 
+  useEffect(() => {
+    if (!asesorFiltro || asesorFiltro === "__sin_asesor__") return;
+    if (!(ASESORES_OPCIONES as readonly string[]).includes(asesorFiltro)) {
+      setAsesorFiltro("");
+    }
+  }, [asesorFiltro]);
+
   const insertMutation = useMutation({
     mutationFn: async (payload: OperadorInsert) => {
       const { error: err } = await supabase.from("operadores").insert(payload);
@@ -305,16 +312,6 @@ export default function SeguimientoVentas() {
     }
     insertMutation.mutate(modalToInsert(modalForm));
   }
-
-  const asesoresOpcionesFiltro = useMemo(() => {
-    const set = new Set<string>();
-    for (const a of ASESORES_OPCIONES) set.add(a);
-    for (const r of data) {
-      const t = r.asesor?.trim();
-      if (t) set.add(t);
-    }
-    return [...set].sort((a, b) => a.localeCompare(b, "es"));
-  }, [data]);
 
   const filas = useMemo(() => {
     let rows = [...data];
@@ -717,7 +714,7 @@ export default function SeguimientoVentas() {
           >
             <option value="">Todos los asesores</option>
             <option value="__sin_asesor__">Sin asesor</option>
-            {asesoresOpcionesFiltro.map((a) => (
+            {ASESORES_OPCIONES.map((a) => (
               <option key={a} value={a}>
                 {a}
               </option>
