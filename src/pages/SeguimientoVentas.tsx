@@ -618,6 +618,14 @@ export default function SeguimientoVentas() {
               </div>
             </div>
 
+            <div className="seguimiento-detalles-expediente-wrap">
+              <Link href={`/operadores/${detallesModal.id}?from=seguimiento`}>
+                <button type="button" className="btn-edit">
+                  Expediente
+                </button>
+              </Link>
+            </div>
+
             <div className="form-field form-field-full" style={{ marginTop: "1rem" }}>
               <label>Notas</label>
               <textarea
@@ -795,33 +803,24 @@ export default function SeguimientoVentas() {
                         </select>
                       </td>
                       <td>
-                        <div className="seguimiento-fila-acciones">
-                          <button
-                            type="button"
-                            className="btn-secondary"
-                            onClick={() =>
-                              setDetallesModal({
-                                id: op.numero_consecutivo,
-                                nombre: nombreCompleto(op),
-                                medio_captacion: op.medio_captacion ?? null,
-                                num_exp_med_preventiva:
-                                  op.num_exp_med_preventiva ?? null,
-                                tramite_a_realizar:
-                                  op.tramite_a_realizar ?? null,
-                                notas: op.notas_seguimiento ?? "",
-                              })
-                            }
-                          >
-                            Detalles
-                          </button>
-                          <Link
-                            href={`/operadores/${op.numero_consecutivo}?from=seguimiento`}
-                          >
-                            <button className="btn-edit" type="button">
-                              Expediente
-                            </button>
-                          </Link>
-                        </div>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() =>
+                            setDetallesModal({
+                              id: op.numero_consecutivo,
+                              nombre: nombreCompleto(op),
+                              medio_captacion: op.medio_captacion ?? null,
+                              num_exp_med_preventiva:
+                                op.num_exp_med_preventiva ?? null,
+                              tramite_a_realizar:
+                                op.tramite_a_realizar ?? null,
+                              notas: op.notas_seguimiento ?? "",
+                            })
+                          }
+                        >
+                          Detalles
+                        </button>
                       </td>
                     </tr>
                   );

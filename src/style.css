@@ -917,17 +917,13 @@ input[type="number"] {
   min-width: 12.5rem;
 }
 
-.seguimiento-fila-acciones {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: stretch;
+.seguimiento-detalles-expediente-wrap {
+  margin-top: 14px;
 }
 
-.seguimiento-fila-acciones .btn-edit,
-.seguimiento-fila-acciones .btn-secondary {
+.seguimiento-detalles-expediente-wrap .btn-edit {
   width: 100%;
-  text-align: center;
+  box-sizing: border-box;
 }
 
 .seguimiento-detalles-meta {
