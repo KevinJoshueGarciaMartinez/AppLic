@@ -825,6 +825,35 @@ input[type="number"] {
   background: rgba(241, 245, 249, 0.65);
 }
 
+/* Asesor en seguimiento: tono fijo por catálogo o estable por nombre (hash) */
+.asesor-tono {
+  display: inline-block;
+  max-width: 100%;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.35;
+  vertical-align: middle;
+}
+
+.asesor-tono--f0 { background: #fce7f3; color: #9d174d; }
+.asesor-tono--f1 { background: #e0e7ff; color: #3730a3; }
+.asesor-tono--f2 { background: #d1fae5; color: #065f46; }
+.asesor-tono--f3 { background: #fef3c7; color: #92400e; }
+.asesor-tono--f4 { background: #cffafe; color: #0e7490; }
+
+.asesor-tono--x0 { background: #fecdd3; color: #9f1239; }
+.asesor-tono--x1 { background: #ddd6fe; color: #5b21b6; }
+.asesor-tono--x2 { background: #bfdbfe; color: #1e40af; }
+.asesor-tono--x3 { background: #fed7aa; color: #9a3412; }
+.asesor-tono--x4 { background: #a7f3d0; color: #047857; }
+.asesor-tono--x5 { background: #fbcfe8; color: #a21caf; }
+.asesor-tono--x6 { background: #e9d5ff; color: #6b21a8; }
+.asesor-tono--x7 { background: #fde68a; color: #854d0e; }
+.asesor-tono--x8 { background: #bae6fd; color: #0369a1; }
+.asesor-tono--x9 { background: #fecaca; color: #991b1b; }
+
 .seguimiento-leyenda {
   display: flex;
   flex-wrap: wrap;

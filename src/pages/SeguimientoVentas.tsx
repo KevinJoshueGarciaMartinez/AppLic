@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 import type { Operador, OperadorInsert } from "../lib/types";
 import { MEDIOS_CAPTACION, etiquetaMedioCaptacion } from "../lib/mediosCaptacion";
+import { ASESORES_OPCIONES, asesorTonoClass } from "../lib/asesoresCatalogo";
 
 const ESTATUS_SEGUIMIENTO_OPCIONES = [
   "Interesado",
@@ -13,14 +14,6 @@ const ESTATUS_SEGUIMIENTO_OPCIONES = [
   "En espera de documentos",
   "Pagado pero sin documentos",
   "Cerrada",
-] as const;
-
-const ASESORES_OPCIONES = [
-  "AME - VAL",
-  "JESSE - VERO",
-  "JESSE - RENATA",
-  "ADRIAN",
-  "ARANZA",
 ] as const;
 
 type FilaSeguimiento = Pick<
@@ -741,7 +734,14 @@ export default function SeguimientoVentas() {
                       <td>{etiquetaMedioCaptacion(op.medio_captacion)}</td>
                       <td className="col-fecha">{op.fecha_captacion ?? "—"}</td>
                       <td className="col-fecha">{op.proxima_llamada ?? "—"}</td>
-                      <td>{truncar(op.asesor, 24)}</td>
+                      <td>
+                        <span
+                          className={asesorTonoClass(op.asesor)}
+                          title={op.asesor?.trim() || undefined}
+                        >
+                          {truncar(op.asesor, 24)}
+                        </span>
+                      </td>
                       <td className="col-mono">{truncar(op.num_exp_med_preventiva, 16)}</td>
                       <td style={{ maxWidth: "10rem", fontSize: "0.85rem" }}>
                         {truncar(op.tramite_a_realizar, 40)}
