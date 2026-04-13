@@ -270,7 +270,7 @@ export default function VentaForm({ id }: Props) {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const isNew = !id;
-  /** En nueva venta: el usuario debe enfocar el promotor antes de servicios/ticket (incluye «Sin promotor»). */
+  /** En nueva venta: confirmar promotor (cambio o salir del select) antes de habilitar servicios/ticket. */
   const [promotorRevisado, setPromotorRevisado] = useState(false);
   const [form, setForm] = useState<VentaInsert>(emptyForm());
   const [items, setItems] = useState<VentaItem[]>([]);
@@ -1108,10 +1108,8 @@ export default function VentaForm({ id }: Props) {
                   className="select-promotor-wide"
                   disabled={isNew && form.operador_id == null}
                   value={form.id_promotor ?? ""}
-                  onFocus={() => {
-                    if (isNew && form.operador_id != null) {
-                      setPromotorRevisado(true);
-                    }
+                  onBlur={() => {
+                    if (isNew && form.operador_id != null) setPromotorRevisado(true);
                   }}
                   onChange={(e) => {
                     if (isNew && form.operador_id != null) setPromotorRevisado(true);
@@ -1141,8 +1139,8 @@ export default function VentaForm({ id }: Props) {
             </div>
             {isNew && form.operador_id != null && !promotorRevisado && (
               <p className="field-hint" style={{ marginTop: "10px" }}>
-                Haz clic en el campo «Promotor» (elige promotor o deja «Sin promotor») para habilitar
-                servicios y ticket.
+                Elige una opción en «Promotor» (o deja «Sin promotor») y sal del campo (Tab o clic fuera)
+                para habilitar servicios y ticket.
               </p>
             )}
 
