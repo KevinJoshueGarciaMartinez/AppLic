@@ -79,6 +79,20 @@ function estatusParaSelect(s: string | null): string {
   return "Interesado";
 }
 
+/** Fila tipo semáforo según próxima llamada (fechas ISO YYYY-MM-DD) y estatus. */
+function claseSemaforoSeguimiento(op: FilaSeguimiento, hoy: string): string {
+  if (op.estatus_seguimiento === "Cerrada") {
+    return "seguimiento-sem seguimiento-sem--gris";
+  }
+  const pl = op.proxima_llamada;
+  if (pl == null || pl === "") {
+    return "seguimiento-sem seguimiento-sem--gris";
+  }
+  if (pl < hoy) return "seguimiento-sem seguimiento-sem--rojo";
+  if (pl === hoy) return "seguimiento-sem seguimiento-sem--amarillo";
+  return "seguimiento-sem seguimiento-sem--verde";
+}
+
 /** Base para insert de prospecto (resto de columnas con valores por defecto). */
 function baseProspectoInsert(): OperadorInsert {
   const fecha = new Date().toISOString().slice(0, 10);
@@ -657,6 +671,21 @@ export default function SeguimientoVentas() {
             ? "Cargando…"
             : `${filas.length} prospecto${filas.length !== 1 ? "s" : ""}`}
         </span>
+        <div className="seguimiento-leyenda" aria-label="Leyenda de prioridad por próxima llamada">
+          <span className="seguimiento-leyenda__titulo">Prioridad:</span>
+          <span className="seguimiento-leyenda__pill seguimiento-leyenda__pill--verde">
+            A tiempo
+          </span>
+          <span className="seguimiento-leyenda__pill seguimiento-leyenda__pill--amarillo">
+            Hoy
+          </span>
+          <span className="seguimiento-leyenda__pill seguimiento-leyenda__pill--rojo">
+            Vencida
+          </span>
+          <span className="seguimiento-leyenda__pill seguimiento-leyenda__pill--gris">
+            Sin fecha / cerrado
+          </span>
+        </div>
       </div>
 
       {isError && (
@@ -700,15 +729,11 @@ export default function SeguimientoVentas() {
                 </tr>
               ) : (
                 filas.map((op) => {
-                  const vencida =
-                    op.proxima_llamada != null &&
-                    op.proxima_llamada < hoy &&
-                    op.estatus_seguimiento !== "Cerrada";
                   const estatusVal = estatusParaSelect(op.estatus_seguimiento);
                   return (
                     <tr
                       key={op.numero_consecutivo}
-                      className={vencida ? "row-seguimiento-vencido" : undefined}
+                      className={claseSemaforoSeguimiento(op, hoy)}
                     >
                       <td className="col-id">{op.numero_consecutivo}</td>
                       <td className="col-nombre">{nombreCompleto(op)}</td>
