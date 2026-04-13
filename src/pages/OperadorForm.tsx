@@ -13,6 +13,11 @@ import {
   etiquetaMedioCaptacion,
   esMedioCaptacionCatalogoActual,
 } from "../lib/mediosCaptacion";
+import {
+  ESTATUS_SEGUIMIENTO_DEFECTO,
+  ESTATUS_SEGUIMIENTO_OPCIONES,
+  esEstatusSeguimientoEnCatalogo,
+} from "../lib/estatusSeguimiento";
 import HistorialVentasOperador from "../components/HistorialVentasOperador";
 
 /** Pestaña «Ventas» (historial) antes de «Saldo»; índices 0–4 son fijos. */
@@ -64,16 +69,6 @@ const MEDIOS_SOLICITUD = [
   "Correo",
   "Referido",
 ];
-
-const ESTATUS_SEGUIMIENTO = [
-  "Interesado",
-  "Seguimiento",
-  "Visita",
-  "Agendado",
-  "En espera de documentos",
-  "Pagado pero sin documentos",
-  "Cerrada",
-] as const;
 
 const FORMAS_COBRO = ["Efectivo", "Transferencia", "Tarjeta", "Depósito"];
 
@@ -198,7 +193,7 @@ export default function OperadorForm({ id }: Props) {
     setForm((prev) => ({
       ...prev,
       es_prospecto: true,
-      estatus_seguimiento: "Interesado",
+      estatus_seguimiento: ESTATUS_SEGUIMIENTO_DEFECTO,
       fecha_captacion: hoy,
       proxima_llamada: hoy,
       curp: "",
@@ -445,11 +440,22 @@ export default function OperadorForm({ id }: Props) {
                   }
                 >
                   <option value="">— Sin definir —</option>
-                  {ESTATUS_SEGUIMIENTO.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
+                  {(() => {
+                    const raw = (form.estatus_seguimiento ?? "").trim();
+                    return (
+                      <>
+                        {raw &&
+                          !esEstatusSeguimientoEnCatalogo(raw) && (
+                            <option value={raw}>{raw} (anterior)</option>
+                          )}
+                        {ESTATUS_SEGUIMIENTO_OPCIONES.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </>
+                    );
+                  })()}
                 </select>
               </div>
             </div>

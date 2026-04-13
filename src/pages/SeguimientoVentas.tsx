@@ -5,16 +5,13 @@ import { supabase } from "../lib/supabase";
 import type { Operador, OperadorInsert } from "../lib/types";
 import { MEDIOS_CAPTACION, etiquetaMedioCaptacion } from "../lib/mediosCaptacion";
 import { ASESORES_OPCIONES, asesorTonoClass } from "../lib/asesoresCatalogo";
-
-const ESTATUS_SEGUIMIENTO_OPCIONES = [
-  "Interesado",
-  "Seguimiento",
-  "Visita",
-  "Agendado",
-  "En espera de documentos",
-  "Pagado pero sin documentos",
-  "Cerrada",
-] as const;
+import {
+  ESTATUS_SEGUIMIENTO_DEFECTO,
+  ESTATUS_SEGUIMIENTO_OPCIONES,
+  esEstatusSeguimientoEnCatalogo,
+  esEstatusSeguimientoOcultoPendientes,
+  esEstatusSeguimientoTerminalSemaforo,
+} from "../lib/estatusSeguimiento";
 
 type FilaSeguimiento = Pick<
   Operador,
@@ -65,16 +62,9 @@ function truncar(s: string | null, max: number) {
   return t.length > max ? `${t.slice(0, max)}…` : t;
 }
 
-function estatusParaSelect(s: string | null): string {
-  if (s && (ESTATUS_SEGUIMIENTO_OPCIONES as readonly string[]).includes(s)) {
-    return s;
-  }
-  return "Interesado";
-}
-
 /** Fila tipo semáforo según próxima llamada (fechas ISO YYYY-MM-DD) y estatus. */
 function claseSemaforoSeguimiento(op: FilaSeguimiento, hoy: string): string {
-  if (op.estatus_seguimiento === "Cerrada") {
+  if (esEstatusSeguimientoTerminalSemaforo(op.estatus_seguimiento)) {
     return "seguimiento-sem seguimiento-sem--gris";
   }
   const pl = op.proxima_llamada;
@@ -183,7 +173,7 @@ function emptyModalProspecto(): ModalProspecto {
     medio_captacion: "",
     fecha_captacion: hoy,
     proxima_llamada: hoy,
-    estatus_seguimiento: "Interesado",
+    estatus_seguimiento: ESTATUS_SEGUIMIENTO_DEFECTO,
     notas: "",
     asesor: "",
     num_exp_med_preventiva: "",
@@ -202,7 +192,7 @@ function modalToInsert(m: ModalProspecto): OperadorInsert {
     medio_captacion: m.medio_captacion.trim() || null,
     fecha_captacion: m.fecha_captacion || null,
     proxima_llamada: m.proxima_llamada.trim(),
-    estatus_seguimiento: m.estatus_seguimiento || "Interesado",
+    estatus_seguimiento: m.estatus_seguimiento || ESTATUS_SEGUIMIENTO_DEFECTO,
     notas_seguimiento: m.notas.trim() || null,
     asesor: m.asesor.trim() || null,
     num_exp_med_preventiva: m.num_exp_med_preventiva.trim() || null,
@@ -318,7 +308,7 @@ export default function SeguimientoVentas() {
   const filas = useMemo(() => {
     let rows = [...data];
     if (soloPendientes) {
-      rows = rows.filter((r) => r.estatus_seguimiento !== "Cerrada");
+      rows = rows.filter((r) => !esEstatusSeguimientoOcultoPendientes(r.estatus_seguimiento));
     }
     if (diaFiltro) {
       rows = rows.filter((r) => r.proxima_llamada === diaFiltro);
@@ -676,7 +666,7 @@ export default function SeguimientoVentas() {
             checked={soloPendientes}
             onChange={(e) => setSoloPendientes(e.target.checked)}
           />
-          Ocultar cerrados
+          Ocultar finalizados
         </label>
         <div className="form-field" style={{ margin: 0, minWidth: "11rem" }}>
           <label style={{ fontSize: "0.75rem", display: "block", marginBottom: "0.25rem" }}>
@@ -716,7 +706,7 @@ export default function SeguimientoVentas() {
             Vencida
           </span>
           <span className="seguimiento-leyenda__pill seguimiento-leyenda__pill--gris">
-            Sin fecha / cerrado
+            Sin fecha / finalizado
           </span>
         </div>
       </div>
@@ -758,7 +748,9 @@ export default function SeguimientoVentas() {
                 </tr>
               ) : (
                 filas.map((op) => {
-                  const estatusVal = estatusParaSelect(op.estatus_seguimiento);
+                  const rawEstatus = (op.estatus_seguimiento ?? "").trim();
+                  const estatusVal =
+                    rawEstatus || ESTATUS_SEGUIMIENTO_DEFECTO;
                   return (
                     <tr
                       key={op.numero_consecutivo}
@@ -791,6 +783,12 @@ export default function SeguimientoVentas() {
                             });
                           }}
                         >
+                          {rawEstatus &&
+                            !esEstatusSeguimientoEnCatalogo(rawEstatus) && (
+                              <option value={rawEstatus}>
+                                {rawEstatus} (anterior)
+                              </option>
+                            )}
                           {ESTATUS_SEGUIMIENTO_OPCIONES.map((s) => (
                             <option key={s} value={s}>
                               {s}
