@@ -992,7 +992,7 @@ export default function OperadorForm({ id }: Props) {
                   <tr>
                     <th>Fecha</th>
                     <th>Tipo</th>
-                    <th>Importe</th>
+                    <th className="col-money col-money--center">Importe</th>
                     <th>Concepto</th>
                   </tr>
                 </thead>
@@ -1019,7 +1019,9 @@ export default function OperadorForm({ id }: Props) {
                               ? "Aplicación a ticket"
                               : m.tipo}
                         </td>
-                        <td className="col-money">{fmtSaldo(Number(m.importe))}</td>
+                        <td className="col-money col-money--center">
+                          {fmtSaldo(Number(m.importe))}
+                        </td>
                         <td>{m.concepto ?? "—"}</td>
                       </tr>
                     ))

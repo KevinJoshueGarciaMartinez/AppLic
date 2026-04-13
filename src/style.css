@@ -942,6 +942,9 @@ input[type="number"] {
 /* ─── Money columns ──────────────────────────────────────────────────────────── */
 
 .col-money        { font-variant-numeric: tabular-nums; text-align: right; }
+.col-money.col-money--center {
+  text-align: center;
+}
 .col-money--green { color: #166534; }
 .col-money--red   { color: #b91c1c; }
 
