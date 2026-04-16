@@ -10,6 +10,7 @@ interface ReporteCard {
 const REPORTES: ReporteCard[] = [
   { label: "Comisiones", icon: "📊", href: "/reportes/comisiones", disponible: true },
   { label: "Petición de Cursos", icon: "📝", href: "/reportes/peticion-cursos", disponible: true },
+  { label: "Seguimiento Prospectos", icon: "📞", href: "/reportes/seguimiento-prospectos", disponible: true },
 ];
 
 export default function Reportes() {

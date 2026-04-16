@@ -10,6 +10,7 @@ import VentaForm from "./pages/VentaForm";
 import Comisiones from "./pages/Comisiones";
 import Reportes from "./pages/Reportes";
 import PeticionCursos from "./pages/PeticionCursos";
+import ReporteSeguimientoProspectos from "./pages/ReporteSeguimientoProspectos";
 import SeguimientoVentas from "./pages/SeguimientoVentas";
 import ComprobacionTransferencias from "./pages/ComprobacionTransferencias";
 
@@ -348,6 +349,9 @@ export default function App() {
         </Route>
         <Route path="/reportes/peticion-cursos">
           <PeticionCursos />
+        </Route>
+        <Route path="/reportes/seguimiento-prospectos">
+          <ReporteSeguimientoProspectos />
         </Route>
 
         {/* ── Resto de módulos (placeholders) ── */}
