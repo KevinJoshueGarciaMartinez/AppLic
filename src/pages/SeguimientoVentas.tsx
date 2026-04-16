@@ -154,7 +154,6 @@ type ModalProspecto = {
   apellido_materno: string;
   telefono_1: string;
   medio_captacion: string;
-  fecha_captacion: string;
   proxima_llamada: string;
   estatus_seguimiento: string;
   notas: string;
@@ -171,7 +170,6 @@ function emptyModalProspecto(): ModalProspecto {
     apellido_materno: "",
     telefono_1: "",
     medio_captacion: "",
-    fecha_captacion: hoy,
     proxima_llamada: hoy,
     estatus_seguimiento: ESTATUS_SEGUIMIENTO_DEFECTO,
     notas: "",
@@ -190,7 +188,8 @@ function modalToInsert(m: ModalProspecto): OperadorInsert {
     apellido_materno: m.apellido_materno.trim() || null,
     telefono_1: tel || null,
     medio_captacion: m.medio_captacion.trim() || null,
-    fecha_captacion: m.fecha_captacion || null,
+    // Fecha de captacion = dia de registro; no editable en UI.
+    fecha_captacion: hoyISO(),
     proxima_llamada: m.proxima_llamada.trim(),
     estatus_seguimiento: m.estatus_seguimiento || ESTATUS_SEGUIMIENTO_DEFECTO,
     notas_seguimiento: m.notas.trim() || null,
@@ -484,14 +483,9 @@ export default function SeguimientoVentas() {
                       </option>
                     ))}
                   </select>
-                </div>
-                <div className="form-field">
-                  <label>Fecha de captación</label>
-                  <input
-                    type="date"
-                    value={modalForm.fecha_captacion}
-                    onChange={(e) => setModal("fecha_captacion", e.target.value)}
-                  />
+                  <span className="field-hint">
+                    Fecha de captación: se asigna automáticamente al día de registro.
+                  </span>
                 </div>
                 <div className="form-field">
                   <label>Próxima llamada (seguimiento) *</label>

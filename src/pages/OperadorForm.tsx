@@ -134,7 +134,7 @@ function emptyForm(): OperadorInsert {
     asistencia: false,
     es_prospecto: false,
     medio_captacion: null,
-    fecha_captacion: null,
+    fecha_captacion: new Date().toISOString().slice(0, 10),
     proxima_llamada: null,
     estatus_seguimiento: null,
     notas_seguimiento: null,
@@ -290,6 +290,9 @@ export default function OperadorForm({ id }: Props) {
     }
     const payload: OperadorInsert = {
       ...form,
+      fecha_captacion: isNew
+        ? (form.fecha_captacion || new Date().toISOString().slice(0, 10))
+        : form.fecha_captacion,
       curp: form.es_prospecto
         ? (form.curp?.trim() || null)
         : (form.curp ?? "").trim().toUpperCase(),
@@ -408,14 +411,15 @@ export default function OperadorForm({ id }: Props) {
                 </select>
               </div>
               <div className="form-field">
-                <label>Fecha de captación</label>
+                <label>Fecha de captación (automática)</label>
                 <input
                   type="date"
                   value={form.fecha_captacion ?? ""}
-                  onChange={(e) =>
-                    set("fecha_captacion", e.target.value || null)
-                  }
+                  disabled
                 />
+                <span className="field-hint">
+                  Se registra automáticamente con la fecha de alta.
+                </span>
               </div>
               <div className="form-field">
                 <label>
