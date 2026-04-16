@@ -210,6 +210,7 @@ type DetallesModalState = {
 export default function SeguimientoVentas() {
   const queryClient = useQueryClient();
   const [soloPendientes, setSoloPendientes] = useState(true);
+  const [busqueda, setBusqueda] = useState("");
   const [diaFiltro, setDiaFiltro] = useState("");
   const [asesorFiltro, setAsesorFiltro] = useState("");
   const [modalAbierto, setModalAbierto] = useState(false);
@@ -314,6 +315,25 @@ export default function SeguimientoVentas() {
 
   const filas = useMemo(() => {
     let rows = [...data];
+    const txt = busqueda.trim().toLowerCase();
+    if (txt) {
+      rows = rows.filter((r) => {
+        const nombre = nombreCompleto(r).toLowerCase();
+        const tel = (r.telefono_1 ?? "").toLowerCase();
+        const asesor = (r.asesor ?? "").toLowerCase();
+        const medio = (r.medio_captacion ?? "").toLowerCase();
+        const estatus = (r.estatus_seguimiento ?? "").toLowerCase();
+        const id = String(r.numero_consecutivo);
+        return (
+          nombre.includes(txt)
+          || tel.includes(txt)
+          || asesor.includes(txt)
+          || medio.includes(txt)
+          || estatus.includes(txt)
+          || id.includes(txt)
+        );
+      });
+    }
     if (soloPendientes) {
       rows = rows.filter((r) => !esEstatusSeguimientoOcultoPendientes(r.estatus_seguimiento));
     }
@@ -337,7 +357,7 @@ export default function SeguimientoVentas() {
       return pa < pb ? -1 : 1;
     });
     return rows;
-  }, [data, soloPendientes, diaFiltro, asesorFiltro, hoy]);
+  }, [data, busqueda, soloPendientes, diaFiltro, asesorFiltro, hoy]);
 
   return (
     <div className="page-container">
@@ -667,6 +687,23 @@ export default function SeguimientoVentas() {
       )}
 
       <div className="toolbar" style={{ flexWrap: "wrap", gap: "0.75rem" }}>
+        <input
+          className="search-input"
+          type="text"
+          placeholder="Buscar prospecto por nombre, teléfono, asesor..."
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          style={{ minWidth: "18rem" }}
+        />
+        {busqueda && (
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => setBusqueda("")}
+          >
+            Limpiar búsqueda
+          </button>
+        )}
         <label className="checkbox-label" style={{ margin: 0 }}>
           <input
             type="checkbox"
@@ -778,7 +815,9 @@ export default function SeguimientoVentas() {
               {filas.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="table-empty">
-                    No hay prospectos con estos filtros.
+                    {busqueda
+                      ? "No hay prospectos que coincidan con la búsqueda."
+                      : "No hay prospectos con estos filtros."}
                   </td>
                 </tr>
               ) : (
