@@ -320,17 +320,9 @@ export default function SeguimientoVentas() {
       rows = rows.filter((r) => {
         const nombre = nombreCompleto(r).toLowerCase();
         const tel = (r.telefono_1 ?? "").toLowerCase();
-        const asesor = (r.asesor ?? "").toLowerCase();
-        const medio = (r.medio_captacion ?? "").toLowerCase();
-        const estatus = (r.estatus_seguimiento ?? "").toLowerCase();
-        const id = String(r.numero_consecutivo);
         return (
           nombre.includes(txt)
           || tel.includes(txt)
-          || asesor.includes(txt)
-          || medio.includes(txt)
-          || estatus.includes(txt)
-          || id.includes(txt)
         );
       });
     }
@@ -690,7 +682,7 @@ export default function SeguimientoVentas() {
         <input
           className="search-input"
           type="text"
-          placeholder="Buscar prospecto por nombre, teléfono, asesor..."
+          placeholder="Buscar prospecto por nombre o teléfono..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
           style={{ minWidth: "18rem" }}
