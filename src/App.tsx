@@ -71,6 +71,9 @@ const NAV_ITEMS: NavItem[] = [
     description:
       "Hub de reportes: traslados, ventas y solicitudes de servicio.",
   },
+];
+
+const SYSTEM_ITEMS: NavItem[] = [
   {
     href: "/usuarios",
     label: "Usuarios",
@@ -96,6 +99,7 @@ const EXTRA_ROUTE_ACCESS: Record<UserRole, string[]> = {
     "/reportes/comisiones",
     "/reportes/peticion-cursos",
     "/reportes/seguimiento-prospectos",
+    "/usuarios",
   ],
   recepcion: ["/operadores/nuevo", "/operadores/:id", "/ventas/nuevo", "/ventas/:id"],
   ventas: [],
@@ -131,6 +135,9 @@ function Layout({
 }) {
   const [location] = useLocation();
   const visibleItems = NAV_ITEMS.filter((item) => hasRoleAccess(role, item.href));
+  const visibleSystemItems = SYSTEM_ITEMS.filter((item) =>
+    hasRoleAccess(role, item.href),
+  );
 
   return (
     <div className="app-shell">
@@ -154,6 +161,16 @@ function Layout({
         </nav>
 
         <div className="sidebar-footer">
+          {visibleSystemItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`nav-link${location === item.href ? " nav-link--active" : ""}`}
+            >
+              <span className="nav-icon">{item.icon}</span>
+              Sistema
+            </Link>
+          ))}
           <p className="user-email">{userEmail}</p>
           <p className="user-email">{ROLE_LABELS[role]}</p>
           <button className="ghost-btn" onClick={onSignOut} type="button">
