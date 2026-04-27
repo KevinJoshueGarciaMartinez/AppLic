@@ -13,6 +13,7 @@ import PeticionCursos from "./pages/PeticionCursos";
 import ReporteSeguimientoProspectos from "./pages/ReporteSeguimientoProspectos";
 import SeguimientoVentas from "./pages/SeguimientoVentas";
 import ComprobacionTransferencias from "./pages/ComprobacionTransferencias";
+import Usuarios from "./pages/Usuarios";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -22,6 +23,16 @@ type NavItem = {
   icon: string;
   description: string;
 };
+
+type UserRole = "admin" | "recepcion" | "ventas";
+
+const ROLE_LABELS: Record<UserRole, string> = {
+  admin: "Administrador",
+  recepcion: "Recepcion",
+  ventas: "Ventas",
+};
+
+const ROLE_TABLE = "profiles";
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Dashboard", icon: "⊞", description: "" },
@@ -60,20 +71,66 @@ const NAV_ITEMS: NavItem[] = [
     description:
       "Hub de reportes: traslados, ventas y solicitudes de servicio.",
   },
+  {
+    href: "/usuarios",
+    label: "Usuarios",
+    icon: "🔐",
+    description:
+      "Gestionar accesos del sistema: asignar nivel y activar o desactivar usuarios.",
+  },
 ];
+
+const NAV_BY_ROLE: Record<UserRole, string[]> = {
+  admin: NAV_ITEMS.map((item) => item.href),
+  recepcion: ["/", "/operadores", "/ventas"],
+  ventas: ["/", "/seguimiento"],
+};
+
+const EXTRA_ROUTE_ACCESS: Record<UserRole, string[]> = {
+  admin: [
+    "/operadores/nuevo",
+    "/operadores/:id",
+    "/ventas/nuevo",
+    "/ventas/:id",
+    "/comprobacion-transferencias",
+    "/reportes/comisiones",
+    "/reportes/peticion-cursos",
+    "/reportes/seguimiento-prospectos",
+  ],
+  recepcion: ["/operadores/nuevo", "/operadores/:id", "/ventas/nuevo", "/ventas/:id"],
+  ventas: [],
+};
+
+function getAllowedPaths(role: UserRole): string[] {
+  return [...NAV_BY_ROLE[role], ...EXTRA_ROUTE_ACCESS[role]];
+}
+
+function hasRoleAccess(role: UserRole, path: string): boolean {
+  return getAllowedPaths(role).some((allowedPath) => {
+    if (allowedPath === path) return true;
+    if (allowedPath.endsWith("/:id")) {
+      const prefix = allowedPath.replace("/:id", "/");
+      return path.startsWith(prefix);
+    }
+    return false;
+  });
+}
 
 // ─── Layout ──────────────────────────────────────────────────────────────────
 
 function Layout({
   children,
   userEmail,
+  role,
   onSignOut,
 }: {
   children: ReactNode;
   userEmail: string;
+  role: UserRole;
   onSignOut: () => Promise<void>;
 }) {
   const [location] = useLocation();
+  const visibleItems = NAV_ITEMS.filter((item) => hasRoleAccess(role, item.href));
 
   return (
     <div className="app-shell">
@@ -84,7 +141,7 @@ function Layout({
         </div>
 
         <nav className="sidebar-nav">
-          {NAV_ITEMS.map((item) => (
+          {visibleItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -98,6 +155,7 @@ function Layout({
 
         <div className="sidebar-footer">
           <p className="user-email">{userEmail}</p>
+          <p className="user-email">{ROLE_LABELS[role]}</p>
           <button className="ghost-btn" onClick={onSignOut} type="button">
             Cerrar sesion
           </button>
@@ -111,13 +169,13 @@ function Layout({
 
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 
-function Dashboard() {
+function Dashboard({ role }: { role: UserRole }) {
   return (
     <div>
       <h2 className="page-title">Dashboard</h2>
 
       <div className="module-grid">
-        {NAV_ITEMS.filter((n) => n.href !== "/").map((item) => (
+        {NAV_ITEMS.filter((n) => n.href !== "/" && hasRoleAccess(role, n.href)).map((item) => (
           <Link key={item.href} href={item.href} className="module-card">
             <span className="module-icon">{item.icon}</span>
             <strong>{item.label}</strong>
@@ -178,7 +236,9 @@ function AuthScreen() {
       } else {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        setMessage("Usuario creado. Revisa tu correo si pide confirmacion.");
+        setMessage(
+          "Registro enviado. Un administrador debe asignarte nivel para usar la app.",
+        );
       }
     } catch (error) {
       setMessage(
@@ -193,6 +253,26 @@ function AuthScreen() {
     if (e.key === "Enter") submit();
   };
 
+  const recoverPassword = async () => {
+    if (!email) {
+      setMessage("Captura tu correo para recuperar contrasena.");
+      return;
+    }
+    setLoading(true);
+    setMessage("Enviando correo de recuperacion...");
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) throw error;
+      setMessage("Si el correo existe, te enviamos instrucciones para recuperar acceso.");
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "No se pudo enviar la recuperacion.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="auth-shell">
       <section className="auth-card">
@@ -200,7 +280,7 @@ function AuthScreen() {
           <strong>AppLic</strong>
           <span>ERP</span>
         </div>
-        <h2>{mode === "login" ? "Iniciar sesion" : "Crear cuenta"}</h2>
+        <h2>{mode === "login" ? "Iniciar sesion" : "Solicitar acceso"}</h2>
         <label>
           Correo
           <input
@@ -232,14 +312,25 @@ function AuthScreen() {
             ? "Procesando..."
             : mode === "login"
               ? "Entrar"
-              : "Crear cuenta"}
+              : "Registrarme"}
         </button>
         <button
           className="link-btn"
           onClick={() => setMode(mode === "login" ? "signup" : "login")}
           type="button"
+          disabled={loading}
         >
-          {mode === "login" ? "No tengo cuenta" : "Ya tengo cuenta"}
+          {mode === "login"
+            ? "No tengo cuenta (solicitar acceso)"
+            : "Ya tengo cuenta"}
+        </button>
+        <button
+          className="link-btn"
+          onClick={recoverPassword}
+          type="button"
+          disabled={loading}
+        >
+          Olvide mi contrasena
         </button>
         {message && <p className="status-message">{message}</p>}
       </section>
@@ -263,20 +354,63 @@ function VentaEditWrapper() {
   return <VentaForm id={numId} />;
 }
 
+function UnauthorizedScreen() {
+  return (
+    <div className="placeholder-card">
+      <h2 className="page-title">Sin acceso</h2>
+      <p className="placeholder-desc">
+        No tienes permisos para entrar a este modulo. Si crees que es un error, solicita acceso a un administrador.
+      </p>
+    </div>
+  );
+}
+
 // ─── App root ─────────────────────────────────────────────────────────────────
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
+  const [role, setRole] = useState<UserRole | null>(null);
+  const [checkingRole, setCheckingRole] = useState(false);
+
+  const loadRole = async (userId: string): Promise<UserRole | null> => {
+    const { data, error } = await supabase
+      .from(ROLE_TABLE)
+      .select("rol, activo")
+      .eq("user_id", userId)
+      .single();
+
+    if (error) {
+      console.error("No se pudo cargar el rol del usuario.", error);
+      return null;
+    }
+    if (!data?.activo) return null;
+    if (data.rol === "admin" || data.rol === "recepcion" || data.rol === "ventas") {
+      return data.rol;
+    }
+    return null;
+  };
 
   useEffect(() => {
     let isMounted = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (isMounted) {
-        setSession(data.session ?? null);
-        setCheckingSession(false);
-      }
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (isMounted) {
+          setSession(data.session ?? null);
+        }
+      })
+      .catch((error) => {
+        console.error("No se pudo obtener la sesion de Supabase.", error);
+        if (isMounted) {
+          setSession(null);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setCheckingSession(false);
+        }
+      });
 
     const { data } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
@@ -292,7 +426,24 @@ export default function App() {
     await supabase.auth.signOut();
   };
 
-  if (checkingSession) {
+  useEffect(() => {
+    if (!session?.user?.id) {
+      setRole(null);
+      setCheckingRole(false);
+      return;
+    }
+
+    setCheckingRole(true);
+    loadRole(session.user.id)
+      .then((resolvedRole) => {
+        setRole(resolvedRole);
+      })
+      .finally(() => {
+        setCheckingRole(false);
+      });
+  }, [session?.user?.id]);
+
+  if (checkingSession || checkingRole) {
     return <div className="loading-screen">Cargando...</div>;
   }
 
@@ -300,58 +451,91 @@ export default function App() {
     return <AuthScreen />;
   }
 
+  if (!role) {
+    return (
+      <div className="auth-shell">
+        <section className="auth-card">
+          <h2>Sin rol asignado</h2>
+          <p className="status-message">
+            Tu usuario no tiene un rol activo. Solicita a un administrador que te asigne uno.
+          </p>
+          <button className="ghost-btn" onClick={handleSignOut} type="button">
+            Cerrar sesion
+          </button>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <Layout
       userEmail={session.user.email ?? "usuario"}
+      role={role}
       onSignOut={handleSignOut}
     >
       <Switch>
         <Route path="/">
-          <Dashboard />
+          {hasRoleAccess(role, "/") ? <Dashboard role={role} /> : <UnauthorizedScreen />}
         </Route>
 
         {/* ── Operadores ── */}
         <Route path="/operadores">
-          <Operadores />
+          {hasRoleAccess(role, "/operadores") ? <Operadores /> : <UnauthorizedScreen />}
         </Route>
         <Route path="/operadores/nuevo">
-          <OperadorForm />
+          {hasRoleAccess(role, "/operadores/nuevo") ? <OperadorForm /> : <UnauthorizedScreen />}
         </Route>
         <Route path="/operadores/:id">
-          <OperadorEditWrapper />
+          {hasRoleAccess(role, "/operadores/:id") ? <OperadorEditWrapper /> : <UnauthorizedScreen />}
         </Route>
 
         {/* ── Ventas ── */}
         <Route path="/ventas">
-          <Ventas />
+          {hasRoleAccess(role, "/ventas") ? <Ventas /> : <UnauthorizedScreen />}
         </Route>
         <Route path="/ventas/nuevo">
-          <VentaForm />
+          {hasRoleAccess(role, "/ventas/nuevo") ? <VentaForm /> : <UnauthorizedScreen />}
         </Route>
         <Route path="/ventas/:id">
-          <VentaEditWrapper />
+          {hasRoleAccess(role, "/ventas/:id") ? <VentaEditWrapper /> : <UnauthorizedScreen />}
         </Route>
 
         <Route path="/comprobacion-transferencias">
-          <ComprobacionTransferencias />
+          {hasRoleAccess(role, "/comprobacion-transferencias") ? (
+            <ComprobacionTransferencias />
+          ) : (
+            <UnauthorizedScreen />
+          )}
         </Route>
 
         <Route path="/seguimiento">
-          <SeguimientoVentas />
+          {hasRoleAccess(role, "/seguimiento") ? <SeguimientoVentas /> : <UnauthorizedScreen />}
         </Route>
 
         {/* ── Reportes ── */}
         <Route path="/reportes">
-          <Reportes />
+          {hasRoleAccess(role, "/reportes") ? <Reportes /> : <UnauthorizedScreen />}
         </Route>
         <Route path="/reportes/comisiones">
-          <Comisiones />
+          {hasRoleAccess(role, "/reportes/comisiones") ? <Comisiones /> : <UnauthorizedScreen />}
         </Route>
         <Route path="/reportes/peticion-cursos">
-          <PeticionCursos />
+          {hasRoleAccess(role, "/reportes/peticion-cursos") ? (
+            <PeticionCursos />
+          ) : (
+            <UnauthorizedScreen />
+          )}
         </Route>
         <Route path="/reportes/seguimiento-prospectos">
-          <ReporteSeguimientoProspectos />
+          {hasRoleAccess(role, "/reportes/seguimiento-prospectos") ? (
+            <ReporteSeguimientoProspectos />
+          ) : (
+            <UnauthorizedScreen />
+          )}
+        </Route>
+
+        <Route path="/usuarios">
+          {hasRoleAccess(role, "/usuarios") ? <Usuarios /> : <UnauthorizedScreen />}
         </Route>
 
         {/* ── Resto de módulos (placeholders) ── */}
