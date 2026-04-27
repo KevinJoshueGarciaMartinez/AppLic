@@ -251,6 +251,18 @@ function AuthScreen() {
         if (error) throw error;
         setMessage("Sesion iniciada.");
       } else {
+        const { data: existsData, error: existsError } = await supabase.rpc(
+          "email_exists_in_usuarios",
+          { p_email: email },
+        );
+        if (existsError) throw existsError;
+        if (existsData === true) {
+          setMessage(
+            "Este correo ya tiene cuenta. Usa 'Ya tengo cuenta' u 'Olvide mi contrasena'.",
+          );
+          return;
+        }
+
         const { error } = await supabase.auth.signUp({
           email,
           password,
