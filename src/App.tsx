@@ -260,7 +260,7 @@ function AuthScreen() {
         });
         if (error) throw error;
         setMessage(
-          "Registro enviado. Un administrador debe asignarte nivel para usar la app.",
+          "Si el correo es nuevo, te llegara confirmacion y despues un administrador debe asignarte nivel. Si ya tienes cuenta, usa 'Ya tengo cuenta' u 'Olvide mi contrasena'.",
         );
       }
     } catch (error) {
