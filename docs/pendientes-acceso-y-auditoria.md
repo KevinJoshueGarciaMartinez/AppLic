@@ -17,8 +17,11 @@
   - Gestion de `usuarios` y `usuarios_nivel` con RLS.
   - Admin puede administrar usuarios y niveles.
   - Usuario autenticado solo puede leerse a si mismo.
+- Preparada migracion SQL `supabase/035_operadores_ventas_actor_columns.sql` para:
+  - Agregar `created_by` y `updated_by` en `operadores` y `ventas`.
+  - Trigger automatico que guarda actor en insert/update.
 - Implementada pantalla `Usuarios` (solo admin) para asignar nivel y activar/inactivar usuarios desde la app.
 
 ## Siguiente paso sugerido
-- Ejecutar migracion 034 en Supabase SQL Editor.
-- Validar con una cuenta admin que el modulo `Usuarios` lista y actualiza correctamente.
+- Ejecutar migracion 035 en Supabase SQL Editor.
+- Validar que nuevos inserts/updates en `operadores` y `ventas` guarden `created_by`/`updated_by`.
