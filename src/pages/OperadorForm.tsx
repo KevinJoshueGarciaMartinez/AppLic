@@ -358,22 +358,230 @@ export default function OperadorForm({ id }: Props) {
       )}
 
       {/* Tabs */}
-      <div className="tabs">
-        {tabs.map((tab, i) => (
-          <button
-            key={tab}
-            className={`tab-btn${activeTab === i ? " tab-btn--active" : ""}`}
-            onClick={() => setActiveTab(i)}
-            type="button"
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+      {!isNew && (
+        <div className="tabs">
+          {tabs.map((tab, i) => (
+            <button
+              key={tab}
+              className={`tab-btn${activeTab === i ? " tab-btn--active" : ""}`}
+              onClick={() => setActiveTab(i)}
+              type="button"
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="record-form">
+        {isNew && (
+          <div className="form-section">
+            <h3 className="section-subtitle">Seguimiento comercial</h3>
+            <div className="checkbox-grid" style={{ marginBottom: "1rem" }}>
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={!!form.es_prospecto}
+                  onChange={(e) => set("es_prospecto", e.target.checked)}
+                />
+                Prospecto (registro ligero, CURP opcional)
+              </label>
+            </div>
+            <div className="form-grid form-grid-2">
+              <div className="form-field">
+                <label>Medio de captación</label>
+                <select
+                  value={form.medio_captacion ?? ""}
+                  onChange={(e) =>
+                    set("medio_captacion", e.target.value || null)
+                  }
+                >
+                  <option value="">— Seleccionar —</option>
+                  {form.medio_captacion != null &&
+                    form.medio_captacion !== "" &&
+                    !esMedioCaptacionCatalogoActual(form.medio_captacion) && (
+                      <option value={form.medio_captacion}>
+                        {etiquetaMedioCaptacion(form.medio_captacion)} (anterior)
+                      </option>
+                    )}
+                  {MEDIOS_CAPTACION.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-field">
+                <label>Fecha de captación (automática)</label>
+                <input
+                  type="date"
+                  value={form.fecha_captacion ?? ""}
+                  disabled
+                />
+              </div>
+              <div className="form-field">
+                <label>
+                  Próxima llamada
+                  {form.es_prospecto ? " *" : ""}
+                </label>
+                <input
+                  type="date"
+                  value={form.proxima_llamada ?? ""}
+                  onChange={(e) =>
+                    set("proxima_llamada", e.target.value || null)
+                  }
+                  required={!!form.es_prospecto}
+                />
+              </div>
+              <div className="form-field">
+                <label>Estatus de seguimiento</label>
+                <select
+                  value={form.estatus_seguimiento ?? ""}
+                  onChange={(e) =>
+                    set("estatus_seguimiento", e.target.value || null)
+                  }
+                >
+                  <option value="">— Sin definir —</option>
+                  {(() => {
+                    const raw = (form.estatus_seguimiento ?? "").trim();
+                    return (
+                      <>
+                        {raw &&
+                          !esEstatusSeguimientoEnCatalogo(raw) && (
+                            <option value={raw}>{raw} (anterior)</option>
+                          )}
+                        {ESTATUS_SEGUIMIENTO_OPCIONES.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </>
+                    );
+                  })()}
+                </select>
+              </div>
+            </div>
+
+            <h3 className="section-subtitle" style={{ marginTop: "1.5rem" }}>
+              Registro del cliente
+            </h3>
+            <div className="form-grid form-grid-3">
+              <div className="form-field">
+                <label>Nombre *</label>
+                <input
+                  type="text"
+                  value={form.nombre}
+                  onChange={(e) => set("nombre", e.target.value)}
+                  required
+                />
+              </div>
+              <div className="form-field">
+                <label>Apellido paterno</label>
+                <input
+                  type="text"
+                  value={form.apellido_paterno ?? ""}
+                  onChange={(e) => set("apellido_paterno", e.target.value || null)}
+                />
+              </div>
+              <div className="form-field">
+                <label>Apellido materno</label>
+                <input
+                  type="text"
+                  value={form.apellido_materno ?? ""}
+                  onChange={(e) => set("apellido_materno", e.target.value || null)}
+                />
+              </div>
+            </div>
+
+            <div className="form-grid form-grid-2">
+              <div className="form-field">
+                <label>CURP{form.es_prospecto ? " (opcional en prospecto)" : " *"}</label>
+                <input
+                  type="text"
+                  value={form.curp ?? ""}
+                  onChange={(e) => set("curp", e.target.value.toUpperCase())}
+                  maxLength={18}
+                  required={!form.es_prospecto}
+                  style={{ textTransform: "uppercase" }}
+                />
+              </div>
+              <div className="form-field">
+                <label>Teléfono</label>
+                <input
+                  type="tel"
+                  value={form.telefono_1 ?? ""}
+                  onChange={(e) => set("telefono_1", e.target.value || null)}
+                  maxLength={10}
+                />
+              </div>
+            </div>
+
+            <div className="form-field form-field-full">
+              <label>Dirección</label>
+              <textarea
+                value={form.direccion ?? ""}
+                onChange={(e) => set("direccion", e.target.value || null)}
+                rows={2}
+              />
+            </div>
+
+            <div className="form-grid form-grid-2">
+              <div className="form-field">
+                <label>Promotor</label>
+                <select
+                  value={form.id_promotor ?? ""}
+                  onChange={(e) =>
+                    set("id_promotor", e.target.value ? Number(e.target.value) : null)
+                  }
+                >
+                  <option value="">— Sin promotor —</option>
+                  {promotores.map((p) => (
+                    <option key={p.id_promotor} value={p.id_promotor}>
+                      {p.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-field">
+                <label>Trámite a realizar</label>
+                <input
+                  type="text"
+                  value={form.tramite_a_realizar ?? ""}
+                  onChange={(e) => set("tramite_a_realizar", e.target.value || null)}
+                />
+              </div>
+              <div className="form-field">
+                <label>Número de expediente méd. prev.</label>
+                <input
+                  type="text"
+                  value={form.num_exp_med_preventiva ?? ""}
+                  onChange={(e) =>
+                    set("num_exp_med_preventiva", e.target.value || null)
+                  }
+                />
+              </div>
+              <div className="form-field">
+                <label>Número de licencia</label>
+                <input
+                  type="text"
+                  value={form.licencia_numero ?? ""}
+                  onChange={(e) => set("licencia_numero", e.target.value || null)}
+                />
+              </div>
+              <div className="form-field">
+                <label>Vigencia de licencia</label>
+                <input
+                  type="date"
+                  value={form.licencia_vigencia ?? ""}
+                  onChange={(e) => set("licencia_vigencia", e.target.value || null)}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── Tab 0: Datos personales ── */}
-        {activeTab === 0 && (
+        {!isNew && activeTab === 0 && (
           <div className="form-section">
             <h3 className="section-subtitle">Seguimiento comercial</h3>
             <div className="checkbox-grid" style={{ marginBottom: "1rem" }}>
@@ -616,7 +824,7 @@ export default function OperadorForm({ id }: Props) {
         )}
 
         {/* ── Tab 1: Documentación ── */}
-        {activeTab === 1 && (
+        {!isNew && activeTab === 1 && (
           <div className="form-section">
             <h3 className="section-subtitle">Documentos del operador</h3>
             <div className="checkbox-grid">
@@ -654,7 +862,7 @@ export default function OperadorForm({ id }: Props) {
         )}
 
         {/* ── Tab 2: Licencia y médico ── */}
-        {activeTab === 2 && (
+        {!isNew && activeTab === 2 && (
           <div className="form-section">
             <h3 className="section-subtitle">Expediente médico preventivo</h3>
             <div className="form-grid form-grid-2">
@@ -695,7 +903,7 @@ export default function OperadorForm({ id }: Props) {
         )}
 
         {/* ── Tab 3: Cita SCT ── */}
-        {activeTab === 3 && (
+        {!isNew && activeTab === 3 && (
           <div className="form-section">
             <div className="form-grid form-grid-2">
               <div className="form-field">
@@ -840,7 +1048,7 @@ export default function OperadorForm({ id }: Props) {
         )}
 
         {/* ── Tab 4: Curso ── */}
-        {activeTab === 4 && (
+        {!isNew && activeTab === 4 && (
           <div className="form-section">
             <div className="form-grid form-grid-2">
               <div className="form-field">
