@@ -4,6 +4,7 @@ export const ESTATUS_SEGUIMIENTO_OPCIONES = [
   "Agendado",
   "En espera de doc",
   "Pendiente de pago",
+  "Pago Parcial",
   "Pagado pero sin doc",
   "Ingresado",
   "No le interesa",
