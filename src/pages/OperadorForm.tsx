@@ -14,7 +14,6 @@ import {
   esMedioCaptacionCatalogoActual,
 } from "../lib/mediosCaptacion";
 import {
-  ESTATUS_SEGUIMIENTO_DEFECTO,
   ESTATUS_SEGUIMIENTO_OPCIONES,
   esEstatusSeguimientoEnCatalogo,
 } from "../lib/estatusSeguimiento";
@@ -184,21 +183,6 @@ export default function OperadorForm({ id }: Props) {
       } as OperadorInsert);
     }
   }, [operadorData]);
-
-  useEffect(() => {
-    if (!isNew) return;
-    const sp = new URLSearchParams(window.location.search);
-    if (sp.get("prospecto") !== "1") return;
-    const hoy = new Date().toISOString().slice(0, 10);
-    setForm((prev) => ({
-      ...prev,
-      es_prospecto: true,
-      estatus_seguimiento: ESTATUS_SEGUIMIENTO_DEFECTO,
-      fecha_captacion: hoy,
-      proxima_llamada: hoy,
-      curp: "",
-    }));
-  }, [isNew]);
 
   useEffect(() => {
     if (isNew || !id) return;
@@ -377,16 +361,6 @@ export default function OperadorForm({ id }: Props) {
         {isNew && (
           <div className="form-section">
             <h3 className="section-subtitle">Seguimiento comercial</h3>
-            <div className="checkbox-grid" style={{ marginBottom: "1rem" }}>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={!!form.es_prospecto}
-                  onChange={(e) => set("es_prospecto", e.target.checked)}
-                />
-                Prospecto (registro ligero, CURP opcional)
-              </label>
-            </div>
             <div className="form-grid form-grid-2">
               <div className="form-field">
                 <label>Medio de captación</label>
@@ -420,17 +394,13 @@ export default function OperadorForm({ id }: Props) {
                 />
               </div>
               <div className="form-field">
-                <label>
-                  Próxima llamada
-                  {form.es_prospecto ? " *" : ""}
-                </label>
+                <label>Próxima llamada</label>
                 <input
                   type="date"
                   value={form.proxima_llamada ?? ""}
                   onChange={(e) =>
                     set("proxima_llamada", e.target.value || null)
                   }
-                  required={!!form.es_prospecto}
                 />
               </div>
               <div className="form-field">
@@ -495,13 +465,13 @@ export default function OperadorForm({ id }: Props) {
 
             <div className="form-grid form-grid-2">
               <div className="form-field">
-                <label>CURP{form.es_prospecto ? " (opcional en prospecto)" : " *"}</label>
+                <label>CURP *</label>
                 <input
                   type="text"
                   value={form.curp ?? ""}
                   onChange={(e) => set("curp", e.target.value.toUpperCase())}
                   maxLength={18}
-                  required={!form.es_prospecto}
+                  required
                   style={{ textTransform: "uppercase" }}
                 />
               </div>
