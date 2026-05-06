@@ -213,6 +213,7 @@ export default function SeguimientoVentas() {
   const [busqueda, setBusqueda] = useState("");
   const [diaFiltro, setDiaFiltro] = useState("");
   const [asesorFiltro, setAsesorFiltro] = useState("");
+  const [estatusFiltro, setEstatusFiltro] = useState<string[]>([]);
   const [modalAbierto, setModalAbierto] = useState(false);
   const [modalForm, setModalForm] = useState<ModalProspecto>(emptyModalProspecto);
   const [modalError, setModalError] = useState<string | null>(null);
@@ -313,7 +314,7 @@ export default function SeguimientoVentas() {
     insertMutation.mutate(modalToInsert(modalForm));
   }
 
-  const filas = useMemo(() => {
+  const filasBase = useMemo(() => {
     let rows = [...data];
     const txt = busqueda.trim().toLowerCase();
     if (txt) {
@@ -350,6 +351,33 @@ export default function SeguimientoVentas() {
     });
     return rows;
   }, [data, busqueda, soloPendientes, diaFiltro, asesorFiltro, hoy]);
+
+  const conteoEstatus = useMemo(() => {
+    const mapa = new Map<string, number>();
+    for (const s of ESTATUS_SEGUIMIENTO_OPCIONES) mapa.set(s, 0);
+    for (const r of filasBase) {
+      const estatus = (r.estatus_seguimiento ?? "").trim() || ESTATUS_SEGUIMIENTO_DEFECTO;
+      mapa.set(estatus, (mapa.get(estatus) ?? 0) + 1);
+    }
+    return mapa;
+  }, [filasBase]);
+
+  const filas = useMemo(() => {
+    if (estatusFiltro.length === 0) return filasBase;
+    const permitidos = new Set(estatusFiltro);
+    return filasBase.filter((r) => {
+      const estatus = (r.estatus_seguimiento ?? "").trim() || ESTATUS_SEGUIMIENTO_DEFECTO;
+      return permitidos.has(estatus);
+    });
+  }, [filasBase, estatusFiltro]);
+
+  function toggleEstatusFiltro(estatus: string) {
+    setEstatusFiltro((prev) =>
+      prev.includes(estatus)
+        ? prev.filter((s) => s !== estatus)
+        : [...prev, estatus],
+    );
+  }
 
   return (
     <div className="page-container">
@@ -753,6 +781,30 @@ export default function SeguimientoVentas() {
             Quitar filtro de asesor
           </button>
         )}
+        <div className="seguimiento-estatus-filtro" aria-label="Filtrar por estatus">
+          <span className="seguimiento-estatus-filtro__label">Estatus:</span>
+          <button
+            type="button"
+            className={`seguimiento-estatus-chip${estatusFiltro.length === 0 ? " seguimiento-estatus-chip--active" : ""}`}
+            onClick={() => setEstatusFiltro([])}
+          >
+            Todos ({filasBase.length})
+          </button>
+          {ESTATUS_SEGUIMIENTO_OPCIONES.map((s) => {
+            const activo = estatusFiltro.includes(s);
+            const count = conteoEstatus.get(s) ?? 0;
+            return (
+              <button
+                key={s}
+                type="button"
+                className={`seguimiento-estatus-chip${activo ? " seguimiento-estatus-chip--active" : ""}`}
+                onClick={() => toggleEstatusFiltro(s)}
+              >
+                {s} ({count})
+              </button>
+            );
+          })}
+        </div>
         <span className="record-count">
           {isLoading
             ? "Cargando…"

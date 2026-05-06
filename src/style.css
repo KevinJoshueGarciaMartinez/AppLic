@@ -985,6 +985,41 @@ input[type="number"] {
   cursor: wait;
 }
 
+.seguimiento-estatus-filtro {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.45rem;
+}
+
+.seguimiento-estatus-filtro__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.seguimiento-estatus-chip {
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: #fff;
+  color: #334155;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.seguimiento-estatus-chip:hover {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.seguimiento-estatus-chip--active {
+  border-color: #2563eb;
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
 .col-mono {
   font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
