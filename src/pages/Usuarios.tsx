@@ -209,7 +209,7 @@ export default function Usuarios() {
                         {u.asesor_asignado
                           && !(ASESORES_OPCIONES as readonly string[]).includes(u.asesor_asignado) && (
                             <option value={u.asesor_asignado}>
-                              {u.asesor_asignado} (personalizado)
+                              {u.asesor_asignado}
                             </option>
                         )}
                         {ASESORES_OPCIONES.map((asesor) => (
