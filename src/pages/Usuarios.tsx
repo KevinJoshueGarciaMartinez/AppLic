@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
-import { ASESORES_OPCIONES } from "../lib/asesoresCatalogo";
 
 type Nivel = {
   id_nivel: number;
@@ -63,26 +62,20 @@ export default function Usuarios() {
       idUsuario,
       idNivel,
       activo,
-      asesorAsignado,
     }: {
       idUsuario: string;
       idNivel: number | null;
       activo?: boolean;
-      asesorAsignado?: string | null;
     }) => {
       const payload: {
         id_nivel?: number | null;
         activo?: boolean;
-        asesor_asignado?: string | null;
         updated_at: string;
       } = {
         updated_at: new Date().toISOString(),
       };
       if (idNivel !== undefined) payload.id_nivel = idNivel;
       if (activo !== undefined) payload.activo = activo;
-      if (asesorAsignado !== undefined) {
-        payload.asesor_asignado = asesorAsignado?.trim() || null;
-      }
 
       const { error: updateError } = await supabase
         .from("usuarios")
@@ -184,40 +177,11 @@ export default function Usuarios() {
                       </select>
                     </td>
                     <td style={{ minWidth: "220px" }}>
-                      <select
-                        className="search-input"
-                        style={{ width: "100%", padding: "8px 10px", cursor: "pointer" }}
-                        value={u.asesor_asignado ?? ""}
-                        onChange={(e) => {
-                          const nuevo = e.target.value;
-                          queryClient.setQueryData<UsuarioRow[]>(["usuarios_admin"], (prev) =>
-                            (prev ?? []).map((item) =>
-                              item.id_usuario === u.id_usuario
-                                ? { ...item, asesor_asignado: nuevo }
-                                : item,
-                            ),
-                          );
-                          updateMutation.mutate({
-                            idUsuario: u.id_usuario,
-                            idNivel: u.id_nivel,
-                            asesorAsignado: nuevo || null,
-                          });
-                        }}
-                        disabled={updateMutation.isPending}
-                      >
-                        <option value="">— Sin asesor —</option>
-                        {u.asesor_asignado
-                          && !(ASESORES_OPCIONES as readonly string[]).includes(u.asesor_asignado) && (
-                            <option value={u.asesor_asignado}>
-                              {u.asesor_asignado}
-                            </option>
-                        )}
-                        {ASESORES_OPCIONES.map((asesor) => (
-                          <option key={asesor} value={asesor}>
-                            {asesor}
-                          </option>
-                        ))}
-                      </select>
+                      {u.asesor_asignado?.trim() ? (
+                        <span className="badge badge--blue">{u.asesor_asignado.trim()}</span>
+                      ) : (
+                        <span className="badge badge--gray">— Sin asesor —</span>
+                      )}
                     </td>
                     <td>
                       <span className={`badge ${u.activo ? "badge--green" : "badge--gray"}`}>
