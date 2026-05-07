@@ -271,6 +271,8 @@ export default function SeguimientoVentas() {
   const [modalForm, setModalForm] = useState<ModalProspecto>(emptyModalProspecto);
   const [modalError, setModalError] = useState<string | null>(null);
   const [detallesModal, setDetallesModal] = useState<DetallesModalState | null>(null);
+  const [asesorDraft, setAsesorDraft] = useState("");
+  const [asesorClaimError, setAsesorClaimError] = useState<string | null>(null);
 
   const {
     data: contextoSeguimiento,
@@ -316,6 +318,20 @@ export default function SeguimientoVentas() {
       setModalAbierto(false);
       setModalForm(emptyModalProspecto());
       setModalError(null);
+    },
+  });
+
+  const claimAsesorMutation = useMutation({
+    mutationFn: async (asesor: string) => {
+      const { error: err } = await supabase.rpc("app_claim_asesor", {
+        p_asesor: asesor,
+      });
+      if (err) throw new Error(err.message);
+    },
+    onSuccess: async () => {
+      setAsesorClaimError(null);
+      await queryClient.invalidateQueries({ queryKey: ["seguimiento_contexto_usuario"] });
+      await queryClient.invalidateQueries({ queryKey: ["seguimiento_operadores"] });
     },
   });
 
@@ -367,7 +383,7 @@ export default function SeguimientoVentas() {
       && !normalizarTexto(contextoSeguimiento?.asesorAsignado)
     ) {
       setModalError(
-        "No puedes crear prospectos porque tu usuario no tiene asesor asignado. Solicita la asignacion en Sistema -> Usuarios.",
+        "No puedes crear prospectos porque tu usuario no tiene asesor asignado. Registra primero tu asesor en esta pantalla.",
       );
       return;
     }
@@ -394,7 +410,7 @@ export default function SeguimientoVentas() {
       && !normalizarTexto(contextoSeguimiento?.asesorAsignado)
     ) {
       setModalError(
-        "No puedes guardar prospectos sin asesor asignado en tu usuario. Solicita la asignacion al administrador.",
+        "No puedes guardar prospectos sin asesor asignado en tu usuario. Registra primero tu asesor en esta pantalla.",
       );
       return;
     }
@@ -506,6 +522,64 @@ export default function SeguimientoVentas() {
           Error al resolver el usuario de seguimiento: {(errorContexto as Error).message}
         </div>
       )}
+
+      {contextoSeguimiento?.rol !== "admin"
+        && !normalizarTexto(contextoSeguimiento?.asesorAsignado) && (
+          <div className="alert-error" style={{ marginBottom: "12px" }}>
+            Tu usuario no tiene asesor asignado. Capturalo una sola vez para continuar.
+          </div>
+        )}
+
+      {contextoSeguimiento?.rol !== "admin"
+        && !normalizarTexto(contextoSeguimiento?.asesorAsignado) && (
+          <div
+            className="form-field"
+            style={{
+              maxWidth: "360px",
+              marginBottom: "16px",
+              background: "#fff",
+              padding: "12px",
+              border: "1px solid #e2e8f0",
+              borderRadius: "10px",
+            }}
+          >
+            <label>Mi asesor</label>
+            <input
+              type="text"
+              value={asesorDraft}
+              onChange={(e) => setAsesorDraft(e.target.value.toUpperCase())}
+              placeholder="Ej. ADRIAN"
+              maxLength={80}
+            />
+            <button
+              type="button"
+              className="btn-primary"
+              style={{ marginTop: "8px" }}
+              disabled={claimAsesorMutation.isPending}
+              onClick={() => {
+                const asesor = asesorDraft.trim();
+                if (!asesor) {
+                  setAsesorClaimError("Captura un asesor valido.");
+                  return;
+                }
+                setAsesorClaimError(null);
+                claimAsesorMutation.mutate(asesor);
+              }}
+            >
+              {claimAsesorMutation.isPending ? "Guardando..." : "Guardar mi asesor"}
+            </button>
+            {asesorClaimError && (
+              <div className="alert-error" style={{ marginTop: "8px", marginBottom: 0 }}>
+                {asesorClaimError}
+              </div>
+            )}
+            {claimAsesorMutation.isError && (
+              <div className="alert-error" style={{ marginTop: "8px", marginBottom: 0 }}>
+                {(claimAsesorMutation.error as Error).message}
+              </div>
+            )}
+          </div>
+        )}
 
       {modalAbierto && (
         <div
