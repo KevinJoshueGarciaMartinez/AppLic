@@ -207,7 +207,7 @@ export default function Usuarios() {
                       >
                         <option value="">— Sin asesor —</option>
                         {u.asesor_asignado
-                          && !ASESORES_OPCIONES.includes(u.asesor_asignado) && (
+                          && !(ASESORES_OPCIONES as readonly string[]).includes(u.asesor_asignado) && (
                             <option value={u.asesor_asignado}>
                               {u.asesor_asignado} (personalizado)
                             </option>
