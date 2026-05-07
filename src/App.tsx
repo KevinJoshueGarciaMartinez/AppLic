@@ -403,6 +403,7 @@ function UnauthorizedScreen() {
 // ─── App root ─────────────────────────────────────────────────────────────────
 
 export default function App() {
+  const [, navigate] = useLocation();
   const [session, setSession] = useState<Session | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
   const [role, setRole] = useState<UserRole | null>(null);
@@ -447,15 +448,18 @@ export default function App() {
         }
       });
 
-    const { data } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
+      if (event === "SIGNED_IN") {
+        navigate("/");
+      }
     });
 
     return () => {
       isMounted = false;
       data.subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
