@@ -307,6 +307,14 @@ export default function SeguimientoVentas() {
     }
   }, [asesorFiltro]);
 
+  useEffect(() => {
+    if (!modalAbierto) return;
+    if (contextoSeguimiento?.rol === "admin") return;
+    const asesorAsignado = contextoSeguimiento?.asesorAsignado?.trim() || "";
+    if (!asesorAsignado) return;
+    setModalForm((prev) => (prev.asesor ? prev : { ...prev, asesor: asesorAsignado }));
+  }, [modalAbierto, contextoSeguimiento?.rol, contextoSeguimiento?.asesorAsignado]);
+
   const insertMutation = useMutation({
     mutationFn: async (payload: OperadorInsert) => {
       const { error: err } = await supabase.from("operadores").insert(payload);
@@ -664,6 +672,10 @@ export default function SeguimientoVentas() {
                     disabled={contextoSeguimiento?.rol !== "admin"}
                   >
                     <option value="">— Seleccionar —</option>
+                    {modalForm.asesor
+                      && !(ASESORES_OPCIONES as readonly string[]).includes(modalForm.asesor) && (
+                        <option value={modalForm.asesor}>{modalForm.asesor}</option>
+                    )}
                     {ASESORES_OPCIONES.map((a) => (
                       <option key={a} value={a}>
                         {a}
