@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
+import { ASESORES_OPCIONES } from "../lib/asesoresCatalogo";
 
 type Nivel = {
   id_nivel: number;
@@ -12,6 +13,7 @@ type UsuarioRow = {
   nombre_usuario: string | null;
   usuario: string | null;
   id_nivel: number | null;
+  asesor_asignado: string | null;
   activo: boolean;
   created_at: string;
   usuarios_nivel: Nivel | null;
@@ -30,7 +32,7 @@ async function fetchNiveles(): Promise<Nivel[]> {
 async function fetchUsuarios(): Promise<UsuarioRow[]> {
   const { data, error } = await supabase
     .from("usuarios")
-    .select("id_usuario, nombre_usuario, usuario, id_nivel, activo, created_at, usuarios_nivel(id_nivel, nivel_usuario)")
+    .select("id_usuario, nombre_usuario, usuario, id_nivel, asesor_asignado, activo, created_at, usuarios_nivel(id_nivel, nivel_usuario)")
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(error.message);
@@ -61,16 +63,26 @@ export default function Usuarios() {
       idUsuario,
       idNivel,
       activo,
+      asesorAsignado,
     }: {
       idUsuario: string;
       idNivel: number | null;
       activo?: boolean;
+      asesorAsignado?: string | null;
     }) => {
-      const payload: { id_nivel?: number | null; activo?: boolean; updated_at: string } = {
+      const payload: {
+        id_nivel?: number | null;
+        activo?: boolean;
+        asesor_asignado?: string | null;
+        updated_at: string;
+      } = {
         updated_at: new Date().toISOString(),
       };
       if (idNivel !== undefined) payload.id_nivel = idNivel;
       if (activo !== undefined) payload.activo = activo;
+      if (asesorAsignado !== undefined) {
+        payload.asesor_asignado = asesorAsignado?.trim() || null;
+      }
 
       const { error: updateError } = await supabase
         .from("usuarios")
@@ -135,6 +147,7 @@ export default function Usuarios() {
                 <th>Correo</th>
                 <th>Nombre</th>
                 <th>Nivel</th>
+                <th>Asesor asignado</th>
                 <th>Activo</th>
                 <th>Acciones</th>
               </tr>
@@ -142,7 +155,7 @@ export default function Usuarios() {
             <tbody>
               {filtrados.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="table-empty">
+                  <td colSpan={6} className="table-empty">
                     No hay usuarios para mostrar.
                   </td>
                 </tr>
@@ -165,6 +178,36 @@ export default function Usuarios() {
                         {niveles.map((n) => (
                           <option key={n.id_nivel} value={n.id_nivel}>
                             {n.nivel_usuario}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td style={{ minWidth: "220px" }}>
+                      <select
+                        className="search-input"
+                        style={{ width: "100%", padding: "8px 10px", cursor: "pointer" }}
+                        value={u.asesor_asignado ?? ""}
+                        onChange={(e) => {
+                          const nuevo = e.target.value;
+                          queryClient.setQueryData<UsuarioRow[]>(["usuarios_admin"], (prev) =>
+                            (prev ?? []).map((item) =>
+                              item.id_usuario === u.id_usuario
+                                ? { ...item, asesor_asignado: nuevo }
+                                : item,
+                            ),
+                          );
+                          updateMutation.mutate({
+                            idUsuario: u.id_usuario,
+                            idNivel: u.id_nivel,
+                            asesorAsignado: nuevo || null,
+                          });
+                        }}
+                        disabled={updateMutation.isPending}
+                      >
+                        <option value="">— Sin asesor —</option>
+                        {ASESORES_OPCIONES.map((asesor) => (
+                          <option key={asesor} value={asesor}>
+                            {asesor}
                           </option>
                         ))}
                       </select>

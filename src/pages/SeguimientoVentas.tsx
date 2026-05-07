@@ -32,7 +32,56 @@ type FilaSeguimiento = Pick<
   promotores?: { nombre: string | null } | null;
 };
 
-async function fetchProspectos(): Promise<FilaSeguimiento[]> {
+type ContextoSeguimiento = {
+  userId: string;
+  email: string | null;
+  rol: "admin" | "recepcion" | "ventas" | null;
+  asesorAsignado: string | null;
+};
+
+function normalizarTexto(v: string | null | undefined): string {
+  return (v ?? "").trim().toUpperCase();
+}
+
+async function fetchContextoSeguimiento(): Promise<ContextoSeguimiento> {
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError) throw new Error(authError.message);
+  const user = authData.user;
+  if (!user) throw new Error("No hay sesion activa.");
+
+  const [{ data: profileData, error: profileError }, { data: usuarioData, error: usuarioError }] =
+    await Promise.all([
+      supabase
+        .from("profiles")
+        .select("rol")
+        .eq("user_id", user.id)
+        .single(),
+      supabase
+        .from("usuarios")
+        .select("asesor_asignado")
+        .eq("id_usuario", user.id)
+        .single(),
+    ]);
+
+  if (profileError) throw new Error(profileError.message);
+  if (usuarioError) throw new Error(usuarioError.message);
+
+  const rolRaw = String(profileData?.rol ?? "").trim();
+  const rol =
+    rolRaw === "admin" || rolRaw === "recepcion" || rolRaw === "ventas"
+      ? rolRaw
+      : null;
+  return {
+    userId: user.id,
+    email: user.email ?? null,
+    rol,
+    asesorAsignado: usuarioData?.asesor_asignado?.trim() || null,
+  };
+}
+
+async function fetchProspectos(
+  contexto: Pick<ContextoSeguimiento, "rol" | "asesorAsignado">,
+): Promise<FilaSeguimiento[]> {
   const { data, error } = await supabase
     .from("operadores")
     .select(
@@ -42,7 +91,11 @@ async function fetchProspectos(): Promise<FilaSeguimiento[]> {
     .order("proxima_llamada", { ascending: true });
 
   if (error) throw new Error(error.message);
-  return (data ?? []) as unknown as FilaSeguimiento[];
+  const rows = (data ?? []) as unknown as FilaSeguimiento[];
+  if (contexto.rol === "admin") return rows;
+  const asesorNorm = normalizarTexto(contexto.asesorAsignado);
+  if (!asesorNorm) return [];
+  return rows.filter((r) => normalizarTexto(r.asesor) === asesorNorm);
 }
 
 function nombreCompleto(op: FilaSeguimiento) {
@@ -218,10 +271,30 @@ export default function SeguimientoVentas() {
   const [modalForm, setModalForm] = useState<ModalProspecto>(emptyModalProspecto);
   const [modalError, setModalError] = useState<string | null>(null);
   const [detallesModal, setDetallesModal] = useState<DetallesModalState | null>(null);
+  const [mensajeScope, setMensajeScope] = useState<string | null>(null);
+
+  const {
+    data: contextoSeguimiento,
+    isLoading: loadingContexto,
+    isError: isErrorContexto,
+    error: errorContexto,
+  } = useQuery({
+    queryKey: ["seguimiento_contexto_usuario"],
+    queryFn: fetchContextoSeguimiento,
+  });
 
   const { data = [], isLoading, isError, error } = useQuery({
-    queryKey: ["seguimiento_operadores"],
-    queryFn: fetchProspectos,
+    queryKey: [
+      "seguimiento_operadores",
+      contextoSeguimiento?.rol ?? null,
+      normalizarTexto(contextoSeguimiento?.asesorAsignado),
+    ],
+    enabled: !!contextoSeguimiento,
+    queryFn: () =>
+      fetchProspectos({
+        rol: contextoSeguimiento?.rol ?? null,
+        asesorAsignado: contextoSeguimiento?.asesorAsignado ?? null,
+      }),
   });
 
   const hoy = hoyISO();
@@ -232,6 +305,23 @@ export default function SeguimientoVentas() {
       setAsesorFiltro("");
     }
   }, [asesorFiltro]);
+
+  useEffect(() => {
+    if (!contextoSeguimiento) return;
+    if (contextoSeguimiento.rol === "admin") {
+      setMensajeScope("Vista admin: puedes ver todos los asesores.");
+      return;
+    }
+    if (!normalizarTexto(contextoSeguimiento.asesorAsignado)) {
+      setMensajeScope(
+        "Tu usuario no tiene asesor asignado. Un administrador debe asignarlo en Sistema -> Usuarios para usar Seguimiento.",
+      );
+      return;
+    }
+    setMensajeScope(
+      `Vista filtrada para ${normalizarTexto(contextoSeguimiento.asesorAsignado)} (${contextoSeguimiento.email ?? "usuario"}).`,
+    );
+  }, [contextoSeguimiento]);
 
   const insertMutation = useMutation({
     mutationFn: async (payload: OperadorInsert) => {
@@ -290,8 +380,22 @@ export default function SeguimientoVentas() {
   }, [overlayAbierto, detallesModal, modalAbierto, insertMutation.isPending, patchNotasMutation.isPending]);
 
   function abrirModal() {
+    if (
+      contextoSeguimiento?.rol !== "admin"
+      && !normalizarTexto(contextoSeguimiento?.asesorAsignado)
+    ) {
+      setModalError(
+        "No puedes crear prospectos porque tu usuario no tiene asesor asignado. Solicita la asignacion en Sistema -> Usuarios.",
+      );
+      return;
+    }
     insertMutation.reset();
-    setModalForm(emptyModalProspecto());
+    const base = emptyModalProspecto();
+    const asesorDefault = contextoSeguimiento?.asesorAsignado?.trim() || "";
+    setModalForm({
+      ...base,
+      asesor: asesorDefault || base.asesor,
+    });
     setModalError(null);
     setModalAbierto(true);
   }
@@ -303,6 +407,15 @@ export default function SeguimientoVentas() {
   function guardarProspecto(e: React.FormEvent) {
     e.preventDefault();
     setModalError(null);
+    if (
+      contextoSeguimiento?.rol !== "admin"
+      && !normalizarTexto(contextoSeguimiento?.asesorAsignado)
+    ) {
+      setModalError(
+        "No puedes guardar prospectos sin asesor asignado en tu usuario. Solicita la asignacion al administrador.",
+      );
+      return;
+    }
     if (!modalForm.nombre.trim()) {
       setModalError("El nombre es obligatorio.");
       return;
@@ -311,7 +424,16 @@ export default function SeguimientoVentas() {
       setModalError("La próxima llamada es obligatoria para poder filtrar y ordenar el seguimiento.");
       return;
     }
-    insertMutation.mutate(modalToInsert(modalForm));
+    const asesorForzado =
+      contextoSeguimiento?.rol === "admin"
+        ? modalForm.asesor
+        : (contextoSeguimiento?.asesorAsignado ?? "");
+    insertMutation.mutate(
+      modalToInsert({
+        ...modalForm,
+        asesor: asesorForzado,
+      }),
+    );
   }
 
   const filasBase = useMemo(() => {
@@ -398,6 +520,26 @@ export default function SeguimientoVentas() {
         </button>
       </div>
 
+      {mensajeScope && (
+        <div
+          className={
+            contextoSeguimiento?.rol === "admin"
+              ? "alert-success"
+              : normalizarTexto(contextoSeguimiento?.asesorAsignado)
+                ? "alert-success"
+                : "alert-error"
+          }
+        >
+          {mensajeScope}
+        </div>
+      )}
+
+      {(isErrorContexto || errorContexto) && (
+        <div className="alert-error">
+          Error al resolver el usuario de seguimiento: {(errorContexto as Error).message}
+        </div>
+      )}
+
       {modalAbierto && (
         <div
           className="modal-overlay"
@@ -478,6 +620,7 @@ export default function SeguimientoVentas() {
                   <select
                     value={modalForm.asesor}
                     onChange={(e) => setModal("asesor", e.target.value)}
+                    disabled={contextoSeguimiento?.rol !== "admin"}
                   >
                     <option value="">— Seleccionar —</option>
                     {ASESORES_OPCIONES.map((a) => (
@@ -806,7 +949,7 @@ export default function SeguimientoVentas() {
           })}
         </div>
         <span className="record-count">
-          {isLoading
+          {loadingContexto || isLoading
             ? "Cargando…"
             : `${filas.length} prospecto${filas.length !== 1 ? "s" : ""}`}
         </span>
@@ -840,7 +983,7 @@ export default function SeguimientoVentas() {
         </div>
       )}
 
-      {!isLoading && !isError && (
+      {!loadingContexto && !isLoading && !isError && !isErrorContexto && (
         <div className="table-wrapper table-wrapper--wide">
           <table className="data-table data-table--seguimiento">
             <thead>
@@ -941,7 +1084,7 @@ export default function SeguimientoVentas() {
         </div>
       )}
 
-      {isLoading && (
+      {(loadingContexto || isLoading) && (
         <div className="loading-state">
           <div className="spinner" />
           <span>Cargando prospectos…</span>
