@@ -206,6 +206,12 @@ export default function Usuarios() {
                         disabled={updateMutation.isPending}
                       >
                         <option value="">— Sin asesor —</option>
+                        {u.asesor_asignado
+                          && !ASESORES_OPCIONES.includes(u.asesor_asignado) && (
+                            <option value={u.asesor_asignado}>
+                              {u.asesor_asignado} (personalizado)
+                            </option>
+                        )}
                         {ASESORES_OPCIONES.map((asesor) => (
                           <option key={asesor} value={asesor}>
                             {asesor}
