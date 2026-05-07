@@ -164,9 +164,10 @@ export default function Usuarios() {
                   <tr key={u.id_usuario}>
                     <td>{u.usuario ?? "—"}</td>
                     <td>{u.nombre_usuario ?? "—"}</td>
-                    <td style={{ minWidth: "200px" }}>
+                    <td style={{ minWidth: "160px" }}>
                       <select
                         className="search-input"
+                        style={{ width: "100%", padding: "8px 10px", cursor: "pointer" }}
                         value={u.id_nivel ?? ""}
                         onChange={(e) => {
                           const value = e.target.value ? Number(e.target.value) : null;

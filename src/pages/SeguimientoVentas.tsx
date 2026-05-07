@@ -271,7 +271,6 @@ export default function SeguimientoVentas() {
   const [modalForm, setModalForm] = useState<ModalProspecto>(emptyModalProspecto);
   const [modalError, setModalError] = useState<string | null>(null);
   const [detallesModal, setDetallesModal] = useState<DetallesModalState | null>(null);
-  const [mensajeScope, setMensajeScope] = useState<string | null>(null);
 
   const {
     data: contextoSeguimiento,
@@ -305,23 +304,6 @@ export default function SeguimientoVentas() {
       setAsesorFiltro("");
     }
   }, [asesorFiltro]);
-
-  useEffect(() => {
-    if (!contextoSeguimiento) return;
-    if (contextoSeguimiento.rol === "admin") {
-      setMensajeScope("Vista admin: puedes ver todos los asesores.");
-      return;
-    }
-    if (!normalizarTexto(contextoSeguimiento.asesorAsignado)) {
-      setMensajeScope(
-        "Tu usuario no tiene asesor asignado. Un administrador debe asignarlo en Sistema -> Usuarios para usar Seguimiento.",
-      );
-      return;
-    }
-    setMensajeScope(
-      `Vista filtrada para ${normalizarTexto(contextoSeguimiento.asesorAsignado)} (${contextoSeguimiento.email ?? "usuario"}).`,
-    );
-  }, [contextoSeguimiento]);
 
   const insertMutation = useMutation({
     mutationFn: async (payload: OperadorInsert) => {
@@ -519,20 +501,6 @@ export default function SeguimientoVentas() {
           Registrar prospecto
         </button>
       </div>
-
-      {mensajeScope && (
-        <div
-          className={
-            contextoSeguimiento?.rol === "admin"
-              ? "alert-success"
-              : normalizarTexto(contextoSeguimiento?.asesorAsignado)
-                ? "alert-success"
-                : "alert-error"
-          }
-        >
-          {mensajeScope}
-        </div>
-      )}
 
       {(isErrorContexto || errorContexto) && (
         <div className="alert-error">
