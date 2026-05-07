@@ -990,6 +990,16 @@ input[type="number"] {
   cursor: wait;
 }
 
+.seguimiento-fab {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: auto;
+  padding: 10px 16px;
+  z-index: 20;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.22);
+}
+
 .seguimiento-estatus-filtro {
   display: flex;
   align-items: center;

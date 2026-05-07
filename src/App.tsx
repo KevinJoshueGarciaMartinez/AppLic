@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, Route, Switch, useLocation, useParams } from "wouter";
 import { supabase } from "./lib/supabase";
 import type { Session } from "@supabase/supabase-js";
@@ -408,6 +408,7 @@ export default function App() {
   const [checkingSession, setCheckingSession] = useState(true);
   const [role, setRole] = useState<UserRole | null>(null);
   const [checkingRole, setCheckingRole] = useState(false);
+  const authUserRef = useRef<string | null>(null);
 
   const loadRole = async (userId: string): Promise<UserRole | null> => {
     const { data, error } = await supabase
@@ -434,6 +435,7 @@ export default function App() {
       .then(({ data }) => {
         if (isMounted) {
           setSession(data.session ?? null);
+          authUserRef.current = data.session?.user?.id ?? null;
         }
       })
       .catch((error) => {
@@ -449,8 +451,11 @@ export default function App() {
       });
 
     const { data } = supabase.auth.onAuthStateChange((event, newSession) => {
+      const prevUserId = authUserRef.current;
+      const nextUserId = newSession?.user?.id ?? null;
       setSession(newSession);
-      if (event === "SIGNED_IN") {
+      authUserRef.current = nextUserId;
+      if (event === "SIGNED_IN" && !prevUserId && !!nextUserId) {
         navigate("/");
       }
     });

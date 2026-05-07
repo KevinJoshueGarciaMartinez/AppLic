@@ -490,17 +490,16 @@ export default function SeguimientoVentas() {
           <h1 className="page-title">
             <span className="page-icon">📞</span> Seguimiento de ventas
           </h1>
-          <p className="page-subtitle">
-            Prospectos registrados como operadores ligeros. Orden por próxima
-            llamada (vencidas primero). Cambia estatus en la tabla; captación, médico,
-            trámite y notas en «Detalles». Al formalizar, completa CURP en el expediente
-            y desmarca «Prospecto».
-          </p>
         </div>
-        <button className="btn-primary" type="button" onClick={abrirModal}>
-          Registrar prospecto
-        </button>
       </div>
+
+      <button
+        className="btn-primary seguimiento-fab"
+        type="button"
+        onClick={abrirModal}
+      >
+        Registrar prospecto
+      </button>
 
       {(isErrorContexto || errorContexto) && (
         <div className="alert-error">
