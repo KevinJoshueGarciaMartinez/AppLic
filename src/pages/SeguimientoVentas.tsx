@@ -297,6 +297,13 @@ function partirHistoricoNotas(hist: string): string[] {
     .reverse();
 }
 
+/** Más de 5 caracteres en la nota para poder ajustar la próxima llamada en este flujo */
+const MIN_CARACTERES_NOTA_PARA_PROXIMA = 5;
+
+function notaHabilitaProximaLlamada(nota: string): boolean {
+  return nota.trim().length > MIN_CARACTERES_NOTA_PARA_PROXIMA;
+}
+
 export default function SeguimientoVentas() {
   const queryClient = useQueryClient();
   const [soloPendientes, setSoloPendientes] = useState(true);
@@ -903,8 +910,9 @@ export default function SeguimientoVentas() {
             </p>
             <p className="field-hint" style={{ marginTop: "-4px", marginBottom: "12px" }}>
               Captación y médico son solo consulta; el resto del expediente (trámite, documentos,
-              etc.) lo ves y editas con el botón. Aquí puedes registrar cada llamada en
-              histórico y definir su próxima fecha.
+              etc.) lo ves y editas con el botón. Escribe primero la nota de la llamada; con más
+              de {MIN_CARACTERES_NOTA_PARA_PROXIMA} caracteres podrás definir la próxima fecha y
+              guardar el seguimiento.
             </p>
 
             <div className="seguimiento-detalles-meta">
@@ -932,53 +940,39 @@ export default function SeguimientoVentas() {
               </Link>
             </div>
 
-            <div className="form-grid form-grid-2" style={{ marginTop: "1rem" }}>
-              <div className="form-field">
-                <label>Próxima llamada *</label>
-                <input
-                  type="date"
-                  value={detallesModal.proxima_llamada}
-                  onChange={(e) =>
-                    setDetallesModal((m) =>
-                      m ? { ...m, proxima_llamada: e.target.value } : m,
-                    )
+            <div className="form-field form-field-full" style={{ marginTop: "1rem" }}>
+              <label>Formalización</label>
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ width: "100%", maxWidth: "22rem" }}
+                disabled={formalizarMutation.isPending || patchSeguimientoMutation.isPending}
+                onClick={() => {
+                  const curp = detallesModal.curp?.trim() ?? "";
+                  if (!curp) {
+                    return;
                   }
-                />
-              </div>
-              <div className="form-field">
-                <label>Formalización</label>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  style={{ width: "100%" }}
-                  disabled={formalizarMutation.isPending || patchSeguimientoMutation.isPending}
-                  onClick={() => {
-                    const curp = detallesModal.curp?.trim() ?? "";
-                    if (!curp) {
-                      return;
-                    }
-                    const ok = window.confirm(
-                      "Esta acción formaliza al prospecto y lo saca de Seguimiento. ¿Deseas continuar?",
-                    );
-                    if (!ok) return;
-                    formalizarMutation.mutate(detallesModal.id);
-                  }}
-                  title={
-                    detallesModal.curp?.trim()
-                      ? "Convierte el prospecto en operador formal."
-                      : "No se puede formalizar sin CURP."
-                  }
-                >
-                  {formalizarMutation.isPending
-                    ? "Formalizando…"
-                    : "Formalizar prospecto"}
-                </button>
-                {!detallesModal.curp?.trim() && (
-                  <span className="field-hint">
-                    Requiere CURP capturada en expediente para formalizar.
-                  </span>
-                )}
-              </div>
+                  const ok = window.confirm(
+                    "Esta acción formaliza al prospecto y lo saca de Seguimiento. ¿Deseas continuar?",
+                  );
+                  if (!ok) return;
+                  formalizarMutation.mutate(detallesModal.id);
+                }}
+                title={
+                  detallesModal.curp?.trim()
+                    ? "Convierte el prospecto en operador formal."
+                    : "No se puede formalizar sin CURP."
+                }
+              >
+                {formalizarMutation.isPending
+                  ? "Formalizando…"
+                  : "Formalizar prospecto"}
+              </button>
+              {!detallesModal.curp?.trim() && (
+                <span className="field-hint">
+                  Requiere CURP capturada en expediente para formalizar.
+                </span>
+              )}
             </div>
 
             <div className="form-field form-field-full" style={{ marginTop: "1rem" }}>
@@ -1030,11 +1024,44 @@ export default function SeguimientoVentas() {
                 value={detallesModal.notaNueva}
                 onChange={(e) =>
                   setDetallesModal((m) =>
-                    m ? { ...m, notaNueva: e.target.value } : m,
+                    m ? { ...m, notaNueva: e.target.value, error: null } : m,
                   )
                 }
                 placeholder="Escribe el resultado de la llamada de hoy…"
               />
+            </div>
+
+            <div className="form-field form-field-full" style={{ marginTop: "0.75rem" }}>
+              <label>Próxima llamada *</label>
+              <input
+                type="date"
+                value={detallesModal.proxima_llamada}
+                disabled={
+                  patchSeguimientoMutation.isPending
+                  || formalizarMutation.isPending
+                  || !notaHabilitaProximaLlamada(detallesModal.notaNueva)
+                }
+                title={
+                  notaHabilitaProximaLlamada(detallesModal.notaNueva)
+                    ? "Fecha objetivo para el siguiente contacto."
+                    : `Escribe más de ${MIN_CARACTERES_NOTA_PARA_PROXIMA} caracteres en la nota para poder cambiar esta fecha.`
+                }
+                onChange={(e) =>
+                  setDetallesModal((m) =>
+                    m ? { ...m, proxima_llamada: e.target.value } : m,
+                  )
+                }
+              />
+              {!notaHabilitaProximaLlamada(detallesModal.notaNueva) ? (
+                <span className="field-hint">
+                  La fecha se habilita cuando la nota supere {MIN_CARACTERES_NOTA_PARA_PROXIMA}{" "}
+                  caracteres (solo lectura hasta entonces).
+                </span>
+              ) : (
+                <span className="field-hint">
+                  Ajusta la fecha para la siguiente llamada de seguimiento.
+                </span>
+              )}
             </div>
 
             {patchSeguimientoMutation.isError && (
@@ -1064,8 +1091,25 @@ export default function SeguimientoVentas() {
               <button
                 type="button"
                 className="btn-primary"
-                disabled={patchSeguimientoMutation.isPending || formalizarMutation.isPending}
+                disabled={
+                  patchSeguimientoMutation.isPending
+                  || formalizarMutation.isPending
+                  || !notaHabilitaProximaLlamada(detallesModal.notaNueva)
+                  || !detallesModal.proxima_llamada.trim()
+                }
                 onClick={() => {
+                  if (!notaHabilitaProximaLlamada(detallesModal.notaNueva)) {
+                    setDetallesModal((m) =>
+                      m
+                        ? {
+                          ...m,
+                          error:
+                            `Escribe más de ${MIN_CARACTERES_NOTA_PARA_PROXIMA} caracteres en la nota antes de guardar.`,
+                        }
+                        : m,
+                    );
+                    return;
+                  }
                   const proxima = detallesModal.proxima_llamada.trim();
                   if (!proxima) {
                     setDetallesModal((m) =>
