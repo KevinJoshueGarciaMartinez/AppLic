@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 import type { Operador, OperadorInsert } from "../lib/types";
@@ -305,6 +305,7 @@ function notaHabilitaProximaLlamada(nota: string): boolean {
 }
 
 export default function SeguimientoVentas() {
+  const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const [soloPendientes, setSoloPendientes] = useState(true);
   const [busqueda, setBusqueda] = useState("");
@@ -910,9 +911,9 @@ export default function SeguimientoVentas() {
             </p>
             <p className="field-hint" style={{ marginTop: "-4px", marginBottom: "12px" }}>
               Captación y médico son solo consulta; el resto del expediente (trámite, documentos,
-              etc.) lo ves y editas con el botón. Escribe primero la nota de la llamada; con más
-              de {MIN_CARACTERES_NOTA_PARA_PROXIMA} caracteres podrás definir la próxima fecha y
-              guardar el seguimiento.
+              etc.) lo abres con «Abrir expediente» abajo. Escribe primero la nota de la llamada;
+              con más de {MIN_CARACTERES_NOTA_PARA_PROXIMA} caracteres podrás definir la próxima
+              fecha y guardar el seguimiento.
             </p>
 
             <div className="seguimiento-detalles-meta">
@@ -930,14 +931,6 @@ export default function SeguimientoVentas() {
                     : "—"}
                 </span>
               </div>
-            </div>
-
-            <div className="seguimiento-detalles-expediente-wrap">
-              <Link href={`/operadores/${detallesModal.id}?from=seguimiento`}>
-                <button type="button" className="btn-edit">
-                  Abrir expediente
-                </button>
-              </Link>
             </div>
 
             <div className="form-field form-field-full" style={{ marginTop: "1rem" }}>
@@ -1057,12 +1050,33 @@ export default function SeguimientoVentas() {
               <div
                 style={{
                   display: "flex",
-                  flexDirection: "column",
-                  alignItems: "flex-start",
-                  gap: "6px",
-                  minWidth: "min(100%, 16rem)",
+                  flexWrap: "wrap",
+                  alignItems: "flex-end",
+                  gap: "10px",
+                  minWidth: "min(100%, 28rem)",
                 }}
               >
+                <button
+                  type="button"
+                  className="btn-edit"
+                  disabled={patchSeguimientoMutation.isPending || formalizarMutation.isPending}
+                  style={{ whiteSpace: "nowrap" }}
+                  onClick={() => {
+                    if (patchSeguimientoMutation.isPending || formalizarMutation.isPending) return;
+                    navigate(`/operadores/${detallesModal.id}?from=seguimiento`);
+                  }}
+                  title="Ver y editar tramite y documentos del expediente"
+                >
+                  Abrir expediente
+                </button>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    gap: "6px",
+                  }}
+                >
                 <button
                   type="button"
                   className="btn-secondary"
@@ -1103,6 +1117,7 @@ export default function SeguimientoVentas() {
                     Requiere CURP capturada en expediente para formalizar.
                   </span>
                 )}
+                </div>
               </div>
               <div style={{ display: "flex", gap: "10px", marginLeft: "auto", flexShrink: 0 }}>
               <button
