@@ -212,6 +212,7 @@ export default function OperadorForm({ id }: Props) {
     queryFn: fetchRolUsuario,
   });
   const puedeVerFinanzas = rolUsuario === "admin" || rolUsuario === "recepcion";
+  const puedeEditarProspecto = rolUsuario === "admin" || rolUsuario === "recepcion";
 
   useEffect(() => {
     if (isNew || !id) return;
@@ -506,16 +507,18 @@ export default function OperadorForm({ id }: Props) {
         {!isNew && activeTab === 0 && (
           <div className="form-section">
             <h3 className="section-subtitle">Seguimiento comercial</h3>
-            <div className="checkbox-grid" style={{ marginBottom: "1rem" }}>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={!!form.es_prospecto}
-                  onChange={(e) => set("es_prospecto", e.target.checked)}
-                />
-                Prospecto (registro ligero, CURP opcional)
-              </label>
-            </div>
+            {puedeEditarProspecto && (
+              <div className="checkbox-grid" style={{ marginBottom: "1rem" }}>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={!!form.es_prospecto}
+                    onChange={(e) => set("es_prospecto", e.target.checked)}
+                  />
+                  Prospecto (registro ligero, CURP opcional)
+                </label>
+              </div>
+            )}
             <div className="form-grid form-grid-2">
               <div className="form-field">
                 <label>Medio de captación</label>
