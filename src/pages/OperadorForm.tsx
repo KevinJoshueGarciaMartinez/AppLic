@@ -201,6 +201,18 @@ export default function OperadorForm({ id }: Props) {
     }
   }, [operadorData]);
 
+  // Promotores list
+  const { data: promotores = [] } = useQuery({
+    queryKey: ["promotores"],
+    queryFn: fetchPromotores,
+  });
+
+  const { data: rolUsuario } = useQuery({
+    queryKey: ["perfil_rol_operador_form"],
+    queryFn: fetchRolUsuario,
+  });
+  const puedeVerFinanzas = rolUsuario === "admin" || rolUsuario === "recepcion";
+
   useEffect(() => {
     if (isNew || !id) return;
     if (!puedeVerFinanzas) return;
@@ -214,18 +226,6 @@ export default function OperadorForm({ id }: Props) {
     }, 250);
     return () => window.clearTimeout(t);
   }, [id, isNew, puedeVerFinanzas]);
-
-  // Promotores list
-  const { data: promotores = [] } = useQuery({
-    queryKey: ["promotores"],
-    queryFn: fetchPromotores,
-  });
-
-  const { data: rolUsuario } = useQuery({
-    queryKey: ["perfil_rol_operador_form"],
-    queryFn: fetchRolUsuario,
-  });
-  const puedeVerFinanzas = rolUsuario === "admin" || rolUsuario === "recepcion";
 
   const {
     data: saldosOp,
