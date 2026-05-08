@@ -941,41 +941,6 @@ export default function SeguimientoVentas() {
             </div>
 
             <div className="form-field form-field-full" style={{ marginTop: "1rem" }}>
-              <label>Formalización</label>
-              <button
-                type="button"
-                className="btn-secondary"
-                style={{ width: "100%", maxWidth: "22rem" }}
-                disabled={formalizarMutation.isPending || patchSeguimientoMutation.isPending}
-                onClick={() => {
-                  const curp = detallesModal.curp?.trim() ?? "";
-                  if (!curp) {
-                    return;
-                  }
-                  const ok = window.confirm(
-                    "Esta acción formaliza al prospecto y lo saca de Seguimiento. ¿Deseas continuar?",
-                  );
-                  if (!ok) return;
-                  formalizarMutation.mutate(detallesModal.id);
-                }}
-                title={
-                  detallesModal.curp?.trim()
-                    ? "Convierte el prospecto en operador formal."
-                    : "No se puede formalizar sin CURP."
-                }
-              >
-                {formalizarMutation.isPending
-                  ? "Formalizando…"
-                  : "Formalizar prospecto"}
-              </button>
-              {!detallesModal.curp?.trim() && (
-                <span className="field-hint">
-                  Requiere CURP capturada en expediente para formalizar.
-                </span>
-              )}
-            </div>
-
-            <div className="form-field form-field-full" style={{ marginTop: "1rem" }}>
               <label>Histórico de notas</label>
               {partirHistoricoNotas(detallesModal.notasHistorico).length === 0 ? (
                 <textarea
@@ -1079,7 +1044,67 @@ export default function SeguimientoVentas() {
                 {detallesModal.error}
               </div>
             )}
-            <div className="modal-actions">
+            <div
+              className="modal-actions"
+              style={{
+                justifyContent: "space-between",
+                alignItems: "flex-end",
+                flexWrap: "wrap",
+                rowGap: "12px",
+                columnGap: "10px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                  gap: "6px",
+                  minWidth: "min(100%, 16rem)",
+                }}
+              >
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={formalizarMutation.isPending || patchSeguimientoMutation.isPending}
+                  style={{ whiteSpace: "nowrap" }}
+                  onClick={() => {
+                    const curp = detallesModal.curp?.trim() ?? "";
+                    if (!curp) {
+                      setDetallesModal((m) =>
+                        m
+                          ? {
+                            ...m,
+                            error:
+                              "Para formalizar hace falta la CURP. Ábre el expediente, captúrala, guarda y vuelve a abrir Detalles.",
+                          }
+                          : m,
+                      );
+                      return;
+                    }
+                    const ok = window.confirm(
+                      "Esta acción formaliza al prospecto y lo saca de Seguimiento. ¿Deseas continuar?",
+                    );
+                    if (!ok) return;
+                    formalizarMutation.mutate(detallesModal.id);
+                  }}
+                  title={
+                    detallesModal.curp?.trim()
+                      ? "Convierte el prospecto en operador formal."
+                      : "Requiere CURP en expediente antes de poder formalizar."
+                  }
+                >
+                  {formalizarMutation.isPending
+                    ? "Formalizando…"
+                    : "Formalizar prospecto"}
+                </button>
+                {!detallesModal.curp?.trim() && (
+                  <span className="field-hint" style={{ margin: 0 }}>
+                    Requiere CURP capturada en expediente para formalizar.
+                  </span>
+                )}
+              </div>
+              <div style={{ display: "flex", gap: "10px", marginLeft: "auto", flexShrink: 0 }}>
               <button
                 type="button"
                 className="btn-secondary"
@@ -1141,6 +1166,7 @@ export default function SeguimientoVentas() {
                   ? "Guardando seguimiento…"
                   : "Guardar seguimiento"}
               </button>
+              </div>
             </div>
           </div>
         </div>
