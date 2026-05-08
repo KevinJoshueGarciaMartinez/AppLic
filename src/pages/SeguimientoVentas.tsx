@@ -26,6 +26,7 @@ type FilaSeguimiento = Pick<
   | "estatus_seguimiento"
   | "notas_seguimiento"
   | "asesor"
+  | "curp"
   | "num_exp_med_preventiva"
   | "tramite_a_realizar"
 > & {
@@ -85,7 +86,7 @@ async function fetchProspectos(
   const { data, error } = await supabase
     .from("operadores")
     .select(
-      "numero_consecutivo, nombre, apellido_paterno, apellido_materno, telefono_1, medio_captacion, fecha_captacion, proxima_llamada, estatus_seguimiento, notas_seguimiento, asesor, num_exp_med_preventiva, tramite_a_realizar, promotores(nombre)",
+      "numero_consecutivo, nombre, apellido_paterno, apellido_materno, telefono_1, medio_captacion, fecha_captacion, proxima_llamada, estatus_seguimiento, notas_seguimiento, asesor, curp, num_exp_med_preventiva, tramite_a_realizar, promotores(nombre)",
     )
     .eq("es_prospecto", true)
     .order("proxima_llamada", { ascending: true });
@@ -257,8 +258,44 @@ type DetallesModalState = {
   nombre: string;
   medio_captacion: string | null;
   num_exp_med_preventiva: string | null;
-  notas: string;
+  curp: string | null;
+  proxima_llamada: string;
+  notasHistorico: string;
+  notaNueva: string;
+  error: string | null;
 };
+
+function construirEntradaHistoricaNota(params: {
+  nota: string;
+  proximaLlamada: string;
+  autor: string;
+  fechaISO: string;
+}) {
+  const nota = params.nota.trim();
+  if (!nota) return "";
+  return [
+    `[${params.fechaISO}] Próx. llamada: ${params.proximaLlamada || "sin fecha"} | ${params.autor}`,
+    nota,
+  ].join("\n");
+}
+
+function combinarHistoricoNotas(actual: string, nuevaEntrada: string) {
+  const previo = actual.trim();
+  const nuevo = nuevaEntrada.trim();
+  if (!nuevo) return previo || null;
+  if (!previo) return nuevo;
+  return `${previo}\n\n---\n\n${nuevo}`;
+}
+
+function partirHistoricoNotas(hist: string): string[] {
+  const base = hist.trim();
+  if (!base) return [];
+  return base
+    .split(/\n\s*---\s*\n/g)
+    .map((b) => b.trim())
+    .filter(Boolean)
+    .reverse();
+}
 
 export default function SeguimientoVentas() {
   const queryClient = useQueryClient();
@@ -357,12 +394,30 @@ export default function SeguimientoVentas() {
     },
   });
 
-  const patchNotasMutation = useMutation({
-    mutationFn: async (p: { id: number; texto: string | null }) => {
+  const patchSeguimientoMutation = useMutation({
+    mutationFn: async (p: { id: number; texto: string | null; proximaLlamada: string | null }) => {
       const { error: err } = await supabase
         .from("operadores")
-        .update({ notas_seguimiento: p.texto })
+        .update({
+          notas_seguimiento: p.texto,
+          proxima_llamada: p.proximaLlamada,
+        })
         .eq("numero_consecutivo", p.id);
+      if (err) throw new Error(err.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["seguimiento_operadores"] });
+      queryClient.invalidateQueries({ queryKey: ["operadores"] });
+      setDetallesModal(null);
+    },
+  });
+
+  const formalizarMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const { error: err } = await supabase
+        .from("operadores")
+        .update({ es_prospecto: false })
+        .eq("numero_consecutivo", id);
       if (err) throw new Error(err.message);
     },
     onSuccess: () => {
@@ -378,12 +433,21 @@ export default function SeguimientoVentas() {
     if (!overlayAbierto) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      if (detallesModal && !patchNotasMutation.isPending) setDetallesModal(null);
+      if (detallesModal && !patchSeguimientoMutation.isPending && !formalizarMutation.isPending) {
+        setDetallesModal(null);
+      }
       else if (modalAbierto && !insertMutation.isPending) setModalAbierto(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [overlayAbierto, detallesModal, modalAbierto, insertMutation.isPending, patchNotasMutation.isPending]);
+  }, [
+    overlayAbierto,
+    detallesModal,
+    modalAbierto,
+    insertMutation.isPending,
+    patchSeguimientoMutation.isPending,
+    formalizarMutation.isPending,
+  ]);
 
   function abrirModal() {
     if (
@@ -797,7 +861,11 @@ export default function SeguimientoVentas() {
           className="modal-overlay"
           role="presentation"
           onClick={(e) => {
-            if (e.target === e.currentTarget && !patchNotasMutation.isPending) {
+            if (
+              e.target === e.currentTarget
+              && !patchSeguimientoMutation.isPending
+              && !formalizarMutation.isPending
+            ) {
               setDetallesModal(null);
             }
           }}
@@ -813,7 +881,7 @@ export default function SeguimientoVentas() {
               type="button"
               className="modal-close"
               aria-label="Cerrar"
-              disabled={patchNotasMutation.isPending}
+              disabled={patchSeguimientoMutation.isPending || formalizarMutation.isPending}
               onClick={() => setDetallesModal(null)}
             >
               ×
@@ -826,8 +894,8 @@ export default function SeguimientoVentas() {
             </p>
             <p className="field-hint" style={{ marginTop: "-4px", marginBottom: "12px" }}>
               Captación y médico son solo consulta; el resto del expediente (trámite, documentos,
-              etc.) lo ves y editas con el botón. Las <strong>notas</strong> se guardan con
-              «Guardar notas».
+              etc.) lo ves y editas con el botón. Aquí puedes registrar cada llamada en
+              histórico y definir su próxima fecha.
             </p>
 
             <div className="seguimiento-detalles-meta">
@@ -855,31 +923,131 @@ export default function SeguimientoVentas() {
               </Link>
             </div>
 
+            <div className="form-grid form-grid-2" style={{ marginTop: "1rem" }}>
+              <div className="form-field">
+                <label>Próxima llamada *</label>
+                <input
+                  type="date"
+                  value={detallesModal.proxima_llamada}
+                  onChange={(e) =>
+                    setDetallesModal((m) =>
+                      m ? { ...m, proxima_llamada: e.target.value } : m,
+                    )
+                  }
+                />
+              </div>
+              <div className="form-field">
+                <label>Formalización</label>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  style={{ width: "100%" }}
+                  disabled={formalizarMutation.isPending || patchSeguimientoMutation.isPending}
+                  onClick={() => {
+                    const curp = detallesModal.curp?.trim() ?? "";
+                    if (!curp) {
+                      return;
+                    }
+                    const ok = window.confirm(
+                      "Esta acción formaliza al prospecto y lo saca de Seguimiento. ¿Deseas continuar?",
+                    );
+                    if (!ok) return;
+                    formalizarMutation.mutate(detallesModal.id);
+                  }}
+                  title={
+                    detallesModal.curp?.trim()
+                      ? "Convierte el prospecto en operador formal."
+                      : "No se puede formalizar sin CURP."
+                  }
+                >
+                  {formalizarMutation.isPending
+                    ? "Formalizando…"
+                    : "Formalizar prospecto"}
+                </button>
+                {!detallesModal.curp?.trim() && (
+                  <span className="field-hint">
+                    Requiere CURP capturada en expediente para formalizar.
+                  </span>
+                )}
+              </div>
+            </div>
+
             <div className="form-field form-field-full" style={{ marginTop: "1rem" }}>
-              <label>Notas</label>
+              <label>Histórico de notas</label>
+              {partirHistoricoNotas(detallesModal.notasHistorico).length === 0 ? (
+                <textarea
+                  className="modal-textarea"
+                  rows={4}
+                  value=""
+                  readOnly
+                  placeholder="Sin notas registradas."
+                />
+              ) : (
+                <div
+                  style={{
+                    maxHeight: "220px",
+                    overflowY: "auto",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "10px",
+                    background: "#f8fafc",
+                    padding: "10px",
+                  }}
+                >
+                  {partirHistoricoNotas(detallesModal.notasHistorico).map((bloque, idx) => (
+                    <article
+                      key={`${idx}-${bloque.slice(0, 24)}`}
+                      style={{
+                        background: "#fff",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "8px",
+                        padding: "10px",
+                        marginBottom: idx === partirHistoricoNotas(detallesModal.notasHistorico).length - 1 ? 0 : "8px",
+                        whiteSpace: "pre-wrap",
+                        fontSize: "0.92rem",
+                      }}
+                    >
+                      {bloque}
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="form-field form-field-full" style={{ marginTop: "0.75rem" }}>
+              <label>Nueva nota de llamada</label>
               <textarea
                 className="modal-textarea"
-                rows={5}
-                value={detallesModal.notas}
+                rows={4}
+                value={detallesModal.notaNueva}
                 onChange={(e) =>
                   setDetallesModal((m) =>
-                    m ? { ...m, notas: e.target.value } : m,
+                    m ? { ...m, notaNueva: e.target.value } : m,
                   )
                 }
-                placeholder="Escribe o edita las notas de seguimiento…"
+                placeholder="Escribe el resultado de la llamada de hoy…"
               />
             </div>
 
-            {patchNotasMutation.isError && (
+            {patchSeguimientoMutation.isError && (
               <div className="alert-error" style={{ marginTop: "12px" }}>
-                {(patchNotasMutation.error as Error).message}
+                {(patchSeguimientoMutation.error as Error).message}
+              </div>
+            )}
+            {formalizarMutation.isError && (
+              <div className="alert-error" style={{ marginTop: "12px" }}>
+                {(formalizarMutation.error as Error).message}
+              </div>
+            )}
+            {detallesModal.error && (
+              <div className="alert-error" style={{ marginTop: "12px" }}>
+                {detallesModal.error}
               </div>
             )}
             <div className="modal-actions">
               <button
                 type="button"
                 className="btn-secondary"
-                disabled={patchNotasMutation.isPending}
+                disabled={patchSeguimientoMutation.isPending || formalizarMutation.isPending}
                 onClick={() => setDetallesModal(null)}
               >
                 Cancelar
@@ -887,15 +1055,40 @@ export default function SeguimientoVentas() {
               <button
                 type="button"
                 className="btn-primary"
-                disabled={patchNotasMutation.isPending}
-                onClick={() =>
-                  patchNotasMutation.mutate({
+                disabled={patchSeguimientoMutation.isPending || formalizarMutation.isPending}
+                onClick={() => {
+                  const proxima = detallesModal.proxima_llamada.trim();
+                  if (!proxima) {
+                    setDetallesModal((m) =>
+                      m
+                        ? { ...m, error: "La próxima llamada es obligatoria para guardar seguimiento." }
+                        : m,
+                    );
+                    return;
+                  }
+                  const autor = contextoSeguimiento?.email?.trim() || "usuario";
+                  const fechaISO = new Date().toISOString().slice(0, 10);
+                  const entradaNueva = construirEntradaHistoricaNota({
+                    nota: detallesModal.notaNueva,
+                    proximaLlamada: proxima,
+                    autor,
+                    fechaISO,
+                  });
+                  const historicoCombinado = combinarHistoricoNotas(
+                    detallesModal.notasHistorico,
+                    entradaNueva,
+                  );
+                  patchSeguimientoMutation.mutate({
                     id: detallesModal.id,
-                    texto: detallesModal.notas.trim() || null,
-                  })
-                }
+                    texto: historicoCombinado,
+                    proximaLlamada: proxima,
+                  });
+                  setDetallesModal((m) => (m ? { ...m, error: null } : m));
+                }}
               >
-                {patchNotasMutation.isPending ? "Guardando notas…" : "Guardar notas"}
+                {patchSeguimientoMutation.isPending
+                  ? "Guardando seguimiento…"
+                  : "Guardar seguimiento"}
               </button>
             </div>
           </div>
@@ -1121,7 +1314,11 @@ export default function SeguimientoVentas() {
                               medio_captacion: op.medio_captacion ?? null,
                               num_exp_med_preventiva:
                                 op.num_exp_med_preventiva ?? null,
-                              notas: op.notas_seguimiento ?? "",
+                              curp: op.curp ?? null,
+                              proxima_llamada: op.proxima_llamada ?? "",
+                              notasHistorico: op.notas_seguimiento ?? "",
+                              notaNueva: "",
+                              error: null,
                             })
                           }
                         >

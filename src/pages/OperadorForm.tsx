@@ -150,6 +150,23 @@ interface Props {
   id?: number;
 }
 
+type RolApp = "admin" | "recepcion" | "ventas" | null;
+
+async function fetchRolUsuario(): Promise<RolApp> {
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError) throw new Error(authError.message);
+  const user = authData.user;
+  if (!user) return null;
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("rol")
+    .eq("user_id", user.id)
+    .single();
+  if (error) throw new Error(error.message);
+  const rol = String(data?.rol ?? "").trim();
+  return rol === "admin" || rol === "recepcion" || rol === "ventas" ? rol : null;
+}
+
 const TABS_FIJAS = [
   "Datos personales",
   "Documentación",
@@ -186,6 +203,7 @@ export default function OperadorForm({ id }: Props) {
 
   useEffect(() => {
     if (isNew || !id) return;
+    if (!puedeVerFinanzas) return;
     const h = window.location.hash;
     if (h !== "#historial-ventas-operador" && h !== "#ventas") return;
     setActiveTab(TAB_IDX_VENTAS);
@@ -195,13 +213,19 @@ export default function OperadorForm({ id }: Props) {
         ?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 250);
     return () => window.clearTimeout(t);
-  }, [id, isNew]);
+  }, [id, isNew, puedeVerFinanzas]);
 
   // Promotores list
   const { data: promotores = [] } = useQuery({
     queryKey: ["promotores"],
     queryFn: fetchPromotores,
   });
+
+  const { data: rolUsuario } = useQuery({
+    queryKey: ["perfil_rol_operador_form"],
+    queryFn: fetchRolUsuario,
+  });
+  const puedeVerFinanzas = rolUsuario === "admin" || rolUsuario === "recepcion";
 
   const {
     data: saldosOp,
@@ -291,7 +315,9 @@ export default function OperadorForm({ id }: Props) {
 
   const tabs: string[] = isNew
     ? [...TABS_FIJAS]
-    : [...TABS_FIJAS, "Ventas", "Saldo"];
+    : puedeVerFinanzas
+      ? [...TABS_FIJAS, "Ventas", "Saldo"]
+      : [...TABS_FIJAS];
 
   if (!isNew && loadingOp) {
     return (
@@ -1073,13 +1099,13 @@ export default function OperadorForm({ id }: Props) {
           </div>
         )}
 
-        {!isNew && activeTab === TAB_IDX_VENTAS && (
+        {!isNew && puedeVerFinanzas && activeTab === TAB_IDX_VENTAS && (
           <div className="form-section">
             {id != null && <HistorialVentasOperador operadorId={id} />}
           </div>
         )}
 
-        {!isNew && activeTab === TAB_IDX_SALDO && (
+        {!isNew && puedeVerFinanzas && activeTab === TAB_IDX_SALDO && (
           <div className="form-section">
             <div className="venta-saldos-cards operador-saldo-resumen" style={{ marginBottom: "1.25rem" }}>
               <div className="saldo-mini-card saldo-mini-card--favor">
