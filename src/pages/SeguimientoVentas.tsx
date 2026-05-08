@@ -268,13 +268,12 @@ type DetallesModalState = {
 function construirEntradaHistoricaNota(params: {
   nota: string;
   proximaLlamada: string;
-  autor: string;
   fechaISO: string;
 }) {
   const nota = params.nota.trim();
   if (!nota) return "";
   return [
-    `[${params.fechaISO}] Próx. llamada: ${params.proximaLlamada || "sin fecha"} | ${params.autor}`,
+    `[${params.fechaISO}] Próx. llamada: ${params.proximaLlamada || "sin fecha"}`,
     nota,
   ].join("\n");
 }
@@ -1119,12 +1118,10 @@ export default function SeguimientoVentas() {
                     );
                     return;
                   }
-                  const autor = contextoSeguimiento?.email?.trim() || "usuario";
                   const fechaISO = new Date().toISOString().slice(0, 10);
                   const entradaNueva = construirEntradaHistoricaNota({
                     nota: detallesModal.notaNueva,
                     proximaLlamada: proxima,
-                    autor,
                     fechaISO,
                   });
                   const historicoCombinado = combinarHistoricoNotas(
