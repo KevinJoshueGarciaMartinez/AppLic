@@ -273,8 +273,9 @@ function construirEntradaHistoricaNota(params: {
   const nota = params.nota.trim();
   if (!nota) return "";
   return [
-    `[${params.fechaISO}] Próx. llamada: ${params.proximaLlamada || "sin fecha"}`,
+    `[${params.fechaISO}]`,
     nota,
+    `Próx. llamada: ${params.proximaLlamada || "sin fecha"}`,
   ].join("\n");
 }
 
