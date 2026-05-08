@@ -102,7 +102,7 @@ const EXTRA_ROUTE_ACCESS: Record<UserRole, string[]> = {
     "/usuarios",
   ],
   recepcion: ["/operadores/nuevo", "/operadores/:id", "/ventas/nuevo", "/ventas/:id"],
-  ventas: [],
+  ventas: ["/operadores/:id"],
 };
 
 function getAllowedPaths(role: UserRole): string[] {
@@ -114,7 +114,10 @@ function hasRoleAccess(role: UserRole, path: string): boolean {
     if (allowedPath === path) return true;
     if (allowedPath.endsWith("/:id")) {
       const prefix = allowedPath.replace("/:id", "/");
-      return path.startsWith(prefix);
+      if (!path.startsWith(prefix)) return false;
+      const suffix = path.slice(prefix.length);
+      // Evita que /operadores/nuevo (u otras rutas) coincidan con /operadores/:id
+      return /^\d+$/.test(suffix);
     }
     return false;
   });
