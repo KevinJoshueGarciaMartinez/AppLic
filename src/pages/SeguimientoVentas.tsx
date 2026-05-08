@@ -946,12 +946,16 @@ export default function SeguimientoVentas() {
               ) : (
                 <div
                   style={{
-                    maxHeight: "220px",
+                    maxHeight: "260px",
                     overflowY: "auto",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "10px",
-                    background: "#f8fafc",
-                    padding: "10px",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: "12px",
+                    background: "#e2e8f0",
+                    padding: "12px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "14px",
+                    boxShadow: "inset 0 1px 2px rgba(15, 23, 42, 0.06)",
                   }}
                 >
                   {partirHistoricoNotas(detallesModal.notasHistorico).map((bloque, idx) => (
@@ -959,12 +963,15 @@ export default function SeguimientoVentas() {
                       key={`${idx}-${bloque.slice(0, 24)}`}
                       style={{
                         background: "#fff",
-                        border: "1px solid #e2e8f0",
-                        borderRadius: "8px",
-                        padding: "10px",
-                        marginBottom: idx === partirHistoricoNotas(detallesModal.notasHistorico).length - 1 ? 0 : "8px",
+                        border: "1px solid #94a3b8",
+                        borderLeft: "4px solid #2563eb",
+                        borderRadius: "10px",
+                        padding: "12px 14px",
                         whiteSpace: "pre-wrap",
-                        fontSize: "0.92rem",
+                        fontSize: "0.9rem",
+                        lineHeight: 1.55,
+                        color: "#334155",
+                        boxShadow: "0 2px 6px rgba(15, 23, 42, 0.08)",
                       }}
                     >
                       {bloque}
