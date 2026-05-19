@@ -249,18 +249,36 @@ export default function OperadorForm({ id }: Props) {
     enabled: !isNew && !!id,
   });
 
+  function buildErrorMessage(error: unknown) {
+    const message =
+      typeof error === "string"
+        ? error
+        : error instanceof Error
+          ? error.message
+          : "Error desconocido al guardar.";
+    const normalizedMessage = message.toLowerCase();
+    if (
+      normalizedMessage.includes("uq_operadores_curp_normalizada") ||
+      normalizedMessage.includes("duplicate key") ||
+      normalizedMessage.includes("duplicado")
+    ) {
+      return "Ya existe un operador registrado con esa CURP.";
+    }
+    return message;
+  }
+
   // Save mutation
   const mutation = useMutation({
     mutationFn: async (payload: OperadorInsert) => {
       if (isNew) {
         const { error } = await supabase.from("operadores").insert(payload);
-        if (error) throw new Error(error.message);
+        if (error) throw new Error(buildErrorMessage(error.message));
       } else {
         const { error } = await supabase
           .from("operadores")
           .update(payload)
           .eq("numero_consecutivo", id!);
-        if (error) throw new Error(error.message);
+        if (error) throw new Error(buildErrorMessage(error.message));
       }
     },
     onSuccess: () => {
