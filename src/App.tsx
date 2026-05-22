@@ -85,7 +85,7 @@ const SYSTEM_ITEMS: NavItem[] = [
 
 const NAV_BY_ROLE: Record<UserRole, string[]> = {
   admin: NAV_ITEMS.map((item) => item.href),
-  recepcion: ["/", "/operadores", "/ventas"],
+  recepcion: ["/", "/operadores", "/ventas", "/reportes"],
   ventas: ["/", "/seguimiento"],
 };
 
@@ -101,7 +101,15 @@ const EXTRA_ROUTE_ACCESS: Record<UserRole, string[]> = {
     "/reportes/seguimiento-prospectos",
     "/usuarios",
   ],
-  recepcion: ["/operadores/nuevo", "/operadores/:id", "/ventas/nuevo", "/ventas/:id"],
+  recepcion: [
+    "/operadores/nuevo",
+    "/operadores/:id",
+    "/ventas/nuevo",
+    "/ventas/:id",
+    "/reportes/comisiones",
+    "/reportes/peticion-cursos",
+    "/reportes/seguimiento-prospectos",
+  ],
   ventas: ["/operadores/:id"],
 };
 
