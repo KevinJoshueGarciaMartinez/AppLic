@@ -109,6 +109,13 @@ function primerDiaMes() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
 }
 
+function formatearFechaCorta(valor: string | null | undefined) {
+  if (!valor) return "";
+  const [anio = "", mes = "", dia = ""] = valor.slice(0, 10).split("-");
+  if (!anio || !mes || !dia) return valor;
+  return `${dia}/${mes}/${anio}`;
+}
+
 // ── Excel export ───────────────────────────────────────────────────────────────
 
 function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
@@ -135,7 +142,7 @@ function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
       op?.apellido_materno ?? "",
       "",
       "",
-      c.fecha_solicitud_curso ?? "",
+      formatearFechaCorta(c.fecha_solicitud_curso),
       c.servicio ?? "",
       "",
       op?.curp ?? "",
@@ -145,7 +152,7 @@ function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
       op?.quien_cobro_curso ?? "",
       c.promotor ?? "",
       op?.escolaridad ?? "",
-      op?.licencia_vigencia ?? "",
+      formatearFechaCorta(op?.licencia_vigencia),
     ];
   });
 
