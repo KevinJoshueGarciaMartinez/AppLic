@@ -106,9 +106,7 @@ const EXTRA_ROUTE_ACCESS: Record<UserRole, string[]> = {
     "/operadores/:id",
     "/ventas/nuevo",
     "/ventas/:id",
-    "/reportes/comisiones",
     "/reportes/peticion-cursos",
-    "/reportes/seguimiento-prospectos",
   ],
   ventas: ["/operadores/:id"],
 };
@@ -569,7 +567,7 @@ export default function App() {
 
         {/* ── Reportes ── */}
         <Route path="/reportes">
-          {hasRoleAccess(role, "/reportes") ? <Reportes /> : <UnauthorizedScreen />}
+          {hasRoleAccess(role, "/reportes") ? <Reportes role={role} /> : <UnauthorizedScreen />}
         </Route>
         <Route path="/reportes/comisiones">
           {hasRoleAccess(role, "/reportes/comisiones") ? <Comisiones /> : <UnauthorizedScreen />}
