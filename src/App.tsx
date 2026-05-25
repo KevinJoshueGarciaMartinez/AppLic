@@ -131,6 +131,48 @@ function hasRoleAccess(role: UserRole, path: string): boolean {
 
 // ─── Layout ──────────────────────────────────────────────────────────────────
 
+
+const EXCLUDED_INPUT_TYPES = new Set([
+  "email",
+  "password",
+  "number",
+  "date",
+  "datetime-local",
+  "month",
+  "time",
+  "week",
+  "checkbox",
+  "radio",
+  "range",
+  "file",
+  "hidden",
+]);
+
+function normalizeUppercaseNoAccents(value: string): string {
+  return value
+    .replace(/Ñ/g, "__ENYE_UPPER__")
+    .replace(/ñ/g, "__ENYE_LOWER__")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/__ENYE_UPPER__/g, "Ñ")
+    .replace(/__ENYE_LOWER__/g, "ñ")
+    .toUpperCase();
+}
+
+function isManagedTextField(
+  target: EventTarget | null,
+): target is HTMLInputElement | HTMLTextAreaElement {
+  if (target instanceof HTMLTextAreaElement) return true;
+  if (!(target instanceof HTMLInputElement)) return false;
+  return !EXCLUDED_INPUT_TYPES.has((target.type || "text").toLowerCase());
+}
+
+function configureManagedTextField(element: HTMLInputElement | HTMLTextAreaElement) {
+  element.spellcheck = false;
+  element.setAttribute("autocomplete", "off");
+  element.setAttribute("autocorrect", "off");
+  element.setAttribute("autocapitalize", "characters");
+}
 function Layout({
   children,
   userEmail,
@@ -418,6 +460,38 @@ export default function App() {
   const [role, setRole] = useState<UserRole | null>(null);
   const [checkingRole, setCheckingRole] = useState(false);
   const authUserRef = useRef<string | null>(null);
+  useEffect(() => {
+    const handleFocusIn = (event: FocusEvent) => {
+      if (!isManagedTextField(event.target)) return;
+      configureManagedTextField(event.target);
+    };
+
+    const handleInput = (event: Event) => {
+      if (!isManagedTextField(event.target)) return;
+
+      const field = event.target;
+      configureManagedTextField(field);
+
+      const normalizedValue = normalizeUppercaseNoAccents(field.value);
+      if (field.value === normalizedValue) return;
+
+      const selectionStart = field.selectionStart;
+      const selectionEnd = field.selectionEnd;
+      field.value = normalizedValue;
+
+      if (selectionStart !== null && selectionEnd !== null) {
+        field.setSelectionRange(selectionStart, selectionEnd);
+      }
+    };
+
+    document.addEventListener("focusin", handleFocusIn, true);
+    document.addEventListener("input", handleInput, true);
+
+    return () => {
+      document.removeEventListener("focusin", handleFocusIn, true);
+      document.removeEventListener("input", handleInput, true);
+    };
+  }, []);
 
   const loadRole = async (userId: string): Promise<UserRole | null> => {
     const { data, error } = await supabase
