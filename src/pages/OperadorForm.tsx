@@ -1158,9 +1158,22 @@ export default function OperadorForm({ id }: Props) {
               </div>
             </div>
             <p className="field-hint" style={{ marginBottom: "1.25rem" }}>
-              Los abonos a favor se registran desde <strong>Ventas</strong> al editar o crear una venta del
-              operador, para vincularlos al ticket.
+              Usa el flujo de recibo para registrar un abono directo sin crear una venta ni agregar un
+              servicio al ticket.
             </p>
+
+            <div className="operador-abono-directo">
+              <div className="form-group-title">Recibo de abono</div>
+              <div className="venta-abono-en-venta-inner">
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => navigate(`/recibos-abono/nuevo?operadorId=${id}`)}
+                >
+                  Crear recibo
+                </button>
+              </div>
+            </div>
 
             <div className="form-group-title">Historial de movimientos</div>
             <div className="table-wrapper">
@@ -1171,12 +1184,13 @@ export default function OperadorForm({ id }: Props) {
                     <th>Tipo</th>
                     <th className="col-money col-money--center">Importe</th>
                     <th>Concepto</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   {movimientosSaldo.length === 0 ? (
                     <tr>
-                      <td colSpan={4} style={{ color: "#64748b" }}>
+                      <td colSpan={5} style={{ color: "#64748b" }}>
                         Sin movimientos registrados.
                       </td>
                     </tr>
@@ -1200,6 +1214,17 @@ export default function OperadorForm({ id }: Props) {
                           {fmtSaldo(Number(m.importe))}
                         </td>
                         <td>{m.concepto ?? "—"}</td>
+                        <td className="col-actions">
+                          {m.tipo === "abono" && (
+                            <button
+                              type="button"
+                              className="btn-edit"
+                              onClick={() => navigate(`/recibos-abono/${m.id}`)}
+                            >
+                              Ver
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     ))
                   )}

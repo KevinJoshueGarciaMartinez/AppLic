@@ -87,9 +87,14 @@ export default function Ventas() {
               : "Todas las ventas (últimas 500)"}
           </p>
         </div>
-        <Link href="/ventas/nuevo">
-          <button className="btn-primary">+ Nueva Venta</button>
-        </Link>
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <Link href="/recibos-abono/nuevo">
+            <button className="btn-secondary">+ Nuevo Recibo</button>
+          </Link>
+          <Link href="/ventas/nuevo">
+            <button className="btn-primary">+ Nueva Venta</button>
+          </Link>
+        </div>
       </div>
 
       <div className="toolbar">

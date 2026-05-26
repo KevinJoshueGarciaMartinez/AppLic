@@ -1293,6 +1293,50 @@ fieldset.venta-flujo-bloque:disabled {
   align-items: center;
 }
 
+.operador-abono-directo {
+  margin-bottom: 1.25rem;
+  padding: 14px;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  background: #f8fbff;
+}
+
+.recibo-page {
+  max-width: 980px;
+}
+
+.recibo-sheet {
+  background: #fff;
+}
+
+.recibo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.recibo-field {
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recibo-field--full {
+  grid-column: 1 / -1;
+}
+
+.recibo-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
 .venta-abono-monto {
   width: 110px;
   min-height: 40px;

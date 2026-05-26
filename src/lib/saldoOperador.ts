@@ -28,6 +28,9 @@ export interface OperadorSaldoMovimientoRow {
   operador_id: number;
   tipo: string;
   importe: number;
+  fecha: string | null;
+  forma_pago: string | null;
+  referencia: string | null;
   concepto: string | null;
   venta_id: number | null;
   ticket_id: number | null;
@@ -39,7 +42,9 @@ export async function fetchMovimientosSaldo(
 ): Promise<OperadorSaldoMovimientoRow[]> {
   const { data, error } = await supabase
     .from("operador_saldo_movimientos")
-    .select("id, operador_id, tipo, importe, concepto, venta_id, ticket_id, created_at")
+    .select(
+      "id, operador_id, tipo, importe, fecha, forma_pago, referencia, concepto, venta_id, ticket_id, created_at",
+    )
     .eq("operador_id", operadorId)
     .order("created_at", { ascending: false })
     .limit(200);
@@ -51,18 +56,32 @@ export async function insertAbonoSaldo(
   operadorId: number,
   importe: number,
   concepto: string | null,
-  opts?: { ventaId?: number | null; ticketId?: number | null },
-): Promise<void> {
+  opts?: {
+    ventaId?: number | null;
+    ticketId?: number | null;
+    fecha?: string | null;
+    formaPago?: string | null;
+    referencia?: string | null;
+  },
+): Promise<number> {
   if (importe <= 0) throw new Error("El abono debe ser mayor a cero.");
-  const { error } = await supabase.from("operador_saldo_movimientos").insert({
-    operador_id: operadorId,
-    tipo: "abono",
-    importe,
-    concepto: concepto?.trim() || null,
-    venta_id: opts?.ventaId ?? null,
-    ticket_id: opts?.ticketId ?? null,
-  });
+  const { data, error } = await supabase
+    .from("operador_saldo_movimientos")
+    .insert({
+      operador_id: operadorId,
+      tipo: "abono",
+      importe,
+      fecha: opts?.fecha ?? null,
+      forma_pago: opts?.formaPago ?? null,
+      referencia: opts?.referencia?.trim() || null,
+      concepto: concepto?.trim() || null,
+      venta_id: opts?.ventaId ?? null,
+      ticket_id: opts?.ticketId ?? null,
+    })
+    .select("id")
+    .single();
   if (error) throw new Error(error.message);
+  return Number((data as { id: number } | null)?.id ?? 0);
 }
 
 /** Movimientos de saldo vinculados a un ticket o venta (abonos, sobrepagos, devoluciones). */
@@ -73,7 +92,9 @@ export async function fetchMovimientosSaldoTicket(
   if (!ticketId && ventaId == null) return [];
   let q = supabase
     .from("operador_saldo_movimientos")
-    .select("id, operador_id, tipo, importe, concepto, venta_id, ticket_id, created_at")
+    .select(
+      "id, operador_id, tipo, importe, fecha, forma_pago, referencia, concepto, venta_id, ticket_id, created_at",
+    )
     .in("tipo", ["abono", "devolucion_cancelacion"])
     .order("created_at", { ascending: true });
   if (ticketId) {

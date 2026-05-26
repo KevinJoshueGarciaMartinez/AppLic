@@ -7,6 +7,7 @@ import Operadores from "./pages/Operadores";
 import OperadorForm from "./pages/OperadorForm";
 import Ventas from "./pages/Ventas";
 import VentaForm from "./pages/VentaForm";
+import ReciboAbonoForm from "./pages/ReciboAbonoForm";
 import Comisiones from "./pages/Comisiones";
 import Reportes from "./pages/Reportes";
 import PeticionCursos from "./pages/PeticionCursos";
@@ -95,6 +96,8 @@ const EXTRA_ROUTE_ACCESS: Record<UserRole, string[]> = {
     "/operadores/:id",
     "/ventas/nuevo",
     "/ventas/:id",
+    "/recibos-abono/nuevo",
+    "/recibos-abono/:id",
     "/comprobacion-transferencias",
     "/reportes/comisiones",
     "/reportes/peticion-cursos",
@@ -106,6 +109,8 @@ const EXTRA_ROUTE_ACCESS: Record<UserRole, string[]> = {
     "/operadores/:id",
     "/ventas/nuevo",
     "/ventas/:id",
+    "/recibos-abono/nuevo",
+    "/recibos-abono/:id",
     "/reportes/peticion-cursos",
   ],
   ventas: ["/operadores/:id"],
@@ -130,7 +135,6 @@ function hasRoleAccess(role: UserRole, path: string): boolean {
 }
 
 // ─── Layout ──────────────────────────────────────────────────────────────────
-
 
 const EXCLUDED_INPUT_TYPES = new Set([
   "email",
@@ -175,6 +179,7 @@ function configureManagedTextField(element: HTMLInputElement | HTMLTextAreaEleme
   element.setAttribute("autocorrect", "off");
   element.setAttribute("autocapitalize", "characters");
 }
+
 function Layout({
   children,
   userEmail,
@@ -442,6 +447,13 @@ function VentaEditWrapper() {
   return <VentaForm id={numId} />;
 }
 
+function ReciboAbonoEditWrapper() {
+  const { id } = useParams<{ id: string }>();
+  const numId = Number(id);
+  if (!id || isNaN(numId)) return <div>ID inválido</div>;
+  return <ReciboAbonoForm id={numId} />;
+}
+
 function UnauthorizedScreen() {
   return (
     <div className="placeholder-card">
@@ -462,6 +474,7 @@ export default function App() {
   const [role, setRole] = useState<UserRole | null>(null);
   const [checkingRole, setCheckingRole] = useState(false);
   const authUserRef = useRef<string | null>(null);
+
   useEffect(() => {
     const handleFocusIn = (event: FocusEvent) => {
       if (!isManagedTextField(event.target)) return;
@@ -607,6 +620,20 @@ export default function App() {
         </Route>
         <Route path="/ventas/:id">
           {hasRoleAccess(role, "/ventas/:id") ? <VentaEditWrapper /> : <UnauthorizedScreen />}
+        </Route>
+        <Route path="/recibos-abono/nuevo">
+          {hasRoleAccess(role, "/recibos-abono/nuevo") ? (
+            <ReciboAbonoForm />
+          ) : (
+            <UnauthorizedScreen />
+          )}
+        </Route>
+        <Route path="/recibos-abono/:id">
+          {hasRoleAccess(role, "/recibos-abono/:id") ? (
+            <ReciboAbonoEditWrapper />
+          ) : (
+            <UnauthorizedScreen />
+          )}
         </Route>
 
         <Route path="/comprobacion-transferencias">

@@ -148,6 +148,24 @@ function parseMontoInput(raw: string): number {
   return Number.isFinite(n) && n >= 0 ? round2(n) : 0;
 }
 
+function buildReciboAbonoUrl(input: {
+  operadorId: number;
+  fecha: string | null;
+  monto: number;
+  formaPago: string;
+  referencia: string | null;
+  concepto: string | null;
+}) {
+  const params = new URLSearchParams();
+  params.set("operadorId", String(input.operadorId));
+  params.set("fecha", input.fecha ?? hoyLocal());
+  params.set("monto", input.monto.toFixed(2));
+  params.set("formaPago", input.formaPago);
+  if (input.referencia?.trim()) params.set("referencia", input.referencia.trim());
+  if (input.concepto?.trim()) params.set("concepto", input.concepto.trim());
+  return `/recibos-abono/nuevo?${params.toString()}`;
+}
+
 /** Fecha local YYYY-MM-DD (evita desfase vs UTC de toISOString). */
 function hoyLocal(): string {
   const d = new Date();
@@ -943,6 +961,31 @@ export default function VentaForm({ id }: Props) {
       alert("El cobro no puede ser negativo.");
       return;
     }
+    if (totalItems <= EPSILON_DEUDA && form.cobro > EPSILON_DEUDA) {
+      if (form.forma_pago === "Saldo") {
+        alert("Cuando no hay servicios, usa un método de cobro externo para generar el recibo.");
+        return;
+      }
+      if (form.forma_pago === "Dividida") {
+        alert("Cuando no hay servicios, genera el recibo desde el flujo nuevo para capturarlo por un solo método de pago.");
+        return;
+      }
+      if (form.operador_id == null) {
+        alert("Selecciona un operador antes de continuar.");
+        return;
+      }
+      navigate(
+        buildReciboAbonoUrl({
+          operadorId: form.operador_id,
+          fecha: form.fecha ?? hoyLocal(),
+          monto: round2(form.cobro),
+          formaPago: form.forma_pago,
+          referencia: form.numero_referencia,
+          concepto: form.observaciones,
+        }),
+      );
+      return;
+    }
 
     /** En edición el cobro y la forma de pago ya están fijados; los pagos nuevos van por «Registrar pago». */
     let aplicarSaldo = 0;
@@ -998,7 +1041,22 @@ export default function VentaForm({ id }: Props) {
       const pending = ventaSavePendingRef.current;
       ventaSavePendingRef.current = null;
       setConfirmSobrepago(null);
-      if (pending) mutation.mutate(pending);
+      if (pending) {
+        if (totalItems <= EPSILON_DEUDA && pending.payload.operador_id != null) {
+          navigate(
+            buildReciboAbonoUrl({
+              operadorId: pending.payload.operador_id,
+              fecha: pending.payload.fecha ?? hoyLocal(),
+              monto: round2(pending.payload.cobro),
+              formaPago: pending.payload.forma_pago,
+              referencia: pending.payload.numero_referencia,
+              concepto: pending.payload.observaciones,
+            }),
+          );
+          return;
+        }
+        mutation.mutate(pending);
+      }
       return;
     }
     setConfirmSobrepago(null);
