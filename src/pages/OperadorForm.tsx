@@ -17,11 +17,32 @@ import {
   ESTATUS_SEGUIMIENTO_OPCIONES,
   esEstatusSeguimientoEnCatalogo,
 } from "../lib/estatusSeguimiento";
+import { normalizeUppercaseNoAccents } from "../lib/inputNormalization";
 import HistorialVentasOperador from "../components/HistorialVentasOperador";
 
 /** Pestaña «Ventas» (historial) antes de «Saldo»; índices 0–4 son fijos. */
 const TAB_IDX_VENTAS = 5;
 const TAB_IDX_SALDO = 6;
+
+const NORMALIZED_TEXT_FIELDS = new Set<keyof OperadorInsert>([
+  "nombre",
+  "apellido_paterno",
+  "apellido_materno",
+  "curp",
+  "direccion",
+  "tramite_a_realizar",
+  "num_exp_med_preventiva",
+  "licencia_numero",
+  "notas_seguimiento",
+  "asesor",
+  "antiguedad_necesaria",
+  "contrasena_lfd",
+  "punto_reunion",
+  "observaciones_traslado",
+  "destinatario_constancia",
+  "quien_cobro_curso",
+  "entregado_recibio",
+]);
 
 function fmtSaldo(n: number) {
   return new Intl.NumberFormat("es-MX", {
@@ -296,7 +317,12 @@ export default function OperadorForm({ id }: Props) {
   });
 
   function set<K extends keyof OperadorInsert>(key: K, value: OperadorInsert[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    const normalizedValue =
+      typeof value === "string" && NORMALIZED_TEXT_FIELDS.has(key)
+        ? (normalizeUppercaseNoAccents(value) as OperadorInsert[K])
+        : value;
+
+    setForm((prev) => ({ ...prev, [key]: normalizedValue }));
   }
 
   function handleSubmit(e: React.FormEvent) {

@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabase";
 import type { Operador, OperadorInsert } from "../lib/types";
 import { MEDIOS_CAPTACION, etiquetaMedioCaptacion } from "../lib/mediosCaptacion";
 import { ASESORES_OPCIONES, asesorTonoClass } from "../lib/asesoresCatalogo";
+import { normalizeUppercaseNoAccents } from "../lib/inputNormalization";
 import {
   ESTATUS_SEGUIMIENTO_DEFECTO,
   ESTATUS_SEGUIMIENTO_OPCIONES,
@@ -39,6 +40,16 @@ type ContextoSeguimiento = {
   rol: "admin" | "recepcion" | "ventas" | null;
   asesorAsignado: string | null;
 };
+
+const MODAL_NORMALIZED_FIELDS = new Set<keyof ModalProspecto>([
+  "nombre",
+  "apellido_paterno",
+  "apellido_materno",
+  "asesor",
+  "num_exp_med_preventiva",
+  "tramite_a_realizar",
+  "notas",
+]);
 
 function normalizarTexto(v: string | null | undefined): string {
   return (v ?? "").trim().toUpperCase();
@@ -486,7 +497,12 @@ export default function SeguimientoVentas() {
   }
 
   function setModal<K extends keyof ModalProspecto>(key: K, value: ModalProspecto[K]) {
-    setModalForm((prev) => ({ ...prev, [key]: value }));
+    const normalizedValue =
+      typeof value === "string" && MODAL_NORMALIZED_FIELDS.has(key)
+        ? (normalizeUppercaseNoAccents(value) as ModalProspecto[K])
+        : value;
+
+    setModalForm((prev) => ({ ...prev, [key]: normalizedValue }));
   }
 
   function guardarProspecto(e: React.FormEvent) {

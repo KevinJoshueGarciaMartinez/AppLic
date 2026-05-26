@@ -30,8 +30,10 @@ import type {
 import HistorialVentasOperador, {
   VENTAS_POR_OPERADOR_QUERY_KEY,
 } from "../components/HistorialVentasOperador";
+import { normalizeUppercaseNoAccents } from "../lib/inputNormalization";
 
 const EPSILON_DEUDA = 0.005;
+const NORMALIZED_TEXT_FIELDS = new Set<keyof VentaInsert>(["numero_referencia"]);
 
 /** Quita el foco para que la rueda del ratón no incremente/decremente el valor (type="number"). */
 const blurNumberInputOnWheel: WheelEventHandler<HTMLInputElement> = (e) => {
@@ -837,7 +839,12 @@ export default function VentaForm({ id }: Props) {
   });
 
   function set<K extends keyof VentaInsert>(key: K, value: VentaInsert[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    const normalizedValue =
+      typeof value === "string" && NORMALIZED_TEXT_FIELDS.has(key)
+        ? (normalizeUppercaseNoAccents(value) as VentaInsert[K])
+        : value;
+
+    setForm((prev) => ({ ...prev, [key]: normalizedValue }));
   }
 
   function setFormaPago(val: VentaInsert["forma_pago"]) {
@@ -1656,7 +1663,10 @@ export default function VentaForm({ id }: Props) {
                         placeholder="Folio / CLABE / transferencia…"
                         value={liqForm.referencia}
                         onChange={(e) =>
-                          setLiqForm((p) => ({ ...p, referencia: e.target.value }))
+                          setLiqForm((p) => ({
+                            ...p,
+                            referencia: normalizeUppercaseNoAccents(e.target.value),
+                          }))
                         }
                       />
                     </div>
@@ -1669,7 +1679,10 @@ export default function VentaForm({ id }: Props) {
                       placeholder="Nota libre…"
                       value={liqForm.concepto}
                       onChange={(e) =>
-                        setLiqForm((p) => ({ ...p, concepto: e.target.value }))
+                        setLiqForm((p) => ({
+                          ...p,
+                          concepto: normalizeUppercaseNoAccents(e.target.value),
+                        }))
                       }
                     />
                   </div>

@@ -159,6 +159,8 @@ function normalizeUppercaseNoAccents(value: string): string {
     .toUpperCase();
 }
 
+void normalizeUppercaseNoAccents;
+
 function isManagedTextField(
   target: EventTarget | null,
 ): target is HTMLInputElement | HTMLTextAreaElement {
@@ -466,30 +468,10 @@ export default function App() {
       configureManagedTextField(event.target);
     };
 
-    const handleInput = (event: Event) => {
-      if (!isManagedTextField(event.target)) return;
-
-      const field = event.target;
-      configureManagedTextField(field);
-
-      const normalizedValue = normalizeUppercaseNoAccents(field.value);
-      if (field.value === normalizedValue) return;
-
-      const selectionStart = field.selectionStart;
-      const selectionEnd = field.selectionEnd;
-      field.value = normalizedValue;
-
-      if (selectionStart !== null && selectionEnd !== null) {
-        field.setSelectionRange(selectionStart, selectionEnd);
-      }
-    };
-
     document.addEventListener("focusin", handleFocusIn, true);
-    document.addEventListener("input", handleInput, true);
 
     return () => {
       document.removeEventListener("focusin", handleFocusIn, true);
-      document.removeEventListener("input", handleInput, true);
     };
   }, []);
 
