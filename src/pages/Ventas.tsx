@@ -3,14 +3,73 @@ import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 import { normalizeForSearch } from "../lib/inputNormalization";
-import type { Venta } from "../lib/types";
 
 function hoy() {
   return new Date().toISOString().slice(0, 10);
 }
 
-async function fetchVentas(fecha: string | null, verCanceladas: boolean): Promise<Venta[]> {
-  let q = supabase
+type VentaListadoRow = {
+  id: number;
+  kind: "venta" | "recibo_abono";
+  fecha: string;
+  operador_id: number | null;
+  operador_nombre: string | null;
+  servicio: string | null;
+  costo: number;
+  cobro: number;
+  faltante: number;
+  forma_pago: string | null;
+  promotor: string | null;
+  comision_pagada: boolean | null;
+  cancelado: boolean;
+  motivo_cancelacion: string | null;
+};
+
+type ReciboAbonoRow = {
+  id: number;
+  fecha: string | null;
+  operador_id: number;
+  forma_pago: string | null;
+  concepto: string | null;
+  importe: number;
+  created_at: string;
+  operadores:
+    | {
+        nombre: string | null;
+        apellido_paterno: string | null;
+        apellido_materno: string | null;
+      }
+    | {
+        nombre: string | null;
+        apellido_paterno: string | null;
+        apellido_materno: string | null;
+      }[]
+    | null;
+};
+
+function nombreOperador(
+  op:
+    | {
+        nombre: string | null;
+        apellido_paterno: string | null;
+        apellido_materno: string | null;
+      }
+    | {
+        nombre: string | null;
+        apellido_paterno: string | null;
+        apellido_materno: string | null;
+      }[]
+    | null
+    | undefined,
+) {
+  const base = Array.isArray(op) ? op[0] : op;
+  return [base?.nombre, base?.apellido_paterno, base?.apellido_materno]
+    .filter(Boolean)
+    .join(" ");
+}
+
+async function fetchVentas(fecha: string | null, verCanceladas: boolean): Promise<VentaListadoRow[]> {
+  let ventasQuery = supabase
     .from("ventas")
     .select(
       "id, fecha, operador_id, operador_nombre, servicio, costo, cobro, faltante, forma_pago, promotor, comision_pagada, cancelado, motivo_cancelacion",
@@ -18,19 +77,62 @@ async function fetchVentas(fecha: string | null, verCanceladas: boolean): Promis
     .order("fecha", { ascending: false })
     .order("id", { ascending: false });
 
+  let recibosQuery = supabase
+    .from("operador_saldo_movimientos")
+    .select(
+      "id, fecha, operador_id, forma_pago, concepto, importe, created_at, operadores:operadores!operador_id(nombre, apellido_paterno, apellido_materno)",
+    )
+    .eq("tipo", "abono")
+    .is("venta_id", null)
+    .is("ticket_id", null)
+    .order("fecha", { ascending: false })
+    .order("id", { ascending: false });
+
   if (fecha) {
-    q = q.eq("fecha", fecha);
+    ventasQuery = ventasQuery.eq("fecha", fecha);
+    recibosQuery = recibosQuery.eq("fecha", fecha);
   } else {
-    q = q.limit(500);
+    ventasQuery = ventasQuery.limit(500);
+    recibosQuery = recibosQuery.limit(500);
   }
 
   if (!verCanceladas) {
-    q = q.eq("cancelado", false);
+    ventasQuery = ventasQuery.eq("cancelado", false);
   }
 
-  const { data, error } = await q;
-  if (error) throw new Error(error.message);
-  return (data ?? []) as unknown as Venta[];
+  const [{ data: ventasData, error: ventasError }, { data: recibosData, error: recibosError }] =
+    await Promise.all([ventasQuery, recibosQuery]);
+
+  if (ventasError) throw new Error(ventasError.message);
+  if (recibosError) throw new Error(recibosError.message);
+
+  const ventas: VentaListadoRow[] = ((ventasData ?? []) as VentaListadoRow[]).map((venta) => ({
+    ...venta,
+    kind: "venta" as const,
+  }));
+
+  const recibos: VentaListadoRow[] = ((recibosData ?? []) as ReciboAbonoRow[]).map((recibo) => ({
+    id: recibo.id,
+    kind: "recibo_abono" as const,
+    fecha: recibo.fecha ?? recibo.created_at.slice(0, 10),
+    operador_id: recibo.operador_id,
+    operador_nombre: nombreOperador(recibo.operadores) || `Operador #${recibo.operador_id}`,
+    servicio: "Recibo de abono",
+    costo: Number(recibo.importe ?? 0),
+    cobro: Number(recibo.importe ?? 0),
+    faltante: 0,
+    forma_pago: recibo.forma_pago ?? "Efectivo",
+    promotor: null,
+    comision_pagada: null,
+    cancelado: false,
+    motivo_cancelacion: recibo.concepto ?? null,
+  }));
+
+  return [...ventas, ...recibos].sort((a, b) => {
+    const cmpFecha = String(b.fecha ?? "").localeCompare(String(a.fecha ?? ""));
+    if (cmpFecha !== 0) return cmpFecha;
+    return b.id - a.id;
+  });
 }
 
 function fmt(n: number) {
@@ -53,7 +155,7 @@ export default function Ventas() {
     isError,
     error,
   } = useQuery({
-    queryKey: ["ventas", fechaFiltro, verCanceladas],
+    queryKey: ["ventas", fechaFiltro, verCanceladas, "recibos_abono"],
     queryFn: () => fetchVentas(fechaFiltro, verCanceladas),
   });
 
@@ -62,7 +164,8 @@ export default function Ventas() {
     return (
       normalizeForSearch(v.operador_nombre).includes(txt) ||
       normalizeForSearch(v.servicio).includes(txt) ||
-      normalizeForSearch(v.promotor).includes(txt)
+      normalizeForSearch(v.promotor).includes(txt) ||
+      normalizeForSearch(v.motivo_cancelacion).includes(txt)
     );
   });
 
@@ -77,14 +180,14 @@ export default function Ventas() {
       <div className="page-header">
         <div>
           <h1 className="page-title">
-            <span className="page-icon">💰</span> Ventas
+            <span className="page-icon">ðŸ’°</span> Ventas
           </h1>
           <p className="page-subtitle">
             {fechaFiltro
               ? esHoy
-                ? "Ventas del día de hoy"
+                ? "Ventas del dÃ­a de hoy"
                 : `Ventas del ${fechaFiltro}`
-              : "Todas las ventas (últimas 500)"}
+              : "Todas las ventas y recibos (Ãºltimos 500)"}
           </p>
         </div>
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
@@ -101,7 +204,7 @@ export default function Ventas() {
         <input
           className="search-input"
           type="text"
-          placeholder="Buscar por operador, servicio o promotor..."
+          placeholder="Buscar por operador, servicio, promotor o concepto..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
@@ -144,7 +247,6 @@ export default function Ventas() {
         </span>
       </div>
 
-      {/* Totales rápidos */}
       {!isLoading && filtradas.length > 0 && (
         <div className="summary-bar">
           <div className="summary-item">
@@ -153,14 +255,14 @@ export default function Ventas() {
           </div>
           <div className="summary-item">
             <span className="summary-label">Total cobrado</span>
-            <span className="summary-value summary-value--green">
-              {fmt(totalCobrado)}
-            </span>
+            <span className="summary-value summary-value--green">{fmt(totalCobrado)}</span>
           </div>
           <div className="summary-item">
             <span className="summary-label">Total faltante</span>
             <span
-              className={`summary-value ${totalFaltante > 0 ? "summary-value--red" : "summary-value--green"}`}
+              className={`summary-value ${
+                totalFaltante > 0 ? "summary-value--red" : "summary-value--green"
+              }`}
             >
               {fmt(totalFaltante)}
             </span>
@@ -203,17 +305,17 @@ export default function Ventas() {
                     {busqueda
                       ? "No hay resultados para la búsqueda."
                       : fechaFiltro
-                        ? "No hay ventas registradas para esta fecha."
-                        : "No hay ventas registradas. Crea la primera."}
+                        ? "No hay ventas ni recibos registrados para esta fecha."
+                        : "No hay ventas ni recibos registrados."}
                   </td>
                 </tr>
               ) : (
                 filtradas.map((v) => (
-                  <tr key={v.id} className={v.cancelado ? "fila-cancelada" : ""}>
+                  <tr key={`${v.kind}-${v.id}`} className={v.cancelado ? "fila-cancelada" : ""}>
                     <td className="col-id">{v.id}</td>
                     <td className="col-fecha">{v.fecha}</td>
-                    <td>{v.operador_nombre ?? "—"}</td>
-                    <td>{v.servicio ?? "—"}</td>
+                    <td>{v.operador_nombre ?? "â€”"}</td>
+                    <td>{v.servicio ?? "â€”"}</td>
                     <td className="col-money">{fmt(v.costo)}</td>
                     <td className="col-money col-money--green">{fmt(v.cobro)}</td>
                     <td
@@ -224,41 +326,56 @@ export default function Ventas() {
                     <td>
                       {v.cancelado ? (
                         <span className="badge badge--cancelado" title={v.motivo_cancelacion ?? ""}>
-                          ⛔ Cancelada
+                          â›” Cancelada
                         </span>
                       ) : (
                         <span
                           className={`badge ${
-                            v.forma_pago === "Efectivo" ? "badge--gray"
-                            : v.forma_pago === "Dividida" ? "badge--amber"
-                            : v.forma_pago === "Saldo" ? "badge--green"
-                            : "badge--blue"
+                            v.forma_pago === "Efectivo"
+                              ? "badge--gray"
+                              : v.forma_pago === "Dividida"
+                                ? "badge--amber"
+                                : v.forma_pago === "Saldo"
+                                  ? "badge--green"
+                                  : "badge--blue"
                           }`}
                         >
                           {v.forma_pago === "Saldo" ? "Saldo a favor" : v.forma_pago}
                         </span>
                       )}
                     </td>
-                    <td>{v.promotor ?? "—"}</td>
+                    <td>{v.promotor ?? "â€”"}</td>
                     <td>
-                      <span
-                        className={`badge ${v.comision_pagada ? "badge--green" : "badge--yellow"}`}
-                      >
-                        {v.comision_pagada ? "Pagada" : "Pend."}
-                      </span>
+                      {v.kind === "recibo_abono" ? (
+                        <span className="badge badge--gray">â€”</span>
+                      ) : (
+                        <span
+                          className={`badge ${v.comision_pagada ? "badge--green" : "badge--yellow"}`}
+                        >
+                          {v.comision_pagada ? "Pagada" : "Pend."}
+                        </span>
+                      )}
                     </td>
                     <td className="col-actions">
-                      <Link href={`/ventas/${v.id}`}>
-                        <button className="btn-edit">Ver</button>
-                      </Link>
-                      {(v.faltante ?? 0) > 0.005 && (
-                        <button
-                          className="btn-liquidar"
-                          title="Registrar pago de liquidación"
-                          onClick={() => navigate(`/ventas/${v.id}`)}
-                        >
-                          💳 Liquidar
-                        </button>
+                      {v.kind === "recibo_abono" ? (
+                        <Link href={`/recibos-abono/${v.id}`}>
+                          <button className="btn-edit">Ver</button>
+                        </Link>
+                      ) : (
+                        <>
+                          <Link href={`/ventas/${v.id}`}>
+                            <button className="btn-edit">Ver</button>
+                          </Link>
+                          {(v.faltante ?? 0) > 0.005 && (
+                            <button
+                              className="btn-liquidar"
+                              title="Registrar pago de liquidación"
+                              onClick={() => navigate(`/ventas/${v.id}`)}
+                            >
+                              ðŸ’³ Liquidar
+                            </button>
+                          )}
+                        </>
                       )}
                     </td>
                   </tr>
