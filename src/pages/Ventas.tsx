@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
+import { normalizeForSearch } from "../lib/inputNormalization";
 import type { Venta } from "../lib/types";
 
 function hoy() {
@@ -57,11 +58,11 @@ export default function Ventas() {
   });
 
   const filtradas = ventas.filter((v) => {
-    const txt = busqueda.toLowerCase();
+    const txt = normalizeForSearch(busqueda);
     return (
-      (v.operador_nombre ?? "").toLowerCase().includes(txt) ||
-      (v.servicio ?? "").toLowerCase().includes(txt) ||
-      (v.promotor ?? "").toLowerCase().includes(txt)
+      normalizeForSearch(v.operador_nombre).includes(txt) ||
+      normalizeForSearch(v.servicio).includes(txt) ||
+      normalizeForSearch(v.promotor).includes(txt)
     );
   });
 

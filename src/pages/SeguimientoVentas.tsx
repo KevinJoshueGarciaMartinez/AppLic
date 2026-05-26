@@ -5,7 +5,10 @@ import { supabase } from "../lib/supabase";
 import type { Operador, OperadorInsert } from "../lib/types";
 import { MEDIOS_CAPTACION, etiquetaMedioCaptacion } from "../lib/mediosCaptacion";
 import { ASESORES_OPCIONES, asesorTonoClass } from "../lib/asesoresCatalogo";
-import { normalizeUppercaseNoAccents } from "../lib/inputNormalization";
+import {
+  normalizeForSearch,
+  normalizeUppercaseNoAccents,
+} from "../lib/inputNormalization";
 import {
   ESTATUS_SEGUIMIENTO_DEFECTO,
   ESTATUS_SEGUIMIENTO_OPCIONES,
@@ -539,11 +542,11 @@ export default function SeguimientoVentas() {
 
   const filasBase = useMemo(() => {
     let rows = [...data];
-    const txt = busqueda.trim().toLowerCase();
+    const txt = normalizeForSearch(busqueda);
     if (txt) {
       rows = rows.filter((r) => {
-        const nombre = nombreCompleto(r).toLowerCase();
-        const tel = (r.telefono_1 ?? "").toLowerCase();
+        const nombre = normalizeForSearch(nombreCompleto(r));
+        const tel = normalizeForSearch(r.telefono_1);
         return (
           nombre.includes(txt)
           || tel.includes(txt)

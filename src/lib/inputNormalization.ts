@@ -8,3 +8,7 @@ export function normalizeUppercaseNoAccents(value: string): string {
     .replace(/__ENYE_LOWER__/g, "ñ")
     .toUpperCase();
 }
+
+export function normalizeForSearch(value: string | null | undefined): string {
+  return normalizeUppercaseNoAccents(value ?? "").trim();
+}

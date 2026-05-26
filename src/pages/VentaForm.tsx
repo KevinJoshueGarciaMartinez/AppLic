@@ -30,7 +30,10 @@ import type {
 import HistorialVentasOperador, {
   VENTAS_POR_OPERADOR_QUERY_KEY,
 } from "../components/HistorialVentasOperador";
-import { normalizeUppercaseNoAccents } from "../lib/inputNormalization";
+import {
+  normalizeForSearch,
+  normalizeUppercaseNoAccents,
+} from "../lib/inputNormalization";
 
 const EPSILON_DEUDA = 0.005;
 const NORMALIZED_TEXT_FIELDS = new Set<keyof VentaInsert>(["numero_referencia"]);
@@ -108,12 +111,22 @@ async function buscarOperadores(texto: string): Promise<Operador[]> {
       "numero_consecutivo, nombre, apellido_paterno, apellido_materno, curp, telefono_1, es_prospecto",
     )
     .eq("es_prospecto", false)
-    .or(
-      `curp.ilike.%${texto}%,nombre.ilike.%${texto}%,apellido_paterno.ilike.%${texto}%,telefono_1.ilike.%${texto}%`,
-    )
-    .limit(8);
+    .limit(200);
   if (error) return [];
-  return (data ?? []) as unknown as Operador[];
+  const operadores = (data ?? []) as unknown as Operador[];
+  const needle = normalizeForSearch(texto);
+
+  return operadores
+    .filter((op) => {
+      const nombre = normalizeForSearch(
+        [op.nombre, op.apellido_paterno, op.apellido_materno].filter(Boolean).join(" "),
+      );
+      const curp = normalizeForSearch(op.curp);
+      const tel = normalizeForSearch(op.telefono_1);
+
+      return nombre.includes(needle) || curp.includes(needle) || tel.includes(needle);
+    })
+    .slice(0, 8);
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -201,28 +214,31 @@ function OperadorSearch({
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    setTexto(operadorNombre ?? "");
+    setTexto(operadorNombre ? normalizeUppercaseNoAccents(operadorNombre) : "");
   }, [operadorNombre]);
 
   function handleInput(val: string) {
-    setTexto(val);
-    if (val === "") {
+    const normalized = normalizeUppercaseNoAccents(val);
+    setTexto(normalized);
+    if (normalized === "") {
       setResultados([]);
       setAbierto(false);
       return;
     }
     if (debounce.current) clearTimeout(debounce.current);
     debounce.current = setTimeout(async () => {
-      const res = await buscarOperadores(val);
+      const res = await buscarOperadores(normalized);
       setResultados(res);
       setAbierto(res.length > 0);
     }, 300);
   }
 
   function seleccionar(op: Operador) {
-    const nombre = [op.nombre, op.apellido_paterno, op.apellido_materno]
+    const nombre = normalizeUppercaseNoAccents(
+      [op.nombre, op.apellido_paterno, op.apellido_materno]
       .filter(Boolean)
-      .join(" ");
+      .join(" "),
+    );
     setTexto(nombre);
     setAbierto(false);
     onChange(op.numero_consecutivo, nombre);

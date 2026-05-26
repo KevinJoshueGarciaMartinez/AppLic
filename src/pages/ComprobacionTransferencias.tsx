@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
+import { normalizeForSearch } from "../lib/inputNormalization";
 import type { VentaPago } from "../lib/types";
 
 function hoy() {
@@ -127,12 +128,12 @@ export default function ComprobacionTransferencias() {
   });
 
   const filtrados = useMemo(() => {
-    const t = busqueda.trim().toLowerCase();
+    const t = normalizeForSearch(busqueda);
     if (!t) return pagos;
     return pagos.filter((p) => {
-      const ref = (p.referencia ?? "").toLowerCase();
-      const conc = (p.concepto ?? "").toLowerCase();
-      const ctx = etiquetaContexto(p).toLowerCase();
+      const ref = normalizeForSearch(p.referencia);
+      const conc = normalizeForSearch(p.concepto);
+      const ctx = normalizeForSearch(etiquetaContexto(p));
       return ref.includes(t) || conc.includes(t) || ctx.includes(t) || String(p.id).includes(t);
     });
   }, [pagos, busqueda]);

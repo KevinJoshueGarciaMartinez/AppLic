@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
+import { normalizeForSearch } from "../lib/inputNormalization";
 import type { Operador } from "../lib/types";
 
 async function fetchOperadores(): Promise<Operador[]> {
@@ -24,10 +25,12 @@ export default function Operadores() {
   });
 
   const filtrados = operadores.filter((op) => {
-    const texto = busqueda.toLowerCase();
-    const nombre = `${op.nombre ?? ""} ${op.apellido_paterno ?? ""} ${op.apellido_materno ?? ""}`.toLowerCase();
-    const curp = (op.curp ?? "").toLowerCase();
-    const tel = (op.telefono_1 ?? "").toLowerCase();
+    const texto = normalizeForSearch(busqueda);
+    const nombre = normalizeForSearch(
+      `${op.nombre ?? ""} ${op.apellido_paterno ?? ""} ${op.apellido_materno ?? ""}`,
+    );
+    const curp = normalizeForSearch(op.curp);
+    const tel = normalizeForSearch(op.telefono_1);
     return nombre.includes(texto) || curp.includes(texto) || tel.includes(texto);
   });
 
