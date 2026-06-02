@@ -105,26 +105,67 @@ async function fetchPromotores(): Promise<Promotor[]> {
 
 async function buscarOperadores(texto: string): Promise<Operador[]> {
   if (texto.length < 2) return [];
-  const { data, error } = await supabase
-    .from("operadores")
-    .select(
-      "numero_consecutivo, nombre, apellido_paterno, apellido_materno, curp, telefono_1, es_prospecto",
-    )
-    .eq("es_prospecto", false)
-    .limit(200);
-  if (error) return [];
-  const operadores = (data ?? []) as unknown as Operador[];
   const needle = normalizeForSearch(texto);
+  const tokens = Array.from(
+    new Set(
+      needle
+        .split(/\s+/)
+        .map((token) => token.trim())
+        .filter((token) => token.length >= 2),
+    ),
+  );
+
+  if (tokens.length === 0) return [];
+
+  const consultas = await Promise.all(
+    tokens.map(async (token) => {
+      const { data, error } = await supabase
+        .from("operadores")
+        .select(
+          "numero_consecutivo, nombre, apellido_paterno, apellido_materno, curp, telefono_1, es_prospecto",
+        )
+        .eq("es_prospecto", false)
+        .or(
+          [
+            `nombre.ilike.%${token}%`,
+            `apellido_paterno.ilike.%${token}%`,
+            `apellido_materno.ilike.%${token}%`,
+            `curp.ilike.%${token}%`,
+            `telefono_1.ilike.%${token}%`,
+          ].join(","),
+        )
+        .limit(40);
+
+      if (error) return [];
+      return (data ?? []) as unknown as Operador[];
+    }),
+  );
+
+  const operadores = Array.from(
+    new Map(
+      consultas
+        .flat()
+        .map((op) => [op.numero_consecutivo, op] as const),
+    ).values(),
+  );
 
   return operadores
     .filter((op) => {
-      const nombre = normalizeForSearch(
+      const nombreCompleto = normalizeForSearch(
         [op.nombre, op.apellido_paterno, op.apellido_materno].filter(Boolean).join(" "),
       );
       const curp = normalizeForSearch(op.curp);
       const tel = normalizeForSearch(op.telefono_1);
+      const coincideTodosLosTokens = tokens.every((token) =>
+        [nombreCompleto, curp, tel].some((campo) => campo.includes(token)),
+      );
 
-      return nombre.includes(needle) || curp.includes(needle) || tel.includes(needle);
+      return (
+        nombreCompleto.includes(needle) ||
+        curp.includes(needle) ||
+        tel.includes(needle) ||
+        coincideTodosLosTokens
+      );
     })
     .slice(0, 8);
 }
