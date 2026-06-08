@@ -170,6 +170,21 @@ async function buscarOperadores(texto: string): Promise<Operador[]> {
     .slice(0, 8);
 }
 
+type OperadorVentaResumen = Pick<
+  Operador,
+  "curp" | "num_exp_med_preventiva" | "licencia_vigencia" | "telefono_1"
+>;
+
+async function fetchOperadorResumen(operadorId: number): Promise<OperadorVentaResumen> {
+  const { data, error } = await supabase
+    .from("operadores")
+    .select("curp, num_exp_med_preventiva, licencia_vigencia, telefono_1")
+    .eq("numero_consecutivo", operadorId)
+    .single();
+  if (error) throw new Error(error.message);
+  return data as OperadorVentaResumen;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function fmt(n: number) {
@@ -182,6 +197,13 @@ function fmt(n: number) {
 
 function round2(n: number) {
   return Math.round(n * 100) / 100;
+}
+
+function fmtFechaCorta(fecha: string | null | undefined) {
+  if (!fecha) return "—";
+  const [y, m, d] = fecha.split("-");
+  if (!y || !m || !d) return fecha;
+  return `${d}/${m}/${y}`;
 }
 
 function parseMontoInput(raw: string): number {
@@ -478,6 +500,15 @@ export default function VentaForm({ id }: Props) {
   });
 
   const operadorIdSaldo = form.operador_id;
+  const {
+    data: operadorResumen,
+    isError: operadorResumenError,
+    error: operadorResumenErrorData,
+  } = useQuery({
+    queryKey: ["operador_resumen_venta", operadorIdSaldo],
+    queryFn: () => fetchOperadorResumen(operadorIdSaldo!),
+    enabled: operadorIdSaldo != null,
+  });
   const {
     data: saldosOperador,
     isError: saldoQueryError,
@@ -858,6 +889,9 @@ export default function VentaForm({ id }: Props) {
           await insertAbonoSaldo(operadorId, sobrepagoInicial, "Sobrepago (pago inicial)", {
             ventaId: firstId,
             ticketId,
+            fecha: payload.fecha ?? new Date().toISOString().slice(0, 10),
+            formaPago: payload.forma_pago,
+            referencia: payload.numero_referencia ?? null,
           });
         }
       } else {
@@ -1221,6 +1255,32 @@ export default function VentaForm({ id }: Props) {
             {saldoQueryError && form.operador_id != null && (
               <p className="field-hint" style={{ color: "#b91c1c" }}>
                 No se pudieron cargar los saldos: {(saldoError as Error).message}
+              </p>
+            )}
+            {form.operador_id != null && operadorResumen && (
+              <div className="venta-operador-detalle">
+                <div className="venta-operador-detalle__item">
+                  <span className="venta-operador-detalle__label">CURP</span>
+                  <strong>{operadorResumen.curp?.trim() || "—"}</strong>
+                </div>
+                <div className="venta-operador-detalle__item">
+                  <span className="venta-operador-detalle__label">N expediente médico</span>
+                  <strong>{operadorResumen.num_exp_med_preventiva?.trim() || "—"}</strong>
+                </div>
+                <div className="venta-operador-detalle__item">
+                  <span className="venta-operador-detalle__label">Vencimiento de licencia</span>
+                  <strong>{fmtFechaCorta(operadorResumen.licencia_vigencia)}</strong>
+                </div>
+                <div className="venta-operador-detalle__item">
+                  <span className="venta-operador-detalle__label">Teléfono</span>
+                  <strong>{operadorResumen.telefono_1?.trim() || "—"}</strong>
+                </div>
+              </div>
+            )}
+            {form.operador_id != null && operadorResumenError && (
+              <p className="field-hint" style={{ color: "#b91c1c" }}>
+                No se pudieron cargar los datos básicos del operador:{" "}
+                {(operadorResumenErrorData as Error).message}
               </p>
             )}
             {bloquearNuevaVentaPorDeuda && (

@@ -1238,6 +1238,39 @@ fieldset.venta-flujo-bloque:disabled {
   flex-shrink: 0;
 }
 
+.venta-operador-detalle {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid #dbe4f0;
+  border-radius: 12px;
+  background: #f8fbff;
+}
+
+.venta-operador-detalle__item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.venta-operador-detalle__item strong {
+  color: #0f172a;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.venta-operador-detalle__label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
 .operador-saldo-resumen {
   width: 100%;
 }
