@@ -65,19 +65,30 @@ export async function insertAbonoSaldo(
   },
 ): Promise<number> {
   if (importe <= 0) throw new Error("El abono debe ser mayor a cero.");
+  const payload: {
+    operador_id: number;
+    tipo: "abono";
+    importe: number;
+    fecha?: string | null;
+    forma_pago?: string | null;
+    referencia?: string | null;
+    concepto: string | null;
+    venta_id: number | null;
+    ticket_id: number | null;
+  } = {
+    operador_id: operadorId,
+    tipo: "abono",
+    importe,
+    concepto: concepto?.trim() || null,
+    venta_id: opts?.ventaId ?? null,
+    ticket_id: opts?.ticketId ?? null,
+  };
+  if (opts?.fecha != null) payload.fecha = opts.fecha;
+  if (opts?.formaPago !== undefined) payload.forma_pago = opts.formaPago ?? null;
+  if (opts?.referencia !== undefined) payload.referencia = opts.referencia?.trim() || null;
   const { data, error } = await supabase
     .from("operador_saldo_movimientos")
-    .insert({
-      operador_id: operadorId,
-      tipo: "abono",
-      importe,
-      fecha: opts?.fecha ?? null,
-      forma_pago: opts?.formaPago ?? null,
-      referencia: opts?.referencia?.trim() || null,
-      concepto: concepto?.trim() || null,
-      venta_id: opts?.ventaId ?? null,
-      ticket_id: opts?.ticketId ?? null,
-    })
+    .insert(payload)
     .select("id")
     .single();
   if (error) throw new Error(error.message);
