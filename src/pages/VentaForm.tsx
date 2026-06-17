@@ -43,12 +43,26 @@ const blurNumberInputOnWheel: WheelEventHandler<HTMLInputElement> = (e) => {
   e.currentTarget.blur();
 };
 
-/** `catalogo_servicios_costos.id_servicio` para IVA (línea de desglose; importe lo define el usuario). */
+/** Servicios cuyo costo se captura manualmente en la venta. */
 const ID_SERVICIO_IVA = 57;
+const ID_SERVICIO_MNP = 46;
+const SERVICIOS_OCULTOS_EN_SELECTOR = new Set([
+  "MEDICO MNP NUEVO INGRESO",
+  "LIQUIDACION MEDICO MNP NUEVO INGRESO",
+]);
 
 function esLineaIva(item: VentaItem): boolean {
   if (item.id_servicio === ID_SERVICIO_IVA) return true;
   return item.servicio?.trim().toUpperCase() === "IVA";
+}
+
+function esLineaMnpEditable(item: VentaItem): boolean {
+  if (item.id_servicio === ID_SERVICIO_MNP) return true;
+  return item.servicio?.trim().toUpperCase() === "MEDICO MNP";
+}
+
+function permiteCapturaManualDeCosto(item: VentaItem): boolean {
+  return esLineaIva(item) || esLineaMnpEditable(item);
 }
 
 // ── Fetchers ──────────────────────────────────────────────────────────────────
@@ -91,7 +105,9 @@ async function fetchServicios(): Promise<Servicio[]> {
     .select("id_servicio, orden, servicio, tipo_servicio, costo_base, com_1")
     .order("orden");
   if (error) throw new Error(error.message);
-  return (data ?? []) as Servicio[];
+  return ((data ?? []) as Servicio[]).filter(
+    (servicio) => !SERVICIOS_OCULTOS_EN_SELECTOR.has(servicio.servicio.trim().toUpperCase()),
+  );
 }
 
 async function fetchPromotores(): Promise<Promotor[]> {
@@ -766,10 +782,10 @@ export default function VentaForm({ id }: Props) {
     );
   }
 
-  function updateItemCostoIva(idx: number, valueStr: string) {
+  function updateItemCostoManual(idx: number, valueStr: string) {
     setItems((prev) => {
       const cur = prev[idx];
-      if (!cur || !esLineaIva(cur)) return prev;
+      if (!cur || !permiteCapturaManualDeCosto(cur)) return prev;
       const parsed = Number(valueStr.replace(",", "."));
       const costo =
         Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed * 100) / 100 : 0;
@@ -1431,7 +1447,7 @@ export default function VentaForm({ id }: Props) {
                             )}
                           </td>
                           <td className="col-monto">
-                            {esLineaIva(item) && isNew ? (
+                            {permiteCapturaManualDeCosto(item) && isNew ? (
                               <input
                                 type="number"
                                 className="ticket-line-importe-iva"
@@ -1440,9 +1456,9 @@ export default function VentaForm({ id }: Props) {
                                 value={item.costo}
                                 onWheel={blurNumberInputOnWheel}
                                 onFocus={(e) => e.target.select()}
-                                onChange={(e) => updateItemCostoIva(idx, e.target.value)}
-                                title="Importe de IVA (lo ingresa el usuario)"
-                                aria-label={`Importe IVA, ${item.servicio}`}
+                                onChange={(e) => updateItemCostoManual(idx, e.target.value)}
+                                title={`Importe de ${item.servicio} (lo ingresa el usuario)`}
+                                aria-label={`Importe manual, ${item.servicio}`}
                               />
                             ) : (
                               fmt(item.costo)

@@ -187,6 +187,9 @@ export async function registrarLiquidacion(params: LiquidacionParams): Promise<v
     await insertAbonoSaldo(operadorId, sobrepago, "Sobrepago (liquidación)", {
       ventaId,
       ticketId,
+      fecha,
+      formaPago,
+      referencia,
     });
   }
 
