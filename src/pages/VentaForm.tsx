@@ -45,19 +45,11 @@ const blurNumberInputOnWheel: WheelEventHandler<HTMLInputElement> = (e) => {
 
 /** Servicios cuyo costo se captura manualmente en la venta. */
 const ID_SERVICIO_IVA = 57;
-const ID_SERVICIO_MNP = 46;
+const SERVICIOS_MNP_COSTO_MANUAL = new Set([46, 67]);
 const SERVICIOS_OCULTOS_EN_SELECTOR = new Set([
   "MEDICO MNP NUEVO INGRESO",
   "LIQUIDACION MEDICO MNP NUEVO INGRESO",
 ]);
-
-function normalizarNombreServicio(servicio: string | null | undefined): string {
-  const limpio = servicio?.trim() ?? "";
-  const upper = limpio.toUpperCase();
-  if (upper.startsWith("LIQUIDACION MEDICO MNP")) return "Liquidacion de MNP";
-  if (upper.startsWith("MEDICO MNP")) return "MNP";
-  return limpio;
-}
 
 function esLineaIva(item: VentaItem): boolean {
   if (item.id_servicio === ID_SERVICIO_IVA) return true;
@@ -65,8 +57,7 @@ function esLineaIva(item: VentaItem): boolean {
 }
 
 function esLineaMnpEditable(item: VentaItem): boolean {
-  if (item.id_servicio === ID_SERVICIO_MNP) return true;
-  return item.servicio?.trim().toUpperCase() === "MEDICO MNP";
+  return item.id_servicio != null && SERVICIOS_MNP_COSTO_MANUAL.has(item.id_servicio);
 }
 
 function permiteCapturaManualDeCosto(item: VentaItem): boolean {
@@ -97,7 +88,7 @@ async function fetchTicketItems(ticketId: number): Promise<VentaItem[]> {
   return (data ?? []).map((row: Record<string, unknown>) => ({
     ventaId: row.id as number,
     id_servicio: row.id_servicio as number | null,
-    servicio: normalizarNombreServicio(row.servicio as string),
+    servicio: row.servicio as string,
     tipo_servicio: row.tipo_servicio as number | null,
     costo: Number(row.costo ?? 0),
     com_1: Number(row.costo_promotor ?? 0),
@@ -113,12 +104,9 @@ async function fetchServicios(): Promise<Servicio[]> {
     .select("id_servicio, orden, servicio, tipo_servicio, costo_base, com_1")
     .order("orden");
   if (error) throw new Error(error.message);
-  return ((data ?? []) as Servicio[])
-    .filter((servicio) => !SERVICIOS_OCULTOS_EN_SELECTOR.has(servicio.servicio.trim().toUpperCase()))
-    .map((servicio) => ({
-      ...servicio,
-      servicio: normalizarNombreServicio(servicio.servicio),
-    }));
+  return ((data ?? []) as Servicio[]).filter(
+    (servicio) => !SERVICIOS_OCULTOS_EN_SELECTOR.has(servicio.servicio.trim().toUpperCase()),
+  );
 }
 
 async function fetchPromotores(): Promise<Promotor[]> {
@@ -495,7 +483,7 @@ export default function VentaForm({ id }: Props) {
         {
           ventaId: ventaData.id,
           id_servicio: ventaData.id_servicio,
-          servicio: normalizarNombreServicio(ventaData.servicio),
+          servicio: ventaData.servicio ?? "",
           tipo_servicio: ventaData.tipo_servicio,
           costo: ventaData.costo,
           com_1: ventaData.costo_promotor ?? 0,
