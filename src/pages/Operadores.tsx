@@ -46,9 +46,6 @@ export default function Operadores() {
             licencia y curso. Los prospectos no aparecen aquí; úsalos en Seguimiento.
           </p>
         </div>
-        <Link href="/operadores/nuevo">
-          <button className="btn-primary">+ Nuevo Operador</button>
-        </Link>
       </div>
 
       <div className="toolbar">
@@ -59,6 +56,9 @@ export default function Operadores() {
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
+        <Link href="/operadores/nuevo">
+          <button className="btn-primary" type="button">+ Nuevo Operador</button>
+        </Link>
         <span className="record-count">
           {isLoading ? "Cargando..." : `${filtrados.length} registro${filtrados.length !== 1 ? "s" : ""}`}
         </span>
