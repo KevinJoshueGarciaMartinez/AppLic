@@ -179,15 +179,13 @@ export default function Ventas() {
     <div className="page-container">
       <div className="page-header">
         <div>
-          <h1 className="page-title">
-            <span className="page-icon">ðŸ’°</span> Ventas
-          </h1>
+          <h1 className="page-title">Ventas</h1>
           <p className="page-subtitle">
             {fechaFiltro
               ? esHoy
-                ? "Ventas del dÃ­a de hoy"
+                ? "Ventas del dia de hoy"
                 : `Ventas del ${fechaFiltro}`
-              : "Todas las ventas y recibos (Ãºltimos 500)"}
+              : "Todas las ventas y recibos (ultimos 500)"}
           </p>
         </div>
       </div>
@@ -200,9 +198,6 @@ export default function Ventas() {
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
-        <Link href="/recibos-abono/nuevo">
-          <button className="btn-secondary" type="button">+ Nuevo Recibo</button>
-        </Link>
         <Link href="/ventas/nuevo">
           <button className="btn-primary" type="button">+ Nueva Venta</button>
         </Link>
@@ -304,7 +299,7 @@ export default function Ventas() {
                 <tr>
                   <td colSpan={11} className="table-empty">
                     {busqueda
-                      ? "No hay resultados para la búsqueda."
+                      ? "No hay resultados para la busqueda."
                       : fechaFiltro
                         ? "No hay ventas ni recibos registrados para esta fecha."
                         : "No hay ventas ni recibos registrados."}
@@ -315,8 +310,8 @@ export default function Ventas() {
                   <tr key={`${v.kind}-${v.id}`} className={v.cancelado ? "fila-cancelada" : ""}>
                     <td className="col-id">{v.id}</td>
                     <td className="col-fecha">{v.fecha}</td>
-                    <td>{v.operador_nombre ?? "â€”"}</td>
-                    <td>{v.servicio ?? "â€”"}</td>
+                    <td>{v.operador_nombre ?? "—"}</td>
+                    <td>{v.servicio ?? "—"}</td>
                     <td className="col-money">{fmt(v.costo)}</td>
                     <td className="col-money col-money--green">{fmt(v.cobro)}</td>
                     <td
@@ -327,7 +322,7 @@ export default function Ventas() {
                     <td>
                       {v.cancelado ? (
                         <span className="badge badge--cancelado" title={v.motivo_cancelacion ?? ""}>
-                          â›” Cancelada
+                          Cancelada
                         </span>
                       ) : (
                         <span
@@ -345,10 +340,10 @@ export default function Ventas() {
                         </span>
                       )}
                     </td>
-                    <td>{v.promotor ?? "â€”"}</td>
+                    <td>{v.promotor ?? "—"}</td>
                     <td>
                       {v.kind === "recibo_abono" ? (
-                        <span className="badge badge--gray">â€”</span>
+                        <span className="badge badge--gray">—</span>
                       ) : (
                         <span
                           className={`badge ${v.comision_pagada ? "badge--green" : "badge--yellow"}`}
@@ -370,10 +365,10 @@ export default function Ventas() {
                           {(v.faltante ?? 0) > 0.005 && (
                             <button
                               className="btn-liquidar"
-                              title="Registrar pago de liquidación"
+                              title="Registrar pago de liquidacion"
                               onClick={() => navigate(`/ventas/${v.id}`)}
                             >
-                              ðŸ’³ Liquidar
+                              Liquidar
                             </button>
                           )}
                         </>
