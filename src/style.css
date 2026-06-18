@@ -473,6 +473,10 @@ body {
   flex-wrap: wrap;
 }
 
+.ventas-toolbar-secundaria {
+  margin-top: -4px;
+}
+
 .search-input {
   border: 1px solid #cbd5e1;
   border-radius: 8px;

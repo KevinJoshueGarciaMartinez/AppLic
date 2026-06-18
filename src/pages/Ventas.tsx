@@ -190,14 +190,6 @@ export default function Ventas() {
               : "Todas las ventas y recibos (Ãºltimos 500)"}
           </p>
         </div>
-        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-          <Link href="/recibos-abono/nuevo">
-            <button className="btn-secondary">+ Nuevo Recibo</button>
-          </Link>
-          <Link href="/ventas/nuevo">
-            <button className="btn-primary">+ Nueva Venta</button>
-          </Link>
-        </div>
       </div>
 
       <div className="toolbar">
@@ -208,6 +200,15 @@ export default function Ventas() {
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
+        <Link href="/recibos-abono/nuevo">
+          <button className="btn-secondary" type="button">+ Nuevo Recibo</button>
+        </Link>
+        <Link href="/ventas/nuevo">
+          <button className="btn-primary" type="button">+ Nueva Venta</button>
+        </Link>
+      </div>
+
+      <div className="toolbar ventas-toolbar-secundaria">
         <input
           type="date"
           className="search-input"
