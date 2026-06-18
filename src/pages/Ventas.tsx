@@ -179,7 +179,9 @@ export default function Ventas() {
     <div className="page-container">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Ventas</h1>
+          <h1 className="page-title">
+            <span className="page-icon" aria-hidden="true">{"\u{1F4B0}"}</span> Ventas
+          </h1>
           <p className="page-subtitle">
             {fechaFiltro
               ? esHoy
@@ -201,6 +203,11 @@ export default function Ventas() {
         <Link href="/ventas/nuevo">
           <button className="btn-primary" type="button">+ Nueva Venta</button>
         </Link>
+        <span className="record-count">
+          {isLoading
+            ? "Cargando..."
+            : `${filtradas.length} registro${filtradas.length !== 1 ? "s" : ""}`}
+        </span>
       </div>
 
       <div className="toolbar ventas-toolbar-secundaria">
@@ -236,11 +243,6 @@ export default function Ventas() {
         >
           {verCanceladas ? "Ocultar canceladas" : "Ver canceladas"}
         </button>
-        <span className="record-count">
-          {isLoading
-            ? "Cargando..."
-            : `${filtradas.length} registro${filtradas.length !== 1 ? "s" : ""}`}
-        </span>
       </div>
 
       {!isLoading && filtradas.length > 0 && (
