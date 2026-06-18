@@ -187,13 +187,13 @@ async function buscarOperadores(texto: string): Promise<Operador[]> {
 
 type OperadorVentaResumen = Pick<
   Operador,
-  "curp" | "num_exp_med_preventiva" | "licencia_vigencia" | "telefono_1"
+  "curp" | "num_exp_med_preventiva" | "licencia_numero" | "licencia_vigencia" | "telefono_1"
 >;
 
 async function fetchOperadorResumen(operadorId: number): Promise<OperadorVentaResumen> {
   const { data, error } = await supabase
     .from("operadores")
-    .select("curp, num_exp_med_preventiva, licencia_vigencia, telefono_1")
+    .select("curp, num_exp_med_preventiva, licencia_numero, licencia_vigencia, telefono_1")
     .eq("numero_consecutivo", operadorId)
     .single();
   if (error) throw new Error(error.message);
@@ -1281,6 +1281,10 @@ export default function VentaForm({ id }: Props) {
                 <div className="venta-operador-detalle__item">
                   <span className="venta-operador-detalle__label">N expediente médico</span>
                   <strong>{operadorResumen.num_exp_med_preventiva?.trim() || "—"}</strong>
+                </div>
+                <div className="venta-operador-detalle__item">
+                  <span className="venta-operador-detalle__label">Número de licencia</span>
+                  <strong>{operadorResumen.licencia_numero?.trim() || "—"}</strong>
                 </div>
                 <div className="venta-operador-detalle__item">
                   <span className="venta-operador-detalle__label">Vencimiento de licencia</span>
