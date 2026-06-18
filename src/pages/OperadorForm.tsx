@@ -20,9 +20,9 @@ import {
 import { normalizeUppercaseNoAccents } from "../lib/inputNormalization";
 import HistorialVentasOperador from "../components/HistorialVentasOperador";
 
-/** Pestaña «Ventas» (historial) antes de «Saldo»; índices 0–4 son fijos. */
-const TAB_IDX_VENTAS = 5;
-const TAB_IDX_SALDO = 6;
+/** Pestañas visibles en expediente simplificado. */
+const TAB_IDX_VENTAS = 1;
+const TAB_IDX_SALDO = 2;
 
 const NORMALIZED_TEXT_FIELDS = new Set<keyof OperadorInsert>([
   "nombre",
@@ -93,6 +93,10 @@ const MEDIOS_SOLICITUD = [
 const FORMAS_COBRO = ["Efectivo", "Transferencia", "Tarjeta", "Depósito"];
 
 // ── default empty form ────────────────────────────────────────────────────────
+void ESCOLARIDADES;
+void MEDIOS_SOLICITUD;
+void FORMAS_COBRO;
+
 function emptyForm(): OperadorInsert {
   return {
     fecha: new Date().toISOString().slice(0, 10),
@@ -188,13 +192,7 @@ async function fetchRolUsuario(): Promise<RolApp> {
   return rol === "admin" || rol === "recepcion" || rol === "ventas" ? rol : null;
 }
 
-const TABS_FIJAS = [
-  "Datos personales",
-  "Documentación",
-  "Licencia y médico",
-  "Cita SCT",
-  "Curso",
-] as const;
+const TABS_FIJAS = ["Datos del operador"] as const;
 
 export default function OperadorForm({ id }: Props) {
   const [, navigate] = useLocation();
@@ -546,7 +544,7 @@ export default function OperadorForm({ id }: Props) {
           </div>
         )}
 
-        {/* ── Tab 0: Datos personales ── */}
+        {/* ── Tab 0: Datos del operador ── */}
         {!isNew && activeTab === 0 && (
           <div className="form-section">
             <h3 className="section-subtitle">Seguimiento comercial</h3>
@@ -650,7 +648,7 @@ export default function OperadorForm({ id }: Props) {
             </div>
 
             <h3 className="section-subtitle" style={{ marginTop: "1.5rem" }}>
-              Datos personales
+              Datos del operador
             </h3>
             <div className="form-grid form-grid-3">
               <div className="form-field">
@@ -708,61 +706,13 @@ export default function OperadorForm({ id }: Props) {
                   ))}
                 </select>
               </div>
-            </div>
-
-            <div className="form-grid form-grid-3">
               <div className="form-field">
-                <label>Teléfono 1</label>
+                <label>Teléfono</label>
                 <input
                   type="tel"
                   value={form.telefono_1 ?? ""}
                   onChange={(e) => set("telefono_1", e.target.value || null)}
                   maxLength={10}
-                />
-              </div>
-              <div className="form-field">
-                <label>Teléfono 2</label>
-                <input
-                  type="tel"
-                  value={form.telefono_2 ?? ""}
-                  onChange={(e) => set("telefono_2", e.target.value || null)}
-                  maxLength={10}
-                />
-              </div>
-              <div className="form-field">
-                <label>Teléfono 3</label>
-                <input
-                  type="tel"
-                  value={form.telefono_3 ?? ""}
-                  onChange={(e) => set("telefono_3", e.target.value || null)}
-                  maxLength={10}
-                />
-              </div>
-            </div>
-
-            <div className="form-grid form-grid-2">
-              <div className="form-field">
-                <label>Escolaridad</label>
-                <select
-                  value={form.escolaridad ?? ""}
-                  onChange={(e) => set("escolaridad", e.target.value || null)}
-                >
-                  <option value="">— Seleccionar —</option>
-                  {ESCOLARIDADES.map((e) => (
-                    <option key={e} value={e}>
-                      {e}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-field">
-                <label>Antigüedad necesaria</label>
-                <input
-                  type="date"
-                  value={form.antiguedad_necesaria ?? ""}
-                  onChange={(e) =>
-                    set("antiguedad_necesaria", e.target.value || null)
-                  }
                 />
               </div>
             </div>
@@ -776,52 +726,15 @@ export default function OperadorForm({ id }: Props) {
               />
             </div>
 
-          </div>
-        )}
-
-        {/* ── Tab 1: Documentación ── */}
-        {!isNew && activeTab === 1 && (
-          <div className="form-section">
-            <h3 className="section-subtitle">Documentos del operador</h3>
-            <div className="checkbox-grid">
-              {(
-                [
-                  ["acta", "Acta de nacimiento"],
-                  ["identificacion", "Identificación oficial"],
-                  ["comprobante_domicilio", "Comprobante de domicilio"],
-                  ["formato_lleno_firmado", "Formato lleno y firmado"],
-                  ["pago_derechos", "Pago de derechos"],
-                ] as [keyof OperadorInsert, string][]
-              ).map(([key, label]) => (
-                <label key={key} className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={!!form[key]}
-                    onChange={(e) =>
-                      set(key, e.target.checked as OperadorInsert[typeof key])
-                    }
-                  />
-                  {label}
-                </label>
-              ))}
-            </div>
-
-            <div className="form-field form-field-full" style={{ marginTop: "1.25rem" }}>
-              <label>Trámite a realizar</label>
-              <input
-                type="text"
-                value={form.tramite_a_realizar ?? ""}
-                onChange={(e) => set("tramite_a_realizar", e.target.value || null)}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* ── Tab 2: Licencia y médico ── */}
-        {!isNew && activeTab === 2 && (
-          <div className="form-section">
-            <h3 className="section-subtitle">Expediente médico preventivo</h3>
             <div className="form-grid form-grid-2">
+              <div className="form-field">
+                <label>Trámite a realizar</label>
+                <input
+                  type="text"
+                  value={form.tramite_a_realizar ?? ""}
+                  onChange={(e) => set("tramite_a_realizar", e.target.value || null)}
+                />
+              </div>
               <div className="form-field">
                 <label>Número de expediente méd. prev.</label>
                 <input
@@ -834,10 +747,7 @@ export default function OperadorForm({ id }: Props) {
               </div>
             </div>
 
-            <h3 className="section-subtitle" style={{ marginTop: "1.5rem" }}>
-              Licencia
-            </h3>
-            <div className="form-grid form-grid-2">
+            <div className="form-grid form-grid-3">
               <div className="form-field">
                 <label>Número de licencia</label>
                 <input
@@ -847,7 +757,7 @@ export default function OperadorForm({ id }: Props) {
                 />
               </div>
               <div className="form-field">
-                <label>Vigencia</label>
+                <label>Vigencia de licencia</label>
                 <input
                   type="date"
                   value={form.licencia_vigencia ?? ""}
@@ -855,281 +765,6 @@ export default function OperadorForm({ id }: Props) {
                 />
               </div>
             </div>
-          </div>
-        )}
-
-        {/* ── Tab 3: Cita SCT ── */}
-        {!isNew && activeTab === 3 && (
-          <div className="form-section">
-            <div className="form-grid form-grid-2">
-              <div className="form-field">
-                <label>Fecha solicitada (cita)</label>
-                <input
-                  type="date"
-                  value={form.cita_fecha_solicitada ?? ""}
-                  onChange={(e) =>
-                    set("cita_fecha_solicitada", e.target.value || null)
-                  }
-                />
-              </div>
-              <div className="form-field">
-                <label>Fecha asignada (cita)</label>
-                <input
-                  type="date"
-                  value={form.cita_fecha_asignada ?? ""}
-                  onChange={(e) =>
-                    set("cita_fecha_asignada", e.target.value || null)
-                  }
-                />
-              </div>
-              <div className="form-field">
-                <label>Contraseña LFD</label>
-                <input
-                  type="text"
-                  value={form.contrasena_lfd ?? ""}
-                  onChange={(e) => set("contrasena_lfd", e.target.value || null)}
-                />
-              </div>
-              <div className="form-field">
-                <label>Cobro derechos EAP/SCT</label>
-                <input
-                  type="text"
-                  value={form.cobro_derechos_eap_sct ?? ""}
-                  onChange={(e) =>
-                    set("cobro_derechos_eap_sct", e.target.value || null)
-                  }
-                />
-              </div>
-              <div className="form-field">
-                <label>Forma de cobro (cita)</label>
-                <select
-                  value={form.forma_cobro_cita ?? ""}
-                  onChange={(e) => set("forma_cobro_cita", e.target.value || null)}
-                >
-                  <option value="">— Seleccionar —</option>
-                  {FORMAS_COBRO.map((f) => (
-                    <option key={f} value={f}>
-                      {f}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="checkbox-grid" style={{ marginTop: "1rem" }}>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={!!form.hoja_ayuda_pago_ventanilla}
-                  onChange={(e) =>
-                    set("hoja_ayuda_pago_ventanilla", e.target.checked)
-                  }
-                />
-                Hoja ayuda pago en ventanilla
-              </label>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={!!form.estatus_progreso_cita}
-                  onChange={(e) => set("estatus_progreso_cita", e.target.checked)}
-                />
-                En progreso
-              </label>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={!!form.estatus_concluido_cita}
-                  onChange={(e) => set("estatus_concluido_cita", e.target.checked)}
-                />
-                Concluido
-              </label>
-            </div>
-
-            <h3 className="section-subtitle" style={{ marginTop: "1.5rem" }}>
-              Traslado
-            </h3>
-            <div className="form-grid form-grid-2">
-              <div className="form-field">
-                <label>Fecha de traslado</label>
-                <input
-                  type="date"
-                  value={form.fecha_traslado ?? ""}
-                  onChange={(e) => set("fecha_traslado", e.target.value || null)}
-                />
-              </div>
-              <div className="form-field">
-                <label>Hora de encuentro</label>
-                <input
-                  type="time"
-                  value={form.hora_encuentro ?? ""}
-                  onChange={(e) => set("hora_encuentro", e.target.value || null)}
-                />
-              </div>
-              <div className="form-field">
-                <label>Punto de reunión</label>
-                <input
-                  type="text"
-                  value={form.punto_reunion ?? ""}
-                  onChange={(e) => set("punto_reunion", e.target.value || null)}
-                />
-              </div>
-              <div className="form-field">
-                <label>Forma de cobro (traslado)</label>
-                <select
-                  value={form.forma_cobro_traslado ?? ""}
-                  onChange={(e) =>
-                    set("forma_cobro_traslado", e.target.value || null)
-                  }
-                >
-                  <option value="">— Seleccionar —</option>
-                  {FORMAS_COBRO.map((f) => (
-                    <option key={f} value={f}>
-                      {f}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="form-field form-field-full">
-              <label>Observaciones del traslado</label>
-              <textarea
-                rows={2}
-                value={form.observaciones_traslado ?? ""}
-                onChange={(e) =>
-                  set("observaciones_traslado", e.target.value || null)
-                }
-              />
-            </div>
-          </div>
-        )}
-
-        {/* ── Tab 4: Curso ── */}
-        {!isNew && activeTab === 4 && (
-          <div className="form-section">
-            <div className="form-grid form-grid-2">
-              <div className="form-field">
-                <label>Medio de solicitud del curso</label>
-                <select
-                  value={form.medio_solicitud_curso ?? ""}
-                  onChange={(e) =>
-                    set("medio_solicitud_curso", e.target.value || null)
-                  }
-                >
-                  <option value="">— Seleccionar —</option>
-                  {MEDIOS_SOLICITUD.map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-field">
-                <label>Fecha en que se solicitó el curso</label>
-                <input
-                  type="date"
-                  value={form.fecha_solicitud_curso ?? ""}
-                  onChange={(e) =>
-                    set("fecha_solicitud_curso", e.target.value || null)
-                  }
-                />
-              </div>
-              <div className="form-field">
-                <label>Destinatario de la constancia</label>
-                <input
-                  type="text"
-                  value={form.destinatario_constancia ?? ""}
-                  onChange={(e) =>
-                    set("destinatario_constancia", e.target.value || null)
-                  }
-                />
-              </div>
-              <div className="form-field">
-                <label>Horas requeridas</label>
-                <input
-                  type="text"
-                  value={form.horas_requeridas ?? ""}
-                  onChange={(e) => set("horas_requeridas", e.target.value || null)}
-                />
-              </div>
-              <div className="form-field">
-                <label>Quién cobró el curso</label>
-                <input
-                  type="text"
-                  value={form.quien_cobro_curso ?? ""}
-                  onChange={(e) => set("quien_cobro_curso", e.target.value || null)}
-                />
-              </div>
-              <div className="form-field">
-                <label>Forma de cobro (curso)</label>
-                <select
-                  value={form.forma_cobro_curso ?? ""}
-                  onChange={(e) => set("forma_cobro_curso", e.target.value || null)}
-                >
-                  <option value="">— Seleccionar —</option>
-                  {FORMAS_COBRO.map((f) => (
-                    <option key={f} value={f}>
-                      {f}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="checkbox-grid" style={{ marginTop: "1rem" }}>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={!!form.entregado}
-                  onChange={(e) => set("entregado", e.target.checked)}
-                />
-                Entregado
-              </label>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={!!form.estatus_progreso_curso}
-                  onChange={(e) =>
-                    set("estatus_progreso_curso", e.target.checked)
-                  }
-                />
-                En progreso
-              </label>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={!!form.estatus_concluido_curso}
-                  onChange={(e) =>
-                    set("estatus_concluido_curso", e.target.checked)
-                  }
-                />
-                Concluido
-              </label>
-            </div>
-
-            {form.entregado && (
-              <div className="form-grid form-grid-2" style={{ marginTop: "1rem" }}>
-                <div className="form-field">
-                  <label>Fecha de entrega</label>
-                  <input
-                    type="date"
-                    value={form.entregado_fecha ?? ""}
-                    onChange={(e) =>
-                      set("entregado_fecha", e.target.value || null)
-                    }
-                  />
-                </div>
-                <div className="form-field">
-                  <label>Recibió</label>
-                  <input
-                    type="text"
-                    value={form.entregado_recibio ?? ""}
-                    onChange={(e) =>
-                      set("entregado_recibio", e.target.value || null)
-                    }
-                  />
-                </div>
-              </div>
-            )}
           </div>
         )}
 
