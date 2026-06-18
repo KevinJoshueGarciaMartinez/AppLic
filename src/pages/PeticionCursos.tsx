@@ -79,6 +79,7 @@ async function fetchCursos(
       )
     `)
     .eq("tipo_servicio", 2)
+    .eq("cancelado", false)
     .order("fecha_solicitud_curso", { ascending: true });
 
   if (desde) q = q.gte("fecha_solicitud_curso", desde);
