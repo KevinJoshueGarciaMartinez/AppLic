@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 import { normalizeForSearch } from "../lib/inputNormalization";
@@ -18,6 +18,7 @@ async function fetchOperadores(): Promise<Operador[]> {
 
 export default function Operadores() {
   const [busqueda, setBusqueda] = useState("");
+  const [, navigate] = useLocation();
 
   const { data: operadores = [], isLoading, isError, error } = useQuery({
     queryKey: ["operadores"],
@@ -82,45 +83,49 @@ export default function Operadores() {
                 <th>Promotor</th>
                 <th>Licencia</th>
                 <th>Fecha</th>
-                <th></th>
               </tr>
             </thead>
             <tbody>
               {filtrados.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="table-empty">
+                  <td colSpan={7} className="table-empty">
                     {busqueda
                       ? "No hay resultados para la búsqueda."
                       : "No hay operadores registrados. Crea el primero."}
                   </td>
                 </tr>
               ) : (
-                filtrados.map((op) => (
-                  <tr key={op.numero_consecutivo}>
-                    <td className="col-id">{op.numero_consecutivo}</td>
-                    <td className="col-nombre">
-                      {[op.nombre, op.apellido_paterno, op.apellido_materno]
-                        .filter(Boolean)
-                        .join(" ")}
-                    </td>
-                    <td className="col-curp">{op.curp ?? "—"}</td>
-                    <td>{op.telefono_1 ?? "—"}</td>
-                    <td>
-                      {op.promotores
-                        ? op.promotores.nombre
-                        : "—"}
-                    </td>
-                    <td>{op.licencia_numero ?? "—"}</td>
-                    <td className="col-fecha">{op.fecha ?? "—"}</td>
-                    <td>
-                      <Link href={`/operadores/${op.numero_consecutivo}`}>
-                        <button type="button" className="btn-edit">
-                          Ver
-                        </button>
-                      </Link>
-                    </td>
-                  </tr>
-                ))
+                filtrados.map((op) => {
+                  const nombreCompleto =
+                    [op.nombre, op.apellido_paterno, op.apellido_materno]
+                      .filter(Boolean)
+                      .join(" ") || `Operador ${op.numero_consecutivo}`;
+
+                  return (
+                    <tr
+                      key={op.numero_consecutivo}
+                      className="table-row-clickable"
+                      role="link"
+                      tabIndex={0}
+                      onClick={() => navigate(`/operadores/${op.numero_consecutivo}`)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          navigate(`/operadores/${op.numero_consecutivo}`);
+                        }
+                      }}
+                      aria-label={`Abrir expediente de ${nombreCompleto}`}
+                    >
+                      <td className="col-id">{op.numero_consecutivo}</td>
+                      <td className="col-nombre">{nombreCompleto}</td>
+                      <td className="col-curp">{op.curp ?? "—"}</td>
+                      <td>{op.telefono_1 ?? "—"}</td>
+                      <td>{op.promotores ? op.promotores.nombre : "—"}</td>
+                      <td>{op.licencia_numero ?? "—"}</td>
+                      <td className="col-fecha">{op.fecha ?? "—"}</td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
