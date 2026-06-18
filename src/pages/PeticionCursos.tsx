@@ -150,7 +150,7 @@ function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
       op?.licencia_numero ?? "",
       op?.direccion ?? "",
       op?.telefono_1 ?? "",
-      op?.quien_cobro_curso ?? "",
+      "ECA",
       c.promotor ?? "",
       op?.escolaridad ?? "",
       formatearFechaCorta(op?.licencia_vigencia),
