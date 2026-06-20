@@ -44,6 +44,8 @@ type ReciboDetalle = {
   importe: number;
   fecha: string;
   forma_pago: string | null;
+  pago_efectivo: number;
+  pago_deposito: number;
   referencia: string | null;
   concepto: string | null;
   venta_id: number | null;
@@ -84,7 +86,7 @@ async function fetchReciboDetalle(id: number): Promise<ReciboDetalle> {
   const { data, error } = await supabase
     .from("operador_saldo_movimientos")
     .select(
-      "id, operador_id, tipo, importe, fecha, forma_pago, referencia, concepto, venta_id, ticket_id, created_at",
+      "id, operador_id, tipo, importe, fecha, forma_pago, pago_efectivo, pago_deposito, referencia, concepto, venta_id, ticket_id, created_at",
     )
     .eq("id", id)
     .single();
@@ -193,6 +195,8 @@ export default function ReciboAbonoForm({ id }: Props) {
   const fechaPrefill = params.get("fecha") || hoyLocal();
   const montoPrefill = params.get("monto") || "";
   const formaPagoPrefill = params.get("formaPago") || "Efectivo";
+  const pagoEfectivoPrefill = params.get("pagoEfectivo") || "";
+  const pagoDepositoPrefill = params.get("pagoDeposito") || "";
   const referenciaPrefill = params.get("referencia") || "";
   const conceptoPrefill = params.get("concepto") || "";
 
@@ -201,6 +205,8 @@ export default function ReciboAbonoForm({ id }: Props) {
   const [operadorNombre, setOperadorNombre] = useState("");
   const [monto, setMonto] = useState(montoPrefill);
   const [formaPago, setFormaPago] = useState(formaPagoPrefill);
+  const [pagoEfectivo, setPagoEfectivo] = useState(pagoEfectivoPrefill);
+  const [pagoDeposito, setPagoDeposito] = useState(pagoDepositoPrefill);
   const [referencia, setReferencia] = useState(referenciaPrefill);
   const [concepto, setConcepto] = useState(conceptoPrefill);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -228,10 +234,22 @@ export default function ReciboAbonoForm({ id }: Props) {
       if (operadorId == null) throw new Error("Selecciona un operador.");
       const importe = parseMonto(monto);
       if (importe <= 0) throw new Error("Captura un monto mayor a cero.");
+      const montoEfectivo = parseMonto(pagoEfectivo);
+      const montoDeposito = parseMonto(pagoDeposito);
+      if (formaPago === "Dividida") {
+        const sumaDividida = Math.round((montoEfectivo + montoDeposito) * 100) / 100;
+        if (Math.abs(importe - sumaDividida) > 0.02) {
+          throw new Error(
+            "En pago dividido, el monto debe coincidir con la suma de efectivo y deposito.",
+          );
+        }
+      }
       const conceptoFinal = concepto.trim() || "Abono directo al operador";
       const newId = await insertAbonoSaldo(operadorId, importe, conceptoFinal, {
         fecha,
         formaPago,
+        pagoEfectivo: formaPago === "Dividida" ? montoEfectivo : 0,
+        pagoDeposito: formaPago === "Dividida" ? montoDeposito : 0,
         referencia,
       });
       if (!newId) throw new Error("No se pudo generar el recibo.");
@@ -253,6 +271,26 @@ export default function ReciboAbonoForm({ id }: Props) {
     }
     navigate("/ventas");
   };
+
+  function handleFormaPagoChange(value: string) {
+    setFormaPago(value);
+    if (value !== "Dividida") {
+      setPagoEfectivo("");
+      setPagoDeposito("");
+    }
+  }
+
+  function handlePagoDivididoChange(
+    field: "efectivo" | "deposito",
+    value: string,
+  ) {
+    const nextEfectivo = field === "efectivo" ? value : pagoEfectivo;
+    const nextDeposito = field === "deposito" ? value : pagoDeposito;
+    if (field === "efectivo") setPagoEfectivo(value);
+    if (field === "deposito") setPagoDeposito(value);
+    const total = Math.round((parseMonto(nextEfectivo) + parseMonto(nextDeposito)) * 100) / 100;
+    setMonto(total > 0 ? total.toFixed(2) : "");
+  }
 
   if (!isNew && isLoading) {
     return (
@@ -318,6 +356,18 @@ export default function ReciboAbonoForm({ id }: Props) {
                 <span className="recibo-label">Forma de pago</span>
                 <strong>{recibo.forma_pago ?? "—"}</strong>
               </div>
+              {recibo.forma_pago === "Dividida" && (
+                <>
+                  <div className="recibo-field">
+                    <span className="recibo-label">Efectivo</span>
+                    <strong>{fmtMoneda(Number(recibo.pago_efectivo ?? 0))}</strong>
+                  </div>
+                  <div className="recibo-field">
+                    <span className="recibo-label">Depósito</span>
+                    <strong>{fmtMoneda(Number(recibo.pago_deposito ?? 0))}</strong>
+                  </div>
+                </>
+              )}
               <div className="recibo-field">
                 <span className="recibo-label">Referencia</span>
                 <strong>{recibo.referencia?.trim() || "—"}</strong>
@@ -400,13 +450,42 @@ export default function ReciboAbonoForm({ id }: Props) {
             </div>
             <div className="form-field">
               <label>Forma de pago</label>
-              <select value={formaPago} onChange={(e) => setFormaPago(e.target.value)}>
+              <select value={formaPago} onChange={(e) => handleFormaPagoChange(e.target.value)}>
                 <option value="Efectivo">Efectivo</option>
                 <option value="Deposito">Depósito</option>
                 <option value="Transferencia">Transferencia</option>
                 <option value="Tarjeta">Tarjeta</option>
+                <option value="Dividida">Dividida</option>
               </select>
             </div>
+            {formaPago === "Dividida" && (
+              <>
+                <div className="form-field">
+                  <label>Efectivo (MXN)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={pagoEfectivo}
+                    onChange={(e) => handlePagoDivididoChange("efectivo", e.target.value)}
+                  />
+                </div>
+                <div className="form-field">
+                  <label>Depósito (MXN)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={pagoDeposito}
+                    onChange={(e) => handlePagoDivididoChange("deposito", e.target.value)}
+                  />
+                </div>
+              </>
+            )}
             <div className="form-field">
               <label>Referencia</label>
               <input

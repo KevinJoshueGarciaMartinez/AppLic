@@ -231,6 +231,8 @@ function buildReciboAbonoUrl(input: {
   fecha: string | null;
   monto: number;
   formaPago: string;
+  pagoEfectivo?: number | null;
+  pagoDeposito?: number | null;
   referencia: string | null;
   concepto: string | null;
 }) {
@@ -239,6 +241,12 @@ function buildReciboAbonoUrl(input: {
   params.set("fecha", input.fecha ?? hoyLocal());
   params.set("monto", input.monto.toFixed(2));
   params.set("formaPago", input.formaPago);
+  if (input.pagoEfectivo != null && input.pagoEfectivo > 0) {
+    params.set("pagoEfectivo", input.pagoEfectivo.toFixed(2));
+  }
+  if (input.pagoDeposito != null && input.pagoDeposito > 0) {
+    params.set("pagoDeposito", input.pagoDeposito.toFixed(2));
+  }
   if (input.referencia?.trim()) params.set("referencia", input.referencia.trim());
   if (input.concepto?.trim()) params.set("concepto", input.concepto.trim());
   return `/recibos-abono/nuevo?${params.toString()}`;
@@ -1057,8 +1065,10 @@ export default function VentaForm({ id }: Props) {
         return;
       }
       if (form.forma_pago === "Dividida") {
-        alert("Cuando no hay servicios, genera el recibo desde el flujo nuevo para capturarlo por un solo método de pago.");
-        return;
+        if (form.pago_saldo_operador > EPSILON_DEUDA) {
+          alert("El recibo nuevo con pago dividido solo admite efectivo y depósito.");
+          return;
+        }
       }
       if (form.operador_id == null) {
         alert("Selecciona un operador antes de continuar.");
@@ -1070,6 +1080,8 @@ export default function VentaForm({ id }: Props) {
           fecha: form.fecha ?? hoyLocal(),
           monto: round2(form.cobro),
           formaPago: form.forma_pago,
+          pagoEfectivo: form.forma_pago === "Dividida" ? form.pago_efectivo : 0,
+          pagoDeposito: form.forma_pago === "Dividida" ? form.pago_deposito : 0,
           referencia: form.numero_referencia,
           concepto: form.observaciones,
         }),
@@ -1133,12 +1145,27 @@ export default function VentaForm({ id }: Props) {
       setConfirmSobrepago(null);
       if (pending) {
         if (totalItems <= EPSILON_DEUDA && pending.payload.operador_id != null) {
+          if (
+            pending.payload.forma_pago === "Dividida" &&
+            Number(pending.payload.pago_saldo_operador ?? 0) > EPSILON_DEUDA
+          ) {
+            alert("El recibo nuevo con pago dividido solo admite efectivo y depósito.");
+            return;
+          }
           navigate(
             buildReciboAbonoUrl({
               operadorId: pending.payload.operador_id,
               fecha: pending.payload.fecha ?? hoyLocal(),
               monto: round2(pending.payload.cobro),
               formaPago: pending.payload.forma_pago,
+              pagoEfectivo:
+                pending.payload.forma_pago === "Dividida"
+                  ? pending.payload.pago_efectivo
+                  : 0,
+              pagoDeposito:
+                pending.payload.forma_pago === "Dividida"
+                  ? pending.payload.pago_deposito
+                  : 0,
               referencia: pending.payload.numero_referencia,
               concepto: pending.payload.observaciones,
             }),

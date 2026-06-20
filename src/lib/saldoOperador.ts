@@ -30,6 +30,8 @@ export interface OperadorSaldoMovimientoRow {
   importe: number;
   fecha: string | null;
   forma_pago: string | null;
+  pago_efectivo: number;
+  pago_deposito: number;
   referencia: string | null;
   concepto: string | null;
   venta_id: number | null;
@@ -43,7 +45,7 @@ export async function fetchMovimientosSaldo(
   const { data, error } = await supabase
     .from("operador_saldo_movimientos")
     .select(
-      "id, operador_id, tipo, importe, fecha, forma_pago, referencia, concepto, venta_id, ticket_id, created_at",
+      "id, operador_id, tipo, importe, fecha, forma_pago, pago_efectivo, pago_deposito, referencia, concepto, venta_id, ticket_id, created_at",
     )
     .eq("operador_id", operadorId)
     .order("created_at", { ascending: false })
@@ -61,6 +63,8 @@ export async function insertAbonoSaldo(
     ticketId?: number | null;
     fecha?: string | null;
     formaPago?: string | null;
+    pagoEfectivo?: number | null;
+    pagoDeposito?: number | null;
     referencia?: string | null;
   },
 ): Promise<number> {
@@ -71,6 +75,8 @@ export async function insertAbonoSaldo(
     importe: number;
     fecha?: string | null;
     forma_pago?: string | null;
+    pago_efectivo?: number;
+    pago_deposito?: number;
     referencia?: string | null;
     concepto: string | null;
     venta_id: number | null;
@@ -85,6 +91,8 @@ export async function insertAbonoSaldo(
   };
   if (opts?.fecha != null) payload.fecha = opts.fecha;
   if (opts?.formaPago !== undefined) payload.forma_pago = opts.formaPago ?? null;
+  if (opts?.pagoEfectivo != null) payload.pago_efectivo = Number(opts.pagoEfectivo) || 0;
+  if (opts?.pagoDeposito != null) payload.pago_deposito = Number(opts.pagoDeposito) || 0;
   if (opts?.referencia !== undefined) payload.referencia = opts.referencia?.trim() || null;
   const { data, error } = await supabase
     .from("operador_saldo_movimientos")
@@ -104,7 +112,7 @@ export async function fetchMovimientosSaldoTicket(
   let q = supabase
     .from("operador_saldo_movimientos")
     .select(
-      "id, operador_id, tipo, importe, fecha, forma_pago, referencia, concepto, venta_id, ticket_id, created_at",
+      "id, operador_id, tipo, importe, fecha, forma_pago, pago_efectivo, pago_deposito, referencia, concepto, venta_id, ticket_id, created_at",
     )
     .in("tipo", ["abono", "devolucion_cancelacion"])
     .order("created_at", { ascending: true });
