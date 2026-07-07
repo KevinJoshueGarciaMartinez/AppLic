@@ -354,7 +354,9 @@ function AuthScreen() {
     setLoading(true);
     setMessage("Enviando correo de recuperacion...");
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin,
+      });
       if (error) throw error;
       setMessage("Si el correo existe, te enviamos instrucciones para recuperar acceso.");
     } catch (error) {
@@ -431,6 +433,96 @@ function AuthScreen() {
   );
 }
 
+function ResetPasswordScreen({
+  onDone,
+}: {
+  onDone: () => void;
+}) {
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const submit = async () => {
+    if (!password || !confirmPassword) {
+      setMessage("Captura y confirma tu nueva contrasena.");
+      return;
+    }
+    if (password.length < 6) {
+      setMessage("La nueva contrasena debe tener al menos 6 caracteres.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setMessage("Las contrasenas no coinciden.");
+      return;
+    }
+
+    setLoading(true);
+    setMessage("Actualizando contrasena...");
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+      setMessage("Contrasena actualizada. Ya puedes iniciar sesion con la nueva clave.");
+      onDone();
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "No se pudo actualizar la contrasena.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKey = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") submit();
+  };
+
+  return (
+    <div className="auth-shell">
+      <section className="auth-card">
+        <div className="auth-logo">
+          <strong>AppLic</strong>
+          <span>ERP</span>
+        </div>
+        <h2>Restablecer contrasena</h2>
+        <p className="status-message">
+          Captura tu nueva contrasena para recuperar el acceso a tu cuenta.
+        </p>
+        <label>
+          Nueva contrasena
+          <input
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={handleKey}
+            type="password"
+            placeholder="••••••••"
+            autoFocus
+          />
+        </label>
+        <label>
+          Confirmar contrasena
+          <input
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            onKeyDown={handleKey}
+            type="password"
+            placeholder="••••••••"
+          />
+        </label>
+        <button
+          className="primary-btn"
+          onClick={submit}
+          type="button"
+          disabled={loading}
+        >
+          {loading ? "Actualizando..." : "Guardar nueva contrasena"}
+        </button>
+        {message && <p className="status-message">{message}</p>}
+      </section>
+    </div>
+  );
+}
+
 // ─── Wrapper para editar operador (extrae :id de la URL) ─────────────────────
 
 function OperadorEditWrapper() {
@@ -473,6 +565,7 @@ export default function App() {
   const [checkingSession, setCheckingSession] = useState(true);
   const [role, setRole] = useState<UserRole | null>(null);
   const [checkingRole, setCheckingRole] = useState(false);
+  const [isRecoveryFlow, setIsRecoveryFlow] = useState(false);
   const authUserRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -507,6 +600,13 @@ export default function App() {
   };
 
   useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const flowType = searchParams.get("type") ?? hashParams.get("type");
+    if (flowType === "recovery") {
+      setIsRecoveryFlow(true);
+    }
+
     let isMounted = true;
     supabase.auth
       .getSession()
@@ -533,6 +633,10 @@ export default function App() {
       const nextUserId = newSession?.user?.id ?? null;
       setSession(newSession);
       authUserRef.current = nextUserId;
+      if (event === "PASSWORD_RECOVERY") {
+        setIsRecoveryFlow(true);
+        return;
+      }
       if (event === "SIGNED_IN" && !prevUserId && !!nextUserId) {
         navigate("/");
       }
@@ -567,6 +671,17 @@ export default function App() {
 
   if (checkingSession || checkingRole) {
     return <div className="loading-screen">Cargando...</div>;
+  }
+
+  if (isRecoveryFlow && session) {
+    return (
+      <ResetPasswordScreen
+        onDone={() => {
+          setIsRecoveryFlow(false);
+          navigate("/");
+        }}
+      />
+    );
   }
 
   if (!session) {
