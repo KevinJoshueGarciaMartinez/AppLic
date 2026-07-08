@@ -674,10 +674,14 @@ export default function VentaForm({ id }: Props) {
   });
 
   const esCancelado = ventaData?.cancelado === true;
+  const esTicketDelDia = (ventaData?.fecha ?? "") === hoyLocal();
 
   const cancelMutation = useMutation({
     mutationFn: async () => {
       if (!motivoCancelacion.trim()) throw new Error("Indica el motivo de cancelación.");
+      if (!esTicketDelDia) {
+        throw new Error("Solo se pueden cancelar tickets registrados el mismo día.");
+      }
 
       const ahora = new Date().toISOString();
       const updateVenta = {
@@ -1994,7 +1998,7 @@ export default function VentaForm({ id }: Props) {
           >
             Volver
           </button>
-          {!isNew && !esCancelado && (
+          {!isNew && !esCancelado && esTicketDelDia && (
             <button
               type="button"
               className="btn-cancelar-ticket"
@@ -2021,6 +2025,12 @@ export default function VentaForm({ id }: Props) {
           )}
         </div>
       </form>
+
+      {!isNew && !esCancelado && ventaData && !esTicketDelDia && (
+        <div className="field-hint" style={{ marginTop: "10px" }}>
+          Los tickets solo se pueden cancelar el mismo día en que fueron registrados.
+        </div>
+      )}
 
       {/* Confirmación de sobrepago (nueva venta) */}
       {confirmSobrepago != null && (
