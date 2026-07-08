@@ -18,6 +18,7 @@ interface FilaComision {
   comision_pagada: boolean;
   promotor: string | null;
   id_promotor: number | null;
+  cancelado: boolean;
 }
 
 interface Filtros {
@@ -42,8 +43,9 @@ async function fetchComisiones(filtros: Filtros): Promise<FilaComision[]> {
   let q = supabase
     .from("ventas")
     .select(
-      "id, fecha, fecha_pago, operador_id, operador_nombre, servicio, costo, costo_promotor, comision_pagada, promotor, id_promotor",
+      "id, fecha, fecha_pago, operador_id, operador_nombre, servicio, costo, costo_promotor, comision_pagada, promotor, id_promotor, cancelado",
     )
+    .eq("cancelado", false)
     .order("fecha", { ascending: false });
 
   // Fechas son opcionales: solo aplican si están definidas
