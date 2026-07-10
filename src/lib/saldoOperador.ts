@@ -17,6 +17,7 @@ export async function fetchSaldoEnContraDeuda(operadorId: number): Promise<numbe
     .from("ventas")
     .select("faltante")
     .eq("operador_id", operadorId)
+    .eq("cancelado", false)
     .gt("faltante", 0);
   if (error) throw new Error(error.message);
   const rows = (data ?? []) as { faltante: number }[];
