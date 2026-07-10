@@ -19,6 +19,9 @@ type VentaListadoRow = {
   cobro: number;
   faltante: number;
   forma_pago: string | null;
+  pago_efectivo: number;
+  pago_deposito: number;
+  pago_saldo_operador: number;
   promotor: string | null;
   comision_pagada: boolean | null;
   cancelado: boolean;
@@ -30,6 +33,8 @@ type ReciboAbonoRow = {
   fecha: string | null;
   operador_id: number;
   forma_pago: string | null;
+  pago_efectivo: number;
+  pago_deposito: number;
   concepto: string | null;
   importe: number;
   created_at: string;
@@ -72,7 +77,7 @@ async function fetchVentas(fecha: string | null, verCanceladas: boolean): Promis
   let ventasQuery = supabase
     .from("ventas")
     .select(
-      "id, fecha, operador_id, operador_nombre, servicio, costo, cobro, faltante, forma_pago, promotor, comision_pagada, cancelado, motivo_cancelacion",
+      "id, fecha, operador_id, operador_nombre, servicio, costo, cobro, faltante, forma_pago, pago_efectivo, pago_deposito, pago_saldo_operador, promotor, comision_pagada, cancelado, motivo_cancelacion",
     )
     .order("fecha", { ascending: false })
     .order("id", { ascending: false });
@@ -80,7 +85,7 @@ async function fetchVentas(fecha: string | null, verCanceladas: boolean): Promis
   let recibosQuery = supabase
     .from("operador_saldo_movimientos")
     .select(
-      "id, fecha, operador_id, forma_pago, concepto, importe, created_at, operadores:operadores!operador_id(nombre, apellido_paterno, apellido_materno)",
+      "id, fecha, operador_id, forma_pago, pago_efectivo, pago_deposito, concepto, importe, created_at, operadores:operadores!operador_id(nombre, apellido_paterno, apellido_materno)",
     )
     .eq("tipo", "abono")
     .is("venta_id", null)
@@ -108,6 +113,9 @@ async function fetchVentas(fecha: string | null, verCanceladas: boolean): Promis
 
   const ventas: VentaListadoRow[] = ((ventasData ?? []) as VentaListadoRow[]).map((venta) => ({
     ...venta,
+    pago_efectivo: Number(venta.pago_efectivo ?? 0),
+    pago_deposito: Number(venta.pago_deposito ?? 0),
+    pago_saldo_operador: Number(venta.pago_saldo_operador ?? 0),
     kind: "venta" as const,
   }));
 
@@ -122,6 +130,19 @@ async function fetchVentas(fecha: string | null, verCanceladas: boolean): Promis
     cobro: Number(recibo.importe ?? 0),
     faltante: 0,
     forma_pago: recibo.forma_pago ?? "Efectivo",
+    pago_efectivo:
+      recibo.forma_pago === "Dividida"
+        ? Number(recibo.pago_efectivo ?? 0)
+        : recibo.forma_pago === "Deposito"
+          ? 0
+          : Number(recibo.importe ?? 0),
+    pago_deposito:
+      recibo.forma_pago === "Dividida"
+        ? Number(recibo.pago_deposito ?? 0)
+        : recibo.forma_pago === "Deposito"
+          ? Number(recibo.importe ?? 0)
+          : 0,
+    pago_saldo_operador: 0,
     promotor: null,
     comision_pagada: null,
     cancelado: false,
@@ -172,6 +193,12 @@ export default function Ventas() {
   const totalCobrado = filtradas.reduce((s, v) => s + (v.cobro ?? 0), 0);
   const totalFaltante = filtradas.reduce((s, v) => s + (v.faltante ?? 0), 0);
   const totalCosto = filtradas.reduce((s, v) => s + (v.costo ?? 0), 0);
+  const totalEfectivo = filtradas.reduce((s, v) => s + Number(v.pago_efectivo ?? 0), 0);
+  const totalDeposito = filtradas.reduce((s, v) => s + Number(v.pago_deposito ?? 0), 0);
+  const totalResguardo = filtradas.reduce(
+    (s, v) => s + Number(v.pago_saldo_operador ?? 0),
+    0,
+  );
 
   const esHoy = fechaFiltro === hoy();
 
@@ -268,6 +295,18 @@ export default function Ventas() {
           <div className="summary-item">
             <span className="summary-label">Registros</span>
             <span className="summary-value">{filtradas.length}</span>
+          </div>
+          <div className="summary-item">
+            <span className="summary-label">Cobrado en efectivo</span>
+            <span className="summary-value">{fmt(totalEfectivo)}</span>
+          </div>
+          <div className="summary-item">
+            <span className="summary-label">Cobrado en deposito</span>
+            <span className="summary-value">{fmt(totalDeposito)}</span>
+          </div>
+          <div className="summary-item">
+            <span className="summary-label">Tomado de resguardo</span>
+            <span className="summary-value">{fmt(totalResguardo)}</span>
           </div>
         </div>
       )}
