@@ -1970,14 +1970,22 @@ fieldset.venta-flujo-bloque:disabled {
   /* Ocultar todo el DOM, luego revelar solo el page-container */
   body * { visibility: hidden; }
 
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
   .page-container,
   .page-container * { visibility: visible; }
 
   .page-container {
-    position: fixed;
-    top: 0;
-    left: 0;
+    position: static !important;
     width: 100%;
+    max-width: none !important;
+    min-height: auto !important;
+    margin: 0 !important;
     padding: 16px 24px;
     background: #fff;
     color: #000;
@@ -2007,7 +2015,17 @@ fieldset.venta-flujo-bloque:disabled {
   .summary-item { visibility: visible !important; }
   .summary-label, .summary-value { color: #000 !important; }
 
+  .table-wrapper {
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+
   .data-table { font-size: 0.82rem; width: 100%; border-collapse: collapse; }
+  .data-table thead { display: table-header-group; }
+  .data-table tfoot { display: table-footer-group; }
+  .data-table tr { break-inside: avoid; page-break-inside: avoid; }
   .data-table th, .data-table td { padding: 5px 8px; border-bottom: 1px solid #ddd; color: #000; }
   .data-table th { background: #f0f0f0 !important; }
 
