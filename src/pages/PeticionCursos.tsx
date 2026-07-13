@@ -1,13 +1,11 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import * as XLSX from "xlsx";
 import { supabase } from "../lib/supabase";
 import type { Promotor } from "../lib/types";
 
-// ── Types ──────────────────────────────────────────────────────────────────────
-
 interface OperadorInfo {
+  numero_consecutivo: number;
   hora: string | null;
   nombre: string;
   apellido_paterno: string | null;
@@ -34,8 +32,6 @@ interface FilaCurso {
   observaciones: string | null;
   operadores: OperadorInfo | null;
 }
-
-// ── Fetchers ───────────────────────────────────────────────────────────────────
 
 async function fetchPromotores(): Promise<Promotor[]> {
   const { data, error } = await supabase
@@ -65,6 +61,7 @@ async function fetchCursos(
       forma_pago,
       observaciones,
       operadores!operador_id (
+        numero_consecutivo,
         hora,
         nombre,
         apellido_paterno,
@@ -91,8 +88,6 @@ async function fetchCursos(
   return (data ?? []) as unknown as FilaCurso[];
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
-
 function fmt(n: number) {
   return new Intl.NumberFormat("es-MX", {
     style: "currency",
@@ -117,84 +112,63 @@ function formatearFechaCorta(valor: string | null | undefined) {
   return `${dia}/${mes}/${anio}`;
 }
 
-// ── Excel export ───────────────────────────────────────────────────────────────
+async function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
+  const { default: ExcelJS } = await import("exceljs");
+  const response = await fetch("/templates/FORMATO_DE_PETICIONES_ECA.xlsx");
+  if (!response.ok) {
+    throw new Error("No se pudo cargar la plantilla de peticiones.");
+  }
 
-function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
-  const fechaEncabezado = new Date().toLocaleDateString("es-MX", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
+  const templateBuffer = await response.arrayBuffer();
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(templateBuffer);
+
+  const worksheet = workbook.worksheets[0];
+  if (!worksheet) {
+    throw new Error("La plantilla de peticiones no contiene hojas.");
+  }
+
+  cursos.forEach((curso, index) => {
+    const rowNumber = index + 2;
+    const op = curso.operadores;
+    const nombreCompleto = [op?.nombre, op?.apellido_paterno, op?.apellido_materno]
+      .filter(Boolean)
+      .join(" ");
+
+    worksheet.getCell(`A${rowNumber}`).value = op?.numero_consecutivo ?? "";
+    worksheet.getCell(`B${rowNumber}`).value = op?.hora ?? "";
+    worksheet.getCell(`C${rowNumber}`).value = nombreCompleto;
+    worksheet.getCell(`D${rowNumber}`).value = "";
+    worksheet.getCell(`E${rowNumber}`).value = "";
+    worksheet.getCell(`F${rowNumber}`).value = formatearFechaCorta(curso.fecha_solicitud_curso);
+    worksheet.getCell(`G${rowNumber}`).value = curso.servicio ?? "";
+    worksheet.getCell(`H${rowNumber}`).value = "";
+    worksheet.getCell(`I${rowNumber}`).value = op?.curp ?? "";
+    worksheet.getCell(`J${rowNumber}`).value = op?.licencia_numero ?? "";
+    worksheet.getCell(`K${rowNumber}`).value = op?.direccion ?? "";
+    worksheet.getCell(`L${rowNumber}`).value = op?.telefono_1 ?? "";
+    worksheet.getCell(`M${rowNumber}`).value = "ECA";
+    worksheet.getCell(`N${rowNumber}`).value = curso.promotor ?? "";
+    worksheet.getCell(`O${rowNumber}`).value = op?.escolaridad ?? "";
+    worksheet.getCell(`P${rowNumber}`).value = "";
+    worksheet.getCell(`Q${rowNumber}`).value = curso.observaciones ?? "";
   });
 
-  const headers = [
-    "Hora", "Nombre", "Apellido Paterno", "Apellido Materno",
-    "Texto 228", "Texto 169", "Fecha Solicitud", "Servicio",
-    "Texto 230", "CURP", "Licencia Núm.", "Dirección",
-    "Teléfono 1", "Quién cobró curso", "Promotor", "Escolaridad", "Licencia Vigencia",
-  ];
-
-  const dataRows = cursos.map((c) => {
-    const op = c.operadores;
-    return [
-      op?.hora ?? "",
-      op?.nombre ?? "",
-      op?.apellido_paterno ?? "",
-      op?.apellido_materno ?? "",
-      "",
-      "",
-      formatearFechaCorta(c.fecha_solicitud_curso),
-      c.servicio ?? "",
-      "",
-      op?.curp ?? "",
-      op?.licencia_numero ?? "",
-      op?.direccion ?? "",
-      op?.telefono_1 ?? "",
-      "ECA",
-      c.promotor ?? "",
-      op?.escolaridad ?? "",
-      formatearFechaCorta(op?.licencia_vigencia),
-    ];
+  const output = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([output], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });
-
-  const aoa = [
-    [fechaEncabezado], // Fila 1: fecha
-    headers,           // Fila 2: encabezados
-    ...dataRows,       // Fila 3+: datos
-  ];
-
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-
-  // Ancho de columnas aproximado
-  ws["!cols"] = [
-    { wch: 8 },  // Hora
-    { wch: 16 }, // Nombre
-    { wch: 16 }, // Ap. Paterno
-    { wch: 16 }, // Ap. Materno
-    { wch: 12 }, // Texto228
-    { wch: 12 }, // Texto169
-    { wch: 14 }, // Fecha Solicitud
-    { wch: 20 }, // Servicio
-    { wch: 12 }, // Texto230
-    { wch: 20 }, // CURP
-    { wch: 14 }, // Licencia
-    { wch: 24 }, // Dirección
-    { wch: 12 }, // Teléfono
-    { wch: 16 }, // Quién cobró
-    { wch: 16 }, // Promotor
-    { wch: 22 }, // Escolaridad
-    { wch: 14 }, // Lic. Vigencia
-  ];
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Petición de Cursos");
-
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
   const fecha = hoy();
   const sufijo = nombrePromotor ? `_${nombrePromotor.replace(/\s+/g, "_")}` : "";
-  XLSX.writeFile(wb, `Peticion_Cursos${sufijo}_${fecha}.xlsx`);
+  link.href = url;
+  link.download = `Peticion_Cursos${sufijo}_${fecha}.xlsx`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
-
-// ── Component ──────────────────────────────────────────────────────────────────
 
 export default function PeticionCursos() {
   const [, navigate] = useLocation();
@@ -235,14 +209,13 @@ export default function PeticionCursos() {
 
   return (
     <div className="page-container">
-      {/* ── Cabecera ── */}
       <div className="page-header no-print">
         <button className="ghost-btn" type="button" onClick={() => navigate("/reportes")}>
-          ← Reportes
+          {"<-"} Reportes
         </button>
         <div>
           <h1 className="page-title">
-            <span className="page-icon">📝</span> Petición de Cursos
+            <span className="page-icon">{"\u{1F4DD}"}</span> Peticion de Cursos
           </h1>
           <p className="page-subtitle">
             Ventas de tipo curso con datos del expediente del operador.
@@ -250,29 +223,20 @@ export default function PeticionCursos() {
         </div>
       </div>
 
-      {/* ── Filtros ── */}
       <form onSubmit={handleBuscar} className="filter-card no-print">
         <div className="filter-grid">
           <div className="form-field">
             <label>Fecha solicitud (desde)</label>
-            <input
-              type="date"
-              value={desde}
-              onChange={(e) => setDesde(e.target.value)}
-            />
+            <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
           </div>
           <div className="form-field">
             <label>Fecha solicitud (hasta)</label>
-            <input
-              type="date"
-              value={hasta}
-              onChange={(e) => setHasta(e.target.value)}
-            />
+            <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
           </div>
           <div className="form-field">
             <label>Promotor</label>
             <select value={idPromotor} onChange={(e) => setIdPromotor(e.target.value)}>
-              <option value="">— Todos —</option>
+              <option value="">-- Todos --</option>
               {promotores.map((p) => (
                 <option key={p.id_promotor} value={p.id_promotor}>
                   {p.nombre}
@@ -282,15 +246,13 @@ export default function PeticionCursos() {
           </div>
           <div className="form-field form-field-center">
             <button type="submit" className="btn-primary" disabled={isLoading}>
-              {isLoading ? "Cargando…" : "Buscar"}
+              {isLoading ? "Cargando..." : "Buscar"}
             </button>
           </div>
         </div>
       </form>
 
-      {isError && (
-        <div className="alert-error">Error: {(error as Error).message}</div>
-      )}
+      {isError && <div className="alert-error">Error: {(error as Error).message}</div>}
 
       {isLoading && (
         <div className="loading-state" style={{ marginTop: "20px" }}>
@@ -308,8 +270,15 @@ export default function PeticionCursos() {
 
       {cursos.length > 0 && (
         <>
-          {/* ── KPIs + botón Excel ── */}
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "20px", flexWrap: "wrap" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              marginTop: "20px",
+              flexWrap: "wrap",
+            }}
+          >
             <div className="summary-bar" style={{ margin: 0, flex: 1 }}>
               <div className="summary-item">
                 <span className="summary-label">Registros</span>
@@ -325,7 +294,11 @@ export default function PeticionCursos() {
               </div>
               <div className="summary-item">
                 <span className="summary-label">Faltante</span>
-                <span className={`summary-value ${totalFaltante > 0 ? "summary-value--red" : "summary-value--green"}`}>
+                <span
+                  className={`summary-value ${
+                    totalFaltante > 0 ? "summary-value--red" : "summary-value--green"
+                  }`}
+                >
                   {fmt(totalFaltante)}
                 </span>
               </div>
@@ -334,14 +307,17 @@ export default function PeticionCursos() {
             <button
               type="button"
               className="btn-primary"
-              onClick={() => exportarExcel(cursos, nombrePromotor)}
+              onClick={() => {
+                void exportarExcel(cursos, nombrePromotor).catch((err) => {
+                  alert(err instanceof Error ? err.message : "No se pudo generar el Excel.");
+                });
+              }}
               style={{ whiteSpace: "nowrap" }}
             >
-              ⬇️ Descargar Excel
+              Descargar Excel
             </button>
           </div>
 
-          {/* ── Tabla ── */}
           <div className="table-wrapper" style={{ marginTop: "16px" }}>
             <table className="data-table">
               <thead>
@@ -362,19 +338,25 @@ export default function PeticionCursos() {
                 {cursos.map((c) => {
                   const op = c.operadores;
                   const nombreCompleto = op
-                    ? [op.nombre, op.apellido_paterno, op.apellido_materno].filter(Boolean).join(" ")
-                    : "—";
+                    ? [op.nombre, op.apellido_paterno, op.apellido_materno]
+                        .filter(Boolean)
+                        .join(" ")
+                    : "-";
                   return (
                     <tr key={c.id}>
                       <td className="col-id">{c.id}</td>
-                      <td className="col-fecha">{c.fecha_solicitud_curso ?? "—"}</td>
+                      <td className="col-fecha">{c.fecha_solicitud_curso ?? "-"}</td>
                       <td>{nombreCompleto}</td>
-                      <td style={{ fontSize: "0.8em" }}>{op?.curp ?? "—"}</td>
-                      <td>{c.servicio ?? "—"}</td>
-                      <td>{c.promotor ?? "—"}</td>
+                      <td style={{ fontSize: "0.8em" }}>{op?.curp ?? "-"}</td>
+                      <td>{c.servicio ?? "-"}</td>
+                      <td>{c.promotor ?? "-"}</td>
                       <td className="col-money">{fmt(c.costo)}</td>
                       <td className="col-money col-money--green">{fmt(c.cobro)}</td>
-                      <td className={`col-money ${(c.faltante ?? 0) > 0 ? "col-money--red" : "col-money--green"}`}>
+                      <td
+                        className={`col-money ${
+                          (c.faltante ?? 0) > 0 ? "col-money--red" : "col-money--green"
+                        }`}
+                      >
                         {fmt(c.faltante ?? 0)}
                       </td>
                       <td>
@@ -396,10 +378,20 @@ export default function PeticionCursos() {
               </tbody>
               <tfoot>
                 <tr className="table-total-row">
-                  <td colSpan={6}><strong>TOTAL ({cursos.length} registros)</strong></td>
-                  <td className="col-money"><strong>{fmt(totalCosto)}</strong></td>
-                  <td className="col-money col-money--green"><strong>{fmt(totalCobrado)}</strong></td>
-                  <td className={`col-money ${totalFaltante > 0 ? "col-money--red" : "col-money--green"}`}>
+                  <td colSpan={6}>
+                    <strong>TOTAL ({cursos.length} registros)</strong>
+                  </td>
+                  <td className="col-money">
+                    <strong>{fmt(totalCosto)}</strong>
+                  </td>
+                  <td className="col-money col-money--green">
+                    <strong>{fmt(totalCobrado)}</strong>
+                  </td>
+                  <td
+                    className={`col-money ${
+                      totalFaltante > 0 ? "col-money--red" : "col-money--green"
+                    }`}
+                  >
                     <strong>{fmt(totalFaltante)}</strong>
                   </td>
                   <td />
