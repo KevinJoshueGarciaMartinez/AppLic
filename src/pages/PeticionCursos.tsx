@@ -135,7 +135,7 @@ async function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
       .filter(Boolean)
       .join(" ");
 
-    worksheet.getCell(`A${rowNumber}`).value = op?.numero_consecutivo ?? "";
+    worksheet.getCell(`A${rowNumber}`).value = index + 1;
     worksheet.getCell(`B${rowNumber}`).value = op?.hora ?? "";
     worksheet.getCell(`C${rowNumber}`).value = nombreCompleto;
     worksheet.getCell(`D${rowNumber}`).value = "";
