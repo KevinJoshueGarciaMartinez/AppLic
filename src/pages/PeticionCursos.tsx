@@ -100,11 +100,6 @@ function hoy() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function primerDiaMes() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-}
-
 function formatearFechaCorta(valor: string | null | undefined) {
   if (!valor) return "";
   const [anio = "", mes = "", dia = ""] = valor.slice(0, 10).split("-");
@@ -265,7 +260,7 @@ async function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
 
 export default function PeticionCursos() {
   const [, navigate] = useLocation();
-  const [desde, setDesde] = useState(primerDiaMes());
+  const [desde, setDesde] = useState(hoy());
   const [hasta, setHasta] = useState(hoy());
   const [idPromotor, setIdPromotor] = useState("");
   const [buscar, setBuscar] = useState(false);
