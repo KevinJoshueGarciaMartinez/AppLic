@@ -51,7 +51,6 @@ function fmtSaldo(n: number) {
     minimumFractionDigits: 2,
   }).format(n);
 }
-
 // ── fetch individual ──────────────────────────────────────────────────────────
 async function fetchOperador(id: number): Promise<Operador> {
   const { data, error } = await supabase
@@ -93,7 +92,6 @@ const MEDIOS_SOLICITUD = [
 const FORMAS_COBRO = ["Efectivo", "Transferencia", "Tarjeta", "Depósito"];
 
 // ── default empty form ────────────────────────────────────────────────────────
-void ESCOLARIDADES;
 void MEDIOS_SOLICITUD;
 void FORMAS_COBRO;
 
@@ -507,6 +505,20 @@ export default function OperadorForm({ id }: Props) {
                 </select>
               </div>
               <div className="form-field">
+                <label>Escolaridad</label>
+                <select
+                  value={form.escolaridad ?? ""}
+                  onChange={(e) => set("escolaridad", e.target.value || null)}
+                >
+                  <option value="">— Seleccionar —</option>
+                  {ESCOLARIDADES.map((escolaridad) => (
+                    <option key={escolaridad} value={escolaridad}>
+                      {escolaridad}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-field">
                 <label>Trámite a realizar</label>
                 <input
                   type="text"
@@ -728,6 +740,20 @@ export default function OperadorForm({ id }: Props) {
 
             <div className="form-grid form-grid-2">
               <div className="form-field">
+                <label>Escolaridad</label>
+                <select
+                  value={form.escolaridad ?? ""}
+                  onChange={(e) => set("escolaridad", e.target.value || null)}
+                >
+                  <option value="">— Seleccionar —</option>
+                  {ESCOLARIDADES.map((escolaridad) => (
+                    <option key={escolaridad} value={escolaridad}>
+                      {escolaridad}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-field">
                 <label>Trámite a realizar</label>
                 <input
                   type="text"
@@ -894,3 +920,4 @@ export default function OperadorForm({ id }: Props) {
     </div>
   );
 }
+

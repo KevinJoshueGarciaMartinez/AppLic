@@ -114,19 +114,65 @@ function formatearFechaCorta(valor: string | null | undefined) {
 
 async function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
   const { default: ExcelJS } = await import("exceljs");
-  const response = await fetch("/templates/FORMATO_DE_PETICIONES_ECA.xlsx");
-  if (!response.ok) {
-    throw new Error("No se pudo cargar la plantilla de peticiones.");
-  }
-
-  const templateBuffer = await response.arrayBuffer();
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(templateBuffer);
+  workbook.creator = "AppLic";
+  workbook.created = new Date();
+  workbook.modified = new Date();
 
-  const worksheet = workbook.worksheets[0];
-  if (!worksheet) {
-    throw new Error("La plantilla de peticiones no contiene hojas.");
-  }
+  const worksheet = workbook.addWorksheet("Peticion Cursos", {
+    views: [{ state: "frozen", ySplit: 1 }],
+  });
+  const columnas = [
+    { key: "A", width: 15.71, header: "Número.\nCONSECUTIVO" },
+    { key: "B", width: 15, header: "HORA  (CTRL\n+ SHIFT +\nPUNTO)" },
+    { key: "C", width: 34.14, header: "NOMBRE CAPACITANDO" },
+    { key: "D", width: 6.57, header: "CCyA" },
+    { key: "E", width: 5.71, header: "CCyA" },
+    { key: "F", width: 10.71, header: "FECHA" },
+    { key: "G", width: 11.29, header: "SERVICIOS" },
+    { key: "H", width: 5.57, header: "CCyA" },
+    { key: "I", width: 25.71, header: "CURP" },
+    { key: "J", width: 13.29, header: "No. DE LICENCIA" },
+    { key: "K", width: 42.57, header: "DIRECCION" },
+    { key: "L", width: 13.14, header: "TELEFONO" },
+    { key: "M", width: 8.71, header: "QUIEN COBRO" },
+    { key: "N", width: 14.14, header: "GESTOR" },
+    { key: "O", width: 13.43, header: "ESCOLARIDAD" },
+    { key: "P", width: 10.86, header: "CCyA" },
+    { key: "Q", width: 42.86, header: "OBSERVACIONES" },
+  ] as const;
+  const columnasRojas = new Set(["D", "E", "H", "P"]);
+  const colorEncabezado = "FF92D8F2";
+  const bordeDelgado = {
+    top: { style: "thin" as const, color: { argb: "FF000000" } },
+    left: { style: "thin" as const, color: { argb: "FF000000" } },
+    bottom: { style: "thin" as const, color: { argb: "FF000000" } },
+    right: { style: "thin" as const, color: { argb: "FF000000" } },
+  };
+
+  columnas.forEach(({ key, width, header }) => {
+    worksheet.getColumn(key).width = width;
+    const cell = worksheet.getCell(`${key}1`);
+    cell.value = header;
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: colorEncabezado },
+    };
+    cell.font = {
+      name: "Aptos Narrow",
+      size: 11,
+      bold: true,
+      color: { argb: columnasRojas.has(key) ? "FFFF0000" : "FF000000" },
+    };
+    cell.alignment = {
+      horizontal: "center",
+      vertical: "middle",
+      wrapText: true,
+    };
+    cell.border = bordeDelgado;
+  });
+  worksheet.getRow(1).height = 39.75;
 
   cursos.forEach((curso, index) => {
     const rowNumber = index + 2;
@@ -152,7 +198,54 @@ async function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
     worksheet.getCell(`O${rowNumber}`).value = op?.escolaridad ?? "";
     worksheet.getCell(`P${rowNumber}`).value = "";
     worksheet.getCell(`Q${rowNumber}`).value = curso.observaciones ?? "";
+
+    worksheet.getRow(rowNumber).height = 24;
+
+    columnas.forEach(({ key }) => {
+      const cell = worksheet.getCell(`${key}${rowNumber}`);
+      cell.border = bordeDelgado;
+      cell.font = {
+        name: "Aptos Narrow",
+        size: 11,
+        color: { argb: "FF000000" },
+      };
+
+      if (key === "B" || key === "F" || key === "I" || key === "L" || key === "M") {
+        cell.alignment = { horizontal: "center", vertical: "middle" };
+      } else if (key === "Q") {
+        cell.alignment = {
+          horizontal: "left",
+          vertical: "middle",
+          wrapText: true,
+        };
+      } else if (key === "C" || key === "G" || key === "K" || key === "N" || key === "O") {
+        cell.alignment = {
+          horizontal: "left",
+          vertical: "middle",
+          wrapText: true,
+        };
+      } else {
+        cell.alignment = { vertical: "middle" };
+      }
+    });
   });
+
+  worksheet.pageSetup = {
+    orientation: "landscape",
+    paperSize: 9,
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0,
+    margins: {
+      left: 0.3,
+      right: 0.3,
+      top: 0.4,
+      bottom: 0.4,
+      header: 0.2,
+      footer: 0.2,
+    },
+  };
+  worksheet.headerFooter.oddFooter = "&LAppLic&R&P / &N";
 
   const output = await workbook.xlsx.writeBuffer();
   const blob = new Blob([output], {
