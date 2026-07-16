@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
+import { joinNameParts, normalizeNamePart } from "../lib/names";
 import type { Operador, OperadorInsert } from "../lib/types";
 import { MEDIOS_CAPTACION, etiquetaMedioCaptacion } from "../lib/mediosCaptacion";
 import { ASESORES_OPCIONES, asesorTonoClass } from "../lib/asesoresCatalogo";
@@ -114,9 +115,7 @@ async function fetchProspectos(
 }
 
 function nombreCompleto(op: FilaSeguimiento) {
-  return [op.nombre, op.apellido_paterno, op.apellido_materno]
-    .filter(Boolean)
-    .join(" ");
+  return joinNameParts(op.nombre, op.apellido_paterno, op.apellido_materno);
 }
 
 function hoyISO() {
@@ -251,9 +250,9 @@ function modalToInsert(m: ModalProspecto): OperadorInsert {
   const tel = m.telefono_1.replace(/\D/g, "").slice(0, 10);
   return {
     ...baseProspectoInsert(),
-    nombre: m.nombre.trim(),
-    apellido_paterno: m.apellido_paterno.trim() || null,
-    apellido_materno: m.apellido_materno.trim() || null,
+    nombre: normalizeNamePart(m.nombre),
+    apellido_paterno: normalizeNamePart(m.apellido_paterno) || null,
+    apellido_materno: normalizeNamePart(m.apellido_materno) || null,
     telefono_1: tel || null,
     medio_captacion: m.medio_captacion.trim() || null,
     // Fecha de captacion = dia de registro; no editable en UI.

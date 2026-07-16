@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
+import { joinNameParts } from "../lib/names";
 import type { Promotor } from "../lib/types";
 
 interface OperadorInfo {
@@ -172,9 +173,11 @@ async function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
   cursos.forEach((curso, index) => {
     const rowNumber = index + 2;
     const op = curso.operadores;
-    const nombreCompleto = [op?.nombre, op?.apellido_paterno, op?.apellido_materno]
-      .filter(Boolean)
-      .join(" ");
+    const nombreCompleto = joinNameParts(
+      op?.nombre,
+      op?.apellido_paterno,
+      op?.apellido_materno,
+    );
 
     worksheet.getCell(`A${rowNumber}`).value = index + 1;
     worksheet.getCell(`B${rowNumber}`).value = op?.hora ?? "";
@@ -426,9 +429,7 @@ export default function PeticionCursos() {
                 {cursos.map((c) => {
                   const op = c.operadores;
                   const nombreCompleto = op
-                    ? [op.nombre, op.apellido_paterno, op.apellido_materno]
-                        .filter(Boolean)
-                        .join(" ")
+                    ? joinNameParts(op.nombre, op.apellido_paterno, op.apellido_materno)
                     : "-";
                   return (
                     <tr key={c.id}>

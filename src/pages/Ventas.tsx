@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
+import { joinNameParts } from "../lib/names";
 import { normalizeForSearch } from "../lib/inputNormalization";
 
 function hoy() {
@@ -68,9 +69,7 @@ function nombreOperador(
     | undefined,
 ) {
   const base = Array.isArray(op) ? op[0] : op;
-  return [base?.nombre, base?.apellido_paterno, base?.apellido_materno]
-    .filter(Boolean)
-    .join(" ");
+  return joinNameParts(base?.nombre, base?.apellido_paterno, base?.apellido_materno);
 }
 
 async function fetchVentas(fecha: string | null, verCanceladas: boolean): Promise<VentaListadoRow[]> {

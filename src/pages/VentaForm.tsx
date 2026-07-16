@@ -34,6 +34,7 @@ import {
   normalizeForSearch,
   normalizeUppercaseNoAccents,
 } from "../lib/inputNormalization";
+import { joinNameParts } from "../lib/names";
 
 const EPSILON_DEUDA = 0.005;
 const NORMALIZED_TEXT_FIELDS = new Set<keyof VentaInsert>(["numero_referencia"]);
@@ -167,7 +168,7 @@ async function buscarOperadores(texto: string): Promise<Operador[]> {
   return operadores
     .filter((op) => {
       const nombreCompleto = normalizeForSearch(
-        [op.nombre, op.apellido_paterno, op.apellido_materno].filter(Boolean).join(" "),
+        joinNameParts(op.nombre, op.apellido_paterno, op.apellido_materno),
       );
       const curp = normalizeForSearch(op.curp);
       const tel = normalizeForSearch(op.telefono_1);
@@ -339,9 +340,7 @@ function OperadorSearch({
 
   function seleccionar(op: Operador) {
     const nombre = normalizeUppercaseNoAccents(
-      [op.nombre, op.apellido_paterno, op.apellido_materno]
-      .filter(Boolean)
-      .join(" "),
+      joinNameParts(op.nombre, op.apellido_paterno, op.apellido_materno),
     );
     setTexto(nombre);
     setAbierto(false);
@@ -368,9 +367,7 @@ function OperadorSearch({
               onMouseDown={() => seleccionar(op)}
             >
               <span className="autocomplete-nombre">
-                {[op.nombre, op.apellido_paterno, op.apellido_materno]
-                  .filter(Boolean)
-                  .join(" ")}
+                {joinNameParts(op.nombre, op.apellido_paterno, op.apellido_materno)}
               </span>
               <span className="autocomplete-curp">
                 {op.curp ?? "Sin CURP"}

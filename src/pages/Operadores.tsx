@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 import { normalizeForSearch } from "../lib/inputNormalization";
+import { joinNameParts } from "../lib/names";
 import type { Operador } from "../lib/types";
 
 async function fetchOperadores(): Promise<Operador[]> {
@@ -28,7 +29,7 @@ export default function Operadores() {
   const filtrados = operadores.filter((op) => {
     const texto = normalizeForSearch(busqueda);
     const nombre = normalizeForSearch(
-      `${op.nombre ?? ""} ${op.apellido_paterno ?? ""} ${op.apellido_materno ?? ""}`,
+      joinNameParts(op.nombre, op.apellido_paterno, op.apellido_materno),
     );
     const curp = normalizeForSearch(op.curp);
     const tel = normalizeForSearch(op.telefono_1);
@@ -97,9 +98,7 @@ export default function Operadores() {
               ) : (
                 filtrados.map((op) => {
                   const nombreCompleto =
-                    [op.nombre, op.apellido_paterno, op.apellido_materno]
-                      .filter(Boolean)
-                      .join(" ") || `Operador ${op.numero_consecutivo}`;
+                    joinNameParts(op.nombre, op.apellido_paterno, op.apellido_materno) || `Operador ${op.numero_consecutivo}`;
 
                   return (
                     <tr

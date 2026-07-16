@@ -18,6 +18,7 @@ import {
   esEstatusSeguimientoEnCatalogo,
 } from "../lib/estatusSeguimiento";
 import { normalizeUppercaseNoAccents } from "../lib/inputNormalization";
+import { joinNameParts, normalizeNamePart } from "../lib/names";
 import HistorialVentasOperador from "../components/HistorialVentasOperador";
 
 /** Pestañas visibles en expediente simplificado. */
@@ -341,6 +342,9 @@ export default function OperadorForm({ id }: Props) {
       fecha_captacion: isNew
         ? (form.fecha_captacion || new Date().toISOString().slice(0, 10))
         : form.fecha_captacion,
+      nombre: normalizeNamePart(form.nombre),
+      apellido_paterno: normalizeNamePart(form.apellido_paterno) || null,
+      apellido_materno: normalizeNamePart(form.apellido_materno) || null,
       curp: form.es_prospecto
         ? (form.curp?.trim() || null)
         : (form.curp ?? "").trim().toUpperCase(),
@@ -387,9 +391,7 @@ export default function OperadorForm({ id }: Props) {
           </h1>
           {!isNew && (
             <p className="page-subtitle">
-              {[form.nombre, form.apellido_paterno, form.apellido_materno]
-                .filter(Boolean)
-                .join(" ")}
+              {joinNameParts(form.nombre, form.apellido_paterno, form.apellido_materno)}
             </p>
           )}
         </div>
