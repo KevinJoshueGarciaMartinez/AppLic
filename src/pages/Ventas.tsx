@@ -42,13 +42,15 @@ type ReciboAbonoRow = {
   operadores:
     | {
         nombre: string | null;
-        apellido_paterno: string | null;
-        apellido_materno: string | null;
-      }
+      apellido_paterno: string | null;
+      apellido_materno: string | null;
+      asesor: string | null;
+    }
     | {
         nombre: string | null;
         apellido_paterno: string | null;
         apellido_materno: string | null;
+        asesor: string | null;
       }[]
     | null;
 };
@@ -84,7 +86,7 @@ async function fetchVentas(fecha: string | null, verCanceladas: boolean): Promis
   let recibosQuery = supabase
     .from("operador_saldo_movimientos")
     .select(
-      "id, fecha, operador_id, forma_pago, pago_efectivo, pago_deposito, concepto, importe, created_at, operadores:operadores!operador_id(nombre, apellido_paterno, apellido_materno)",
+      "id, fecha, operador_id, forma_pago, pago_efectivo, pago_deposito, concepto, importe, created_at, operadores:operadores!operador_id(nombre, apellido_paterno, apellido_materno, asesor)",
     )
     .eq("tipo", "abono")
     .is("venta_id", null)
@@ -143,6 +145,7 @@ async function fetchVentas(fecha: string | null, verCanceladas: boolean): Promis
           : 0,
     pago_saldo_operador: 0,
     promotor: null,
+    asesor: Array.isArray(recibo.operadores) ? recibo.operadores[0]?.asesor ?? null : recibo.operadores?.asesor ?? null,
     comision_pagada: null,
     cancelado: false,
     motivo_cancelacion: recibo.concepto ?? null,
@@ -153,6 +156,11 @@ async function fetchVentas(fecha: string | null, verCanceladas: boolean): Promis
     if (cmpFecha !== 0) return cmpFecha;
     return b.id - a.id;
   });
+}
+
+function asesorDelRegistro(v: VentaListadoRow): string | null {
+  if (v.kind !== "recibo_abono") return null;
+  return v.asesor?.trim() || null;
 }
 
 function fmt(n: number) {
@@ -380,7 +388,7 @@ export default function Ventas() {
                         </span>
                       )}
                     </td>
-                    <td>{v.promotor ?? "—"}</td>
+                    <td>{v.promotor ?? asesorDelRegistro(v) ?? "—"}</td>
                     <td>
                       {v.kind === "recibo_abono" ? (
                         <span className="badge badge--gray">—</span>
