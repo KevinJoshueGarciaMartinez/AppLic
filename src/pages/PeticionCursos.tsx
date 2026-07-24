@@ -176,7 +176,8 @@ async function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
   cursos.forEach((curso, index) => {
     const op = curso.operadores;
     const nombreCompleto = op ? joinNameParts(op.nombre, op.apellido_paterno, op.apellido_materno) : "";
-    const fila = worksheet.addRow({
+    const rowNumber = index + 2;
+    const values: Record<string, string | number> = {
       A: index + 1,
       B: op?.hora ?? "",
       C: nombreCompleto,
@@ -190,11 +191,11 @@ async function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
       N: curso.promotor ?? "",
       O: op?.escolaridad ?? "",
       Q: curso.observaciones ?? "",
-    });
+    };
 
-    fila.height = 24;
-    fila.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-      const columnKey = worksheet.getColumn(colNumber).letter;
+    for (const [key, value] of Object.entries(values)) {
+      const cell = worksheet.getCell(`${key}${rowNumber}`);
+      cell.value = value;
       cell.font = {
         name: "Arial",
         size: 10,
@@ -202,12 +203,24 @@ async function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
       };
       cell.alignment = {
         vertical: "middle",
-        horizontal: columnKey === "C" || columnKey === "K" || columnKey === "Q" ? "left" : "center",
+        horizontal: key === "C" || key === "K" || key === "Q" ? "left" : "center",
         wrapText: true,
       };
       cell.border = bordeDelgado;
-    });
+    }
+    worksheet.getRow(rowNumber).height = 24;
   });
+
+  for (let rowNumber = 2; rowNumber <= 213; rowNumber += 1) {
+    worksheet.getCell(`G${rowNumber}`).dataValidation = {
+      type: "list",
+      allowBlank: true,
+      formulae: ['"R A N,R A I,R B N,R B I,R C N,R E MRP,R E TSS-TSR,O A N,O A I,O SE BN,O SE BI,O C E BN"'],
+      showErrorMessage: true,
+      errorTitle: "Servicio no valido",
+      error: "Selecciona un servicio de la lista desplegable.",
+    };
+  }
 
   worksheet.pageSetup = {
     orientation: "landscape",
