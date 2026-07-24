@@ -126,11 +126,11 @@ async function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
     { key: "A", width: 15.71, header: "Número.\nCONSECUTIVO" },
     { key: "B", width: 15, header: "HORA  (CTRL\n+ SHIFT +\nPUNTO)" },
     { key: "C", width: 34.14, header: "NOMBRE CAPACITANDO" },
-    { key: "D", width: 6.57, header: "CCyA" },
-    { key: "E", width: 5.71, header: "CCyA" },
+    { key: "D", width: 8.14, header: "CCyA" },
+    { key: "E", width: 8.14, header: "CCyA" },
     { key: "F", width: 10.71, header: "FECHA" },
     { key: "G", width: 11.29, header: "SERVICIOS" },
-    { key: "H", width: 5.57, header: "CCyA" },
+    { key: "H", width: 8.14, header: "CCyA" },
     { key: "I", width: 25.71, header: "CURP" },
     { key: "J", width: 13.29, header: "No. DE LICENCIA" },
     { key: "K", width: 42.57, header: "DIRECCION" },
@@ -138,7 +138,7 @@ async function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
     { key: "M", width: 8.71, header: "QUIEN COBRO" },
     { key: "N", width: 14.14, header: "GESTOR" },
     { key: "O", width: 13.43, header: "ESCOLARIDAD" },
-    { key: "P", width: 10.86, header: "CCyA" },
+    { key: "P", width: 8.14, header: "CCyA" },
     { key: "Q", width: 42.86, header: "OBSERVACIONES" },
   ] as const;
   const serviciosCurso = [
@@ -193,8 +193,8 @@ async function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
     cell.border = bordeDelgado;
   });
 
-  worksheet.getColumn("S").width = 16;
-  worksheet.getColumn("T").width = 54;
+  worksheet.getColumn("S").width = 18;
+  worksheet.getColumn("T").width = 58;
   worksheet.getCell("S1").value = "SERVICIO";
   worksheet.getCell("T1").value = "DESCRIPCION";
   ["S1", "T1"].forEach((addr) => {
@@ -278,12 +278,12 @@ async function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
     fitToWidth: 1,
     fitToHeight: 0,
     margins: {
-      left: 0.3,
-      right: 0.3,
-      top: 0.4,
-      bottom: 0.4,
-      header: 0.2,
-      footer: 0.2,
+      left: 0.5,
+      right: 0.5,
+      top: 0.45,
+      bottom: 0.45,
+      header: 0.25,
+      footer: 0.25,
     },
   };
   const output = await workbook.xlsx.writeBuffer();
