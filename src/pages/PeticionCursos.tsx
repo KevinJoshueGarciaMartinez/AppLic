@@ -141,6 +141,26 @@ async function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
     { key: "P", width: 10.86, header: "CCyA" },
     { key: "Q", width: 42.86, header: "OBSERVACIONES" },
   ] as const;
+  const serviciosCurso = [
+    { codigo: "R A N", descripcion: "Renovación en A Nacional" },
+    { codigo: "R A I", descripcion: "Renovación en A Internacional" },
+    { codigo: "R B N", descripcion: "Renovación en B Nacional" },
+    { codigo: "R B I", descripcion: "Renovación en B Internacional" },
+    { codigo: "R C N", descripcion: "Renovación en C Nacional" },
+    { codigo: "R C I", descripcion: "Renovación en C Internacional" },
+    { codigo: "R E MRP", descripcion: "Renovación en E Materiales y Residuos Peligrosos" },
+    { codigo: "R E TSS-TSR", descripcion: "Renovación en E Doblemente Articulado" },
+    { codigo: "O A N", descripcion: "Obtención en A Nacional" },
+    { codigo: "O A I", descripcion: "Obtención en A Internacional" },
+    { codigo: "O SE BN", descripcion: "Obtención Sin Experiencia B Nacional" },
+    { codigo: "O SE BI", descripcion: "Obtención Sin Experiencia B Internacional" },
+    { codigo: "O C E BN", descripcion: "Obtención Con Experiencia B Nacional" },
+    { codigo: "O C E BI", descripcion: "Obtención Con Experiencia B Internacional" },
+    { codigo: "O SE CN", descripcion: "Obtención Sin Experiencia C Nacional" },
+    { codigo: "O SE CI", descripcion: "Obtención Sin Experiencia C Internacional" },
+    { codigo: "O C E CN", descripcion: "Obtención Con Experiencia C Nacional" },
+    { codigo: "O C E CI", descripcion: "Obtención Con Experiencia C Internacional" },
+  ];
   const columnasRojas = new Set(["D", "E", "H", "P"]);
   const colorEncabezado = "FF92D8F2";
   const bordeDelgado = {
@@ -172,6 +192,35 @@ async function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
     };
     cell.border = bordeDelgado;
   });
+
+  worksheet.getColumn("S").width = 16;
+  worksheet.getColumn("T").width = 54;
+  worksheet.getCell("S1").value = "SERVICIO";
+  worksheet.getCell("T1").value = "DESCRIPCION";
+  ["S1", "T1"].forEach((addr) => {
+    const cell = worksheet.getCell(addr);
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: colorEncabezado },
+    };
+    cell.font = {
+      name: "Arial",
+      size: 10,
+      bold: true,
+      color: { argb: "FF000000" },
+    };
+    cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+    cell.border = bordeDelgado;
+  });
+  serviciosCurso.forEach((servicio, index) => {
+    const rowNumber = index + 2;
+    worksheet.getCell(`S${rowNumber}`).value = servicio.codigo;
+    worksheet.getCell(`T${rowNumber}`).value = servicio.descripcion;
+    worksheet.getRow(rowNumber).height = 20;
+  });
+  worksheet.getColumn("S").hidden = false;
+  worksheet.getColumn("T").hidden = false;
 
   cursos.forEach((curso, index) => {
     const op = curso.operadores;
@@ -215,7 +264,7 @@ async function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
     worksheet.getCell(`G${rowNumber}`).dataValidation = {
       type: "list",
       allowBlank: true,
-      formulae: ['"R A N,R A I,R B N,R B I,R C N,R E MRP,R E TSS-TSR,O A N,O A I,O SE BN,O SE BI,O C E BN"'],
+      formulae: [`$S$2:$S$${serviciosCurso.length + 1}`],
       showErrorMessage: true,
       errorTitle: "Servicio no valido",
       error: "Selecciona un servicio de la lista desplegable.",
