@@ -271,6 +271,15 @@ async function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
     };
   }
 
+  for (let rowNumber = 2; rowNumber <= 213; rowNumber += 1) {
+    for (const key of ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q"] as const) {
+      const cell = worksheet.getCell(`${key}${rowNumber}`);
+      if (!cell.value) {
+        cell.border = bordeDelgado;
+      }
+    }
+  }
+
   worksheet.pageSetup = {
     orientation: "landscape",
     paperSize: 9,
