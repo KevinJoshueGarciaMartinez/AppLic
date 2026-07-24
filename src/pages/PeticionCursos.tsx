@@ -225,9 +225,6 @@ async function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
       footer: 0.2,
     },
   };
-  worksheet.headerFooter ??= {};
-  worksheet.headerFooter.oddFooter = "&LAppLic&R&P / &N";
-
   const output = await workbook.xlsx.writeBuffer();
   const blob = new Blob([output], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
