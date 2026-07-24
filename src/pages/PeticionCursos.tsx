@@ -111,64 +111,48 @@ function formatearFechaCorta(valor: string | null | undefined) {
 async function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
   const { default: ExcelJS } = await import("exceljs");
   const workbook = new ExcelJS.Workbook();
+  const plantillaUrl = "/templates/FORMATO_DE_PETICIONES_ECA.xlsx";
+  const plantilla = await fetch(plantillaUrl).then((res) => {
+    if (!res.ok) {
+      throw new Error(`No se pudo cargar la plantilla de peticion (${res.status})`);
+    }
+    return res.arrayBuffer();
+  });
+
+  await workbook.xlsx.load(plantilla);
   workbook.creator = "AppLic";
-  workbook.created = new Date();
   workbook.modified = new Date();
 
-  const worksheet = workbook.addWorksheet("Peticion Cursos", {
-    views: [{ state: "frozen", ySplit: 1 }],
-  });
-  const columnas = [
-    { key: "A", width: 15.71, header: "Número.\nCONSECUTIVO" },
-    { key: "B", width: 15, header: "HORA  (CTRL\n+ SHIFT +\nPUNTO)" },
-    { key: "C", width: 34.14, header: "NOMBRE CAPACITANDO" },
-    { key: "D", width: 6.57, header: "CCyA" },
-    { key: "E", width: 5.71, header: "CCyA" },
-    { key: "F", width: 10.71, header: "FECHA" },
-    { key: "G", width: 11.29, header: "SERVICIOS" },
-    { key: "H", width: 5.57, header: "CCyA" },
-    { key: "I", width: 25.71, header: "CURP" },
-    { key: "J", width: 13.29, header: "No. DE LICENCIA" },
-    { key: "K", width: 42.57, header: "DIRECCION" },
-    { key: "L", width: 13.14, header: "TELEFONO" },
-    { key: "M", width: 8.71, header: "QUIEN COBRO" },
-    { key: "N", width: 14.14, header: "GESTOR" },
-    { key: "O", width: 13.43, header: "ESCOLARIDAD" },
-    { key: "P", width: 10.86, header: "CCyA" },
-    { key: "Q", width: 42.86, header: "OBSERVACIONES" },
-  ] as const;
-  const columnasRojas = new Set(["D", "E", "H", "P"]);
-  const colorEncabezado = "FF92D8F2";
-  const bordeDelgado = {
-    top: { style: "thin" as const, color: { argb: "FF000000" } },
-    left: { style: "thin" as const, color: { argb: "FF000000" } },
-    bottom: { style: "thin" as const, color: { argb: "FF000000" } },
-    right: { style: "thin" as const, color: { argb: "FF000000" } },
-  };
+  const worksheet = workbook.worksheets[0];
+  if (!worksheet) {
+    throw new Error("La plantilla de peticion no contiene una hoja valida.");
+  }
 
-  columnas.forEach(({ key, width, header }) => {
+  const columnas = [
+    { key: "A", width: 15.71 },
+    { key: "B", width: 15 },
+    { key: "C", width: 34.14 },
+    { key: "D", width: 6.57 },
+    { key: "E", width: 5.71 },
+    { key: "F", width: 10.71 },
+    { key: "G", width: 11.29 },
+    { key: "H", width: 5.57 },
+    { key: "I", width: 25.71 },
+    { key: "J", width: 13.29 },
+    { key: "K", width: 42.57 },
+    { key: "L", width: 13.14 },
+    { key: "M", width: 8.71 },
+    { key: "N", width: 14.14 },
+    { key: "O", width: 13.43 },
+    { key: "P", width: 10.86 },
+    { key: "Q", width: 42.86 },
+  ] as const;
+  const columnaCentral = new Set(["B", "F", "I", "L", "M"]);
+  const columnasTextoLargo = new Set(["C", "G", "K", "N", "O", "Q"]);
+
+  columnas.forEach(({ key, width }) => {
     worksheet.getColumn(key).width = width;
-    const cell = worksheet.getCell(`${key}1`);
-    cell.value = header;
-    cell.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: colorEncabezado },
-    };
-    cell.font = {
-      name: "Aptos Narrow",
-      size: 11,
-      bold: true,
-      color: { argb: columnasRojas.has(key) ? "FFFF0000" : "FF000000" },
-    };
-    cell.alignment = {
-      horizontal: "center",
-      vertical: "middle",
-      wrapText: true,
-    };
-    cell.border = bordeDelgado;
   });
-  worksheet.getRow(1).height = 39.75;
 
   cursos.forEach((curso, index) => {
     const rowNumber = index + 2;
@@ -196,27 +180,19 @@ async function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
     worksheet.getCell(`O${rowNumber}`).value = op?.escolaridad ?? "";
     worksheet.getCell(`P${rowNumber}`).value = "";
     worksheet.getCell(`Q${rowNumber}`).value = curso.observaciones ?? "";
-
     worksheet.getRow(rowNumber).height = 24;
 
     columnas.forEach(({ key }) => {
       const cell = worksheet.getCell(`${key}${rowNumber}`);
-      cell.border = bordeDelgado;
       cell.font = {
         name: "Aptos Narrow",
         size: 11,
         color: { argb: "FF000000" },
       };
 
-      if (key === "B" || key === "F" || key === "I" || key === "L" || key === "M") {
+      if (columnaCentral.has(key)) {
         cell.alignment = { horizontal: "center", vertical: "middle" };
-      } else if (key === "Q") {
-        cell.alignment = {
-          horizontal: "left",
-          vertical: "middle",
-          wrapText: true,
-        };
-      } else if (key === "C" || key === "G" || key === "K" || key === "N" || key === "O") {
+      } else if (columnasTextoLargo.has(key)) {
         cell.alignment = {
           horizontal: "left",
           vertical: "middle",
@@ -227,6 +203,12 @@ async function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
       }
     });
   });
+
+  for (let rowNumber = cursos.length + 2; rowNumber <= 213; rowNumber += 1) {
+    for (const key of ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q"] as const) {
+      worksheet.getCell(`${key}${rowNumber}`).value = "";
+    }
+  }
 
   worksheet.pageSetup = {
     orientation: "landscape",
