@@ -24,6 +24,7 @@ type VentaListadoRow = {
   pago_deposito: number;
   pago_saldo_operador: number;
   promotor: string | null;
+  asesor?: string | null;
   comision_pagada: boolean | null;
   cancelado: boolean;
   motivo_cancelacion: string | null;
