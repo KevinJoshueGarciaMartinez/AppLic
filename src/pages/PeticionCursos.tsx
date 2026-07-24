@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
@@ -111,104 +111,103 @@ function formatearFechaCorta(valor: string | null | undefined) {
 async function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
   const { default: ExcelJS } = await import("exceljs");
   const workbook = new ExcelJS.Workbook();
-  const plantillaUrl = "/templates/FORMATO_DE_PETICIONES_ECA.xlsx";
-  const plantilla = await fetch(plantillaUrl).then((res) => {
-    if (!res.ok) {
-      throw new Error(`No se pudo cargar la plantilla de peticion (${res.status})`);
-    }
-    return res.arrayBuffer();
-  });
-
-  await workbook.xlsx.load(plantilla);
   workbook.creator = "AppLic";
+  workbook.created = new Date();
   workbook.modified = new Date();
 
-  const worksheet = workbook.worksheets[0];
+  const worksheet = workbook.addWorksheet("Peticion Cursos", {
+    views: [{ state: "frozen", ySplit: 1 }],
+  });
   if (!worksheet) {
-    throw new Error("La plantilla de peticion no contiene una hoja valida.");
+    throw new Error("No se pudo crear la hoja de peticion.");
   }
 
   const columnas = [
-    { key: "A", width: 15.71 },
-    { key: "B", width: 15 },
-    { key: "C", width: 34.14 },
-    { key: "D", width: 6.57 },
-    { key: "E", width: 5.71 },
-    { key: "F", width: 10.71 },
-    { key: "G", width: 11.29 },
-    { key: "H", width: 5.57 },
-    { key: "I", width: 25.71 },
-    { key: "J", width: 13.29 },
-    { key: "K", width: 42.57 },
-    { key: "L", width: 13.14 },
-    { key: "M", width: 8.71 },
-    { key: "N", width: 14.14 },
-    { key: "O", width: 13.43 },
-    { key: "P", width: 10.86 },
-    { key: "Q", width: 42.86 },
+    { key: "A", width: 15.71, header: "Número.\nCONSECUTIVO" },
+    { key: "B", width: 15, header: "HORA  (CTRL\n+ SHIFT +\nPUNTO)" },
+    { key: "C", width: 34.14, header: "NOMBRE CAPACITANDO" },
+    { key: "D", width: 6.57, header: "CCyA" },
+    { key: "E", width: 5.71, header: "CCyA" },
+    { key: "F", width: 10.71, header: "FECHA" },
+    { key: "G", width: 11.29, header: "SERVICIOS" },
+    { key: "H", width: 5.57, header: "CCyA" },
+    { key: "I", width: 25.71, header: "CURP" },
+    { key: "J", width: 13.29, header: "No. DE LICENCIA" },
+    { key: "K", width: 42.57, header: "DIRECCION" },
+    { key: "L", width: 13.14, header: "TELEFONO" },
+    { key: "M", width: 8.71, header: "QUIEN COBRO" },
+    { key: "N", width: 14.14, header: "GESTOR" },
+    { key: "O", width: 13.43, header: "ESCOLARIDAD" },
+    { key: "P", width: 10.86, header: "CCyA" },
+    { key: "Q", width: 42.86, header: "OBSERVACIONES" },
   ] as const;
-  const columnaCentral = new Set(["B", "F", "I", "L", "M"]);
-  const columnasTextoLargo = new Set(["C", "G", "K", "N", "O", "Q"]);
+  const columnasRojas = new Set(["D", "E", "H", "P"]);
+  const colorEncabezado = "FF92D8F2";
+  const bordeDelgado = {
+    top: { style: "thin" as const, color: { argb: "FF000000" } },
+    left: { style: "thin" as const, color: { argb: "FF000000" } },
+    bottom: { style: "thin" as const, color: { argb: "FF000000" } },
+    right: { style: "thin" as const, color: { argb: "FF000000" } },
+  };
 
-  columnas.forEach(({ key, width }) => {
+  columnas.forEach(({ key, width, header }) => {
     worksheet.getColumn(key).width = width;
+    const cell = worksheet.getCell(`${key}1`);
+    cell.value = header;
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: colorEncabezado },
+    };
+    cell.font = {
+      name: "Arial",
+      size: 10,
+      bold: true,
+      color: { argb: columnasRojas.has(key) ? "FFFF0000" : "FF000000" },
+    };
+    cell.alignment = {
+      vertical: "middle",
+      horizontal: "center",
+      wrapText: true,
+    };
+    cell.border = bordeDelgado;
   });
 
   cursos.forEach((curso, index) => {
-    const rowNumber = index + 2;
     const op = curso.operadores;
-    const nombreCompleto = joinNameParts(
-      op?.nombre,
-      op?.apellido_paterno,
-      op?.apellido_materno,
-    );
+    const nombreCompleto = op ? joinNameParts(op.nombre, op.apellido_paterno, op.apellido_materno) : "";
+    const fila = worksheet.addRow({
+      A: index + 1,
+      B: op?.hora ?? "",
+      C: nombreCompleto,
+      F: formatearFechaCorta(curso.fecha_solicitud_curso),
+      G: curso.servicio ?? "",
+      I: op?.curp ?? "",
+      J: op?.licencia_numero ?? "",
+      K: op?.direccion ?? "",
+      L: op?.telefono_1 ?? "",
+      M: "ECA",
+      N: curso.promotor ?? "",
+      O: op?.escolaridad ?? "",
+      Q: curso.observaciones ?? "",
+    });
 
-    worksheet.getCell(`A${rowNumber}`).value = index + 1;
-    worksheet.getCell(`B${rowNumber}`).value = op?.hora ?? "";
-    worksheet.getCell(`C${rowNumber}`).value = nombreCompleto;
-    worksheet.getCell(`D${rowNumber}`).value = "";
-    worksheet.getCell(`E${rowNumber}`).value = "";
-    worksheet.getCell(`F${rowNumber}`).value = formatearFechaCorta(curso.fecha_solicitud_curso);
-    worksheet.getCell(`G${rowNumber}`).value = curso.servicio ?? "";
-    worksheet.getCell(`H${rowNumber}`).value = "";
-    worksheet.getCell(`I${rowNumber}`).value = op?.curp ?? "";
-    worksheet.getCell(`J${rowNumber}`).value = op?.licencia_numero ?? "";
-    worksheet.getCell(`K${rowNumber}`).value = op?.direccion ?? "";
-    worksheet.getCell(`L${rowNumber}`).value = op?.telefono_1 ?? "";
-    worksheet.getCell(`M${rowNumber}`).value = "ECA";
-    worksheet.getCell(`N${rowNumber}`).value = curso.promotor ?? "";
-    worksheet.getCell(`O${rowNumber}`).value = op?.escolaridad ?? "";
-    worksheet.getCell(`P${rowNumber}`).value = "";
-    worksheet.getCell(`Q${rowNumber}`).value = curso.observaciones ?? "";
-    worksheet.getRow(rowNumber).height = 24;
-
-    columnas.forEach(({ key }) => {
-      const cell = worksheet.getCell(`${key}${rowNumber}`);
+    fila.height = 24;
+    fila.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+      const columnKey = worksheet.getColumn(colNumber).letter;
       cell.font = {
-        name: "Aptos Narrow",
-        size: 11,
+        name: "Arial",
+        size: 10,
         color: { argb: "FF000000" },
       };
-
-      if (columnaCentral.has(key)) {
-        cell.alignment = { horizontal: "center", vertical: "middle" };
-      } else if (columnasTextoLargo.has(key)) {
-        cell.alignment = {
-          horizontal: "left",
-          vertical: "middle",
-          wrapText: true,
-        };
-      } else {
-        cell.alignment = { vertical: "middle" };
-      }
+      cell.alignment = {
+        vertical: "middle",
+        horizontal: columnKey === "C" || columnKey === "K" || columnKey === "Q" ? "left" : "center",
+        wrapText: true,
+      };
+      cell.border = bordeDelgado;
     });
   });
-
-  for (let rowNumber = cursos.length + 2; rowNumber <= 213; rowNumber += 1) {
-    for (const key of ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q"] as const) {
-      worksheet.getCell(`${key}${rowNumber}`).value = "";
-    }
-  }
 
   worksheet.pageSetup = {
     orientation: "landscape",
