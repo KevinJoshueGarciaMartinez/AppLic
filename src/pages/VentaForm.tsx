@@ -223,7 +223,26 @@ function fmtFechaCorta(fecha: string | null | undefined) {
 }
 
 function parseMontoInput(raw: string): number {
-  const n = Number(raw.replace(",", "."));
+  const limpio = raw
+    .trim()
+    .replace(/\s+/g, "")
+    .replace(/[^\d,.-]/g, "");
+  if (!limpio) return 0;
+
+  const lastComma = limpio.lastIndexOf(",");
+  const lastDot = limpio.lastIndexOf(".");
+  const decimalSep = Math.max(lastComma, lastDot);
+
+  let normalized = limpio;
+  if (decimalSep >= 0) {
+    const integerPart = limpio.slice(0, decimalSep).replace(/[.,]/g, "");
+    const decimalPart = limpio.slice(decimalSep + 1).replace(/[.,]/g, "");
+    normalized = `${integerPart || "0"}.${decimalPart || "0"}`;
+  } else {
+    normalized = limpio.replace(/[.,]/g, "");
+  }
+
+  const n = Number(normalized);
   return Number.isFinite(n) && n >= 0 ? round2(n) : 0;
 }
 
@@ -1554,10 +1573,9 @@ export default function VentaForm({ id }: Props) {
                   <div className="form-field">
                     <label>Efectivo (MXN)</label>
                     <input
-                      type="number"
+                      type="text"
                       className="venta-pago-dividido-input"
-                      min={0}
-                      step={0.01}
+                      inputMode="decimal"
                       value={form.pago_efectivo}
                       onWheel={blurNumberInputOnWheel}
                       onFocus={(e) => e.target.select()}
@@ -1567,10 +1585,9 @@ export default function VentaForm({ id }: Props) {
                   <div className="form-field">
                     <label>Depósito (MXN)</label>
                     <input
-                      type="number"
+                      type="text"
                       className="venta-pago-dividido-input"
-                      min={0}
-                      step={0.01}
+                      inputMode="decimal"
                       value={form.pago_deposito}
                       onWheel={blurNumberInputOnWheel}
                       onFocus={(e) => e.target.select()}
@@ -1597,10 +1614,9 @@ export default function VentaForm({ id }: Props) {
                   <div className="form-field">
                     <label>Saldo operador (MXN)</label>
                     <input
-                      type="number"
+                      type="text"
                       className="venta-pago-dividido-input"
-                      min={0}
-                      step={0.01}
+                      inputMode="decimal"
                       value={form.pago_saldo_operador}
                       onWheel={blurNumberInputOnWheel}
                       onFocus={(e) => e.target.select()}
@@ -1687,9 +1703,8 @@ export default function VentaForm({ id }: Props) {
                 ) : (
                   <>
                     <input
-                      type="number"
-                      min={0}
-                      step={0.01}
+                      type="text"
+                      inputMode="decimal"
                       value={form.cobro}
                       onWheel={blurNumberInputOnWheel}
                       onFocus={(e) => e.target.select()}
