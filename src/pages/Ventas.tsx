@@ -12,6 +12,7 @@ function hoy() {
 type VentaListadoRow = {
   id: number;
   kind: "venta" | "recibo_abono";
+  ticket_id?: number | null;
   fecha: string;
   operador_id: number | null;
   operador_nombre: string | null;
@@ -79,7 +80,7 @@ async function fetchVentas(fecha: string | null, verCanceladas: boolean): Promis
   let ventasQuery = supabase
     .from("ventas")
     .select(
-      "id, fecha, operador_id, operador_nombre, servicio, costo, cobro, faltante, forma_pago, pago_efectivo, pago_deposito, pago_saldo_operador, promotor, comision_pagada, cancelado, motivo_cancelacion",
+      "id, ticket_id, fecha, operador_id, operador_nombre, servicio, costo, cobro, faltante, forma_pago, pago_efectivo, pago_deposito, pago_saldo_operador, promotor, comision_pagada, cancelado, motivo_cancelacion",
     )
     .order("fecha", { ascending: false })
     .order("id", { ascending: false });
@@ -115,6 +116,7 @@ async function fetchVentas(fecha: string | null, verCanceladas: boolean): Promis
 
   const ventas: VentaListadoRow[] = ((ventasData ?? []) as VentaListadoRow[]).map((venta) => ({
     ...venta,
+    ticket_id: venta.ticket_id ?? null,
     pago_efectivo: Number(venta.pago_efectivo ?? 0),
     pago_deposito: Number(venta.pago_deposito ?? 0),
     pago_saldo_operador: Number(venta.pago_saldo_operador ?? 0),
@@ -159,6 +161,26 @@ async function fetchVentas(fecha: string | null, verCanceladas: boolean): Promis
   });
 }
 
+function sumarPagosUnicos(registros: VentaListadoRow[]) {
+  const vistos = new Set<string>();
+  return registros.reduce(
+    (totales, registro) => {
+      const llave =
+        registro.kind === "venta"
+          ? `venta:${registro.ticket_id ?? registro.id}`
+          : `recibo:${registro.id}`;
+      if (vistos.has(llave)) return totales;
+      vistos.add(llave);
+      return {
+        efectivo: totales.efectivo + Number(registro.pago_efectivo ?? 0),
+        deposito: totales.deposito + Number(registro.pago_deposito ?? 0),
+        resguardo: totales.resguardo + Number(registro.pago_saldo_operador ?? 0),
+      };
+    },
+    { efectivo: 0, deposito: 0, resguardo: 0 },
+  );
+}
+
 function asesorDelRegistro(v: VentaListadoRow): string | null {
   if (v.kind !== "recibo_abono") return null;
   return v.asesor?.trim() || null;
@@ -201,12 +223,10 @@ export default function Ventas() {
   const totalCobrado = filtradas.reduce((s, v) => s + (v.cobro ?? 0), 0);
   const totalFaltante = filtradas.reduce((s, v) => s + (v.faltante ?? 0), 0);
   const totalCosto = filtradas.reduce((s, v) => s + (v.costo ?? 0), 0);
-  const totalEfectivo = filtradas.reduce((s, v) => s + Number(v.pago_efectivo ?? 0), 0);
-  const totalDeposito = filtradas.reduce((s, v) => s + Number(v.pago_deposito ?? 0), 0);
-  const totalResguardo = filtradas.reduce(
-    (s, v) => s + Number(v.pago_saldo_operador ?? 0),
-    0,
-  );
+  const pagosUnicos = sumarPagosUnicos(filtradas);
+  const totalEfectivo = pagosUnicos.efectivo;
+  const totalDeposito = pagosUnicos.deposito;
+  const totalResguardo = pagosUnicos.resguardo;
 
   const esHoy = fechaFiltro === hoy();
 
