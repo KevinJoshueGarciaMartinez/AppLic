@@ -244,7 +244,7 @@ export default function ReporteSeguimientoProspectos() {
             <span className="page-icon">📞</span> Seguimiento de Prospectos
           </h1>
           <p className="page-subtitle">
-            Reporte para analizar captación semanal (lunes a domingo), responsables y estatus de seguimiento.
+            Reporte para analizar captacion semanal (lunes a domingo), responsables y estatus de seguimiento.
           </p>
         </div>
       </div>
@@ -252,7 +252,7 @@ export default function ReporteSeguimientoProspectos() {
       <div className="filter-card no-print">
         <div className="filter-grid">
           <div className="form-field">
-            <label>Periodo de captación</label>
+            <label>Periodo de captacion</label>
             <select
               value={filtros.periodo}
               onChange={(e) => onChangePeriodo(e.target.value as TipoPeriodo)}
@@ -260,7 +260,7 @@ export default function ReporteSeguimientoProspectos() {
               <option value="semana_actual">Semana actual (lunes a domingo)</option>
               <option value="mes_actual">Mes actual</option>
               <option value="personalizado">Personalizado</option>
-              <option value="todos">Todo el histórico</option>
+              <option value="todos">Todo el historico</option>
             </select>
           </div>
 
@@ -383,10 +383,10 @@ export default function ReporteSeguimientoProspectos() {
                 <tr>
                   <th>#</th>
                   <th>Nombre</th>
-                  <th>Captación</th>
+                  <th>Captacion</th>
                   <th>Asesor</th>
                   <th>Estatus</th>
-                  <th>Próx. llamada</th>
+                  <th>Prox. llamada</th>
                   <th>Medio</th>
                 </tr>
               </thead>

@@ -164,7 +164,7 @@ export default function CitaRuta() {
             <span className="page-icon">🗓️</span> Cita y Ruta
           </h1>
           <p className="page-subtitle">
-            Gestión de cita SCT y traslado: fecha, punto de reunión, pagos y
+            Gestion de cita SCT y traslado: fecha, punto de reunion, pagos y
             estatus.
           </p>
         </div>
@@ -209,7 +209,7 @@ export default function CitaRuta() {
         </div>
       </form>
 
-      {/* Contadores rápidos */}
+      {/* Contadores rapidos */}
       {citas.length > 0 && (
         <div className="summary-bar" style={{ marginTop: "16px" }}>
           <div className="summary-item">
@@ -241,7 +241,7 @@ export default function CitaRuta() {
         <div className="alert-error">Error: {(error as Error).message}</div>
       )}
 
-      {/* Búsqueda en resultados */}
+      {/* Busqueda en resultados */}
       {citas.length > 0 && (
         <div className="toolbar" style={{ marginTop: "16px" }}>
           <input
@@ -279,7 +279,7 @@ export default function CitaRuta() {
                 <th>#</th>
                 <th>Nombre completo</th>
                 <th>CURP</th>
-                <th>Teléfono</th>
+                <th>Telefono</th>
                 <th>F. Solicitada</th>
                 <th>F. Asignada</th>
                 <th>Contraseña LFD</th>

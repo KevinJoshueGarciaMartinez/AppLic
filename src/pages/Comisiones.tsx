@@ -48,7 +48,7 @@ async function fetchComisiones(filtros: Filtros): Promise<FilaComision[]> {
     .eq("cancelado", false)
     .order("fecha", { ascending: false });
 
-  // Fechas son opcionales: solo aplican si están definidas
+  // Fechas son opcionales: solo aplican si estan definidas
   if (filtros.fecha_desde) q = q.gte("fecha", filtros.fecha_desde);
   if (filtros.fecha_hasta) q = q.lte("fecha", filtros.fecha_hasta);
 
@@ -93,7 +93,7 @@ export default function Comisiones() {
     solo_pendientes: true,
   });
 
-  // Carga automática al entrar
+  // Carga automatica al entrar
   const [buscar, setBuscar] = useState(true);
   const [pagado, setPagado] = useState(false);
   // Snapshot de filas para imprimir tras el pago (evita que desaparezcan al hacer refetch)
@@ -142,13 +142,13 @@ export default function Comisiones() {
 
   const pendientes = filas.filter((f) => !f.comision_pagada);
 
-  // Dispara impresión tras actualizar el snapshot en el DOM
+  // Dispara impresion tras actualizar el snapshot en el DOM
   useEffect(() => {
     if (listoParaImprimir) {
       const t = setTimeout(() => {
         window.print();
         setListoParaImprimir(false);
-        // Refetch real después de imprimir
+        // Refetch real despues de imprimir
         queryClient.invalidateQueries({ queryKey: ["comisiones"] });
         refetch();
       }, 300);
@@ -184,19 +184,19 @@ export default function Comisiones() {
   function handlePagar() {
     if (pendientes.length === 0) return;
     if (!filtros.id_promotor) {
-      alert("Selecciona un promotor específico antes de registrar el pago.\n\nEl pago de comisiones se realiza por promotor, no a todos a la vez.");
+      alert("Selecciona un promotor especifico antes de registrar el pago.\n\nEl pago de comisiones se realiza por promotor, no a todos a la vez.");
       return;
     }
     const nombres = [...new Set(pendientes.map((f) => f.promotor ?? "Sin nombre"))].join(", ");
     const confirmado = window.confirm(
-      `¿Marcar ${pendientes.length} comisión(es) como pagadas?\n\nPromotor(es): ${nombres}\nTotal: ${fmt(pendientes.reduce((s, f) => s + f.costo_promotor, 0))}\nFecha de pago: ${hoy()}`,
+      `¿Marcar ${pendientes.length} comision(es) como pagadas?\n\nPromotor(es): ${nombres}\nTotal: ${fmt(pendientes.reduce((s, f) => s + f.costo_promotor, 0))}\nFecha de pago: ${hoy()}`,
     );
     if (confirmado) pagarMutation.mutate();
   }
 
   // ── Totales ───────────────────────────────────────────────────────────────
 
-  // Durante la impresión usar snapshot; el resto del tiempo, datos en vivo
+  // Durante la impresion usar snapshot; el resto del tiempo, datos en vivo
   const filasActivas = listoParaImprimir && filasImprimir.length > 0 ? filasImprimir : filas;
 
   const totalCosto = filasActivas.reduce((s, f) => s + f.costo, 0);
@@ -214,7 +214,7 @@ export default function Comisiones() {
     return acc;
   }, {});
 
-  // Descripción del filtro de fechas activo
+  // Descripcion del filtro de fechas activo
   const descFechas =
     filtros.fecha_desde && filtros.fecha_hasta
       ? `${filtros.fecha_desde} — ${filtros.fecha_hasta}`
@@ -318,7 +318,7 @@ export default function Comisiones() {
 
       {filasActivas.length > 0 && (
         <>
-          {/* ── Encabezado de impresión (solo visible al imprimir) ── */}
+          {/* ── Encabezado de impresion (solo visible al imprimir) ── */}
           <div className="print-only print-header">
             <h2>Reporte de Comisiones</h2>
             <p>
@@ -390,7 +390,7 @@ export default function Comisiones() {
                   <th>Servicio</th>
                   <th>Promotor</th>
                   <th>Costo</th>
-                  <th>Comisión</th>
+                  <th>Comision</th>
                   <th>Estado</th>
                   <th className="no-print">Fecha pago</th>
                 </tr>
@@ -425,7 +425,7 @@ export default function Comisiones() {
             </table>
           </div>
 
-          {/* ── Botones de acción (se ocultan al imprimir) ── */}
+          {/* ── Botones de accion (se ocultan al imprimir) ── */}
           <div className="no-print" style={{ display: "flex", gap: "10px", marginTop: "16px", alignItems: "center" }}>
             {pendientes.length > 0 && (
               <button
@@ -436,7 +436,7 @@ export default function Comisiones() {
               >
                 {pagarMutation.isPending
                   ? "Procesando..."
-                  : `Pagar ${pendientes.length} comisión${pendientes.length !== 1 ? "es" : ""} · ${fmt(totalPendiente)}`}
+                  : `Pagar ${pendientes.length} comision${pendientes.length !== 1 ? "es" : ""} · ${fmt(totalPendiente)}`}
               </button>
             )}
             {pagado && (

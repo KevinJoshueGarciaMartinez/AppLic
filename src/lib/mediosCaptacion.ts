@@ -1,4 +1,4 @@
-/** Opciones de «Medio de captación» (operadores / prospectos). */
+/** Opciones de «Medio de captacion» (operadores / prospectos). */
 export const MEDIOS_CAPTACION = [
   "CLIENTE",
   "RECOMENDADO",
@@ -12,10 +12,10 @@ export const MEDIOS_CAPTACION = [
 
 const CATALOGO = MEDIOS_CAPTACION as readonly string[];
 
-/** Etiqueta en listados; conserva lectura amable de valores previos a migración 027. */
+/** Etiqueta en listados; conserva lectura amable de valores previos a migracion 027. */
 export function etiquetaMedioCaptacion(m: string | null | undefined): string {
   if (!m?.trim()) return "—";
-  if (m === "Telefono") return "Teléfono";
+  if (m === "Telefono") return "Telefono";
   if (m === "Redes") return "Redes sociales";
   return m;
 }

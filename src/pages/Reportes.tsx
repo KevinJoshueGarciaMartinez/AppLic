@@ -19,7 +19,7 @@ const REPORTES: ReporteCard[] = [
     rolesPermitidos: ["admin"],
   },
   {
-    label: "Petición de Cursos",
+    label: "Peticion de Cursos",
     icon: "📝",
     href: "/reportes/peticion-cursos",
     disponible: true,

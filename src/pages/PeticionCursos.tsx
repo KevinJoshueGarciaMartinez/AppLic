@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
@@ -123,7 +123,7 @@ async function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
   }
 
   const columnas = [
-    { key: "A", width: 15.71, header: "Número.\nCONSECUTIVO" },
+    { key: "A", width: 15.71, header: "Numero.\nCONSECUTIVO" },
     { key: "B", width: 15, header: "HORA  (CTRL\n+ SHIFT +\nPUNTO)" },
     { key: "C", width: 34.14, header: "NOMBRE CAPACITANDO" },
     { key: "D", width: 10.14, header: "CCyA" },
@@ -142,24 +142,24 @@ async function exportarExcel(cursos: FilaCurso[], nombrePromotor: string) {
     { key: "Q", width: 42.86, header: "OBSERVACIONES" },
   ] as const;
   const serviciosCurso = [
-    { codigo: "R A N", descripcion: "Renovación en A Nacional" },
-    { codigo: "R A I", descripcion: "Renovación en A Internacional" },
-    { codigo: "R B N", descripcion: "Renovación en B Nacional" },
-    { codigo: "R B I", descripcion: "Renovación en B Internacional" },
-    { codigo: "R C N", descripcion: "Renovación en C Nacional" },
-    { codigo: "R C I", descripcion: "Renovación en C Internacional" },
-    { codigo: "R E MRP", descripcion: "Renovación en E Materiales y Residuos Peligrosos" },
-    { codigo: "R E TSS-TSR", descripcion: "Renovación en E Doblemente Articulado" },
-    { codigo: "O A N", descripcion: "Obtención en A Nacional" },
-    { codigo: "O A I", descripcion: "Obtención en A Internacional" },
-    { codigo: "O SE BN", descripcion: "Obtención Sin Experiencia B Nacional" },
-    { codigo: "O SE BI", descripcion: "Obtención Sin Experiencia B Internacional" },
-    { codigo: "O C E BN", descripcion: "Obtención Con Experiencia B Nacional" },
-    { codigo: "O C E BI", descripcion: "Obtención Con Experiencia B Internacional" },
-    { codigo: "O SE CN", descripcion: "Obtención Sin Experiencia C Nacional" },
-    { codigo: "O SE CI", descripcion: "Obtención Sin Experiencia C Internacional" },
-    { codigo: "O C E CN", descripcion: "Obtención Con Experiencia C Nacional" },
-    { codigo: "O C E CI", descripcion: "Obtención Con Experiencia C Internacional" },
+    { codigo: "R A N", descripcion: "Renovacion en A Nacional" },
+    { codigo: "R A I", descripcion: "Renovacion en A Internacional" },
+    { codigo: "R B N", descripcion: "Renovacion en B Nacional" },
+    { codigo: "R B I", descripcion: "Renovacion en B Internacional" },
+    { codigo: "R C N", descripcion: "Renovacion en C Nacional" },
+    { codigo: "R C I", descripcion: "Renovacion en C Internacional" },
+    { codigo: "R E MRP", descripcion: "Renovacion en E Materiales y Residuos Peligrosos" },
+    { codigo: "R E TSS-TSR", descripcion: "Renovacion en E Doblemente Articulado" },
+    { codigo: "O A N", descripcion: "Obtencion en A Nacional" },
+    { codigo: "O A I", descripcion: "Obtencion en A Internacional" },
+    { codigo: "O SE BN", descripcion: "Obtencion Sin Experiencia B Nacional" },
+    { codigo: "O SE BI", descripcion: "Obtencion Sin Experiencia B Internacional" },
+    { codigo: "O C E BN", descripcion: "Obtencion Con Experiencia B Nacional" },
+    { codigo: "O C E BI", descripcion: "Obtencion Con Experiencia B Internacional" },
+    { codigo: "O SE CN", descripcion: "Obtencion Sin Experiencia C Nacional" },
+    { codigo: "O SE CI", descripcion: "Obtencion Sin Experiencia C Internacional" },
+    { codigo: "O C E CN", descripcion: "Obtencion Con Experiencia C Nacional" },
+    { codigo: "O C E CI", descripcion: "Obtencion Con Experiencia C Internacional" },
   ];
   const columnasRojas = new Set(["D", "E", "H", "P"]);
   const colorEncabezado = "FF92D8F2";

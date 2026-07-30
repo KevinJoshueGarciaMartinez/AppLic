@@ -129,7 +129,7 @@ function truncar(s: string | null, max: number) {
   return t.length > max ? `${t.slice(0, max)}…` : t;
 }
 
-/** Fila tipo semáforo según próxima llamada (fechas ISO YYYY-MM-DD) y estatus. */
+/** Fila tipo semaforo segun proxima llamada (fechas ISO YYYY-MM-DD) y estatus. */
 function claseSemaforoSeguimiento(op: FilaSeguimiento, hoy: string): string {
   if (esEstatusSeguimientoTerminalSemaforo(op.estatus_seguimiento)) {
     return "seguimiento-sem seguimiento-sem--gris";
@@ -288,7 +288,7 @@ function construirEntradaHistoricaNota(params: {
   return [
     `[${params.fechaISO}]`,
     nota,
-    `Próx. llamada: ${params.proximaLlamada || "sin fecha"}`,
+    `Prox. llamada: ${params.proximaLlamada || "sin fecha"}`,
   ].join("\n");
 }
 
@@ -310,7 +310,7 @@ function partirHistoricoNotas(hist: string): string[] {
     .reverse();
 }
 
-/** Más de 5 caracteres en la nota para poder ajustar la próxima llamada en este flujo */
+/** Mas de 5 caracteres en la nota para poder ajustar la proxima llamada en este flujo */
 const MIN_CARACTERES_NOTA_PARA_PROXIMA = 5;
 
 function notaHabilitaProximaLlamada(nota: string): boolean {
@@ -524,7 +524,7 @@ export default function SeguimientoVentas() {
       return;
     }
     if (!modalForm.proxima_llamada.trim()) {
-      setModalError("La próxima llamada es obligatoria para poder filtrar y ordenar el seguimiento.");
+      setModalError("La proxima llamada es obligatoria para poder filtrar y ordenar el seguimiento.");
       return;
     }
     const asesorForzado =
@@ -718,8 +718,8 @@ export default function SeguimientoVentas() {
               Registrar prospecto
             </h2>
             <p className="modal-desc">
-              Registro ligero en operadores (sin CURP). Podrás completar el expediente
-              después desde «Expediente».
+              Registro ligero en operadores (sin CURP). Podras completar el expediente
+              despues desde «Expediente».
             </p>
 
             <form onSubmit={guardarProspecto}>
@@ -753,13 +753,13 @@ export default function SeguimientoVentas() {
                   />
                 </div>
                 <div className="form-field form-field-full">
-                  <label>Teléfono</label>
+                  <label>Telefono</label>
                   <input
                     type="tel"
                     inputMode="numeric"
                     value={modalForm.telefono_1}
                     onChange={(e) => setModal("telefono_1", e.target.value)}
-                    placeholder="10 dígitos"
+                    placeholder="10 digitos"
                     maxLength={14}
                   />
                 </div>
@@ -783,7 +783,7 @@ export default function SeguimientoVentas() {
                   </select>
                 </div>
                 <div className="form-field">
-                  <label>Núm. medicina preventiva</label>
+                  <label>Num. medicina preventiva</label>
                   <input
                     type="text"
                     value={modalForm.num_exp_med_preventiva}
@@ -794,7 +794,7 @@ export default function SeguimientoVentas() {
                   />
                 </div>
                 <div className="form-field form-field-full">
-                  <label>Trámite</label>
+                  <label>Tramite</label>
                   <input
                     type="text"
                     value={modalForm.tramite_a_realizar}
@@ -802,11 +802,11 @@ export default function SeguimientoVentas() {
                       setModal("tramite_a_realizar", e.target.value)
                     }
                     maxLength={200}
-                    placeholder="Trámite a realizar"
+                    placeholder="Tramite a realizar"
                   />
                 </div>
                 <div className="form-field">
-                  <label>Medio de captación</label>
+                  <label>Medio de captacion</label>
                   <select
                     value={modalForm.medio_captacion}
                     onChange={(e) => setModal("medio_captacion", e.target.value)}
@@ -819,11 +819,11 @@ export default function SeguimientoVentas() {
                     ))}
                   </select>
                   <span className="field-hint">
-                    Fecha de captación: se asigna automáticamente al día de registro.
+                    Fecha de captacion: se asigna automaticamente al dia de registro.
                   </span>
                 </div>
                 <div className="form-field">
-                  <label>Próxima llamada (seguimiento) *</label>
+                  <label>Proxima llamada (seguimiento) *</label>
                   <input
                     type="date"
                     required
@@ -928,15 +928,15 @@ export default function SeguimientoVentas() {
               <strong>#{detallesModal.id}</strong> — {detallesModal.nombre}
             </p>
             <p className="field-hint" style={{ marginTop: "-4px", marginBottom: "12px" }}>
-              Captación y médico son solo consulta; el resto del expediente (trámite, documentos,
+              Captacion y medico son solo consulta; el resto del expediente (tramite, documentos,
               etc.) lo abres con «Abrir expediente» abajo. Escribe primero la nota de la llamada;
-              con más de {MIN_CARACTERES_NOTA_PARA_PROXIMA} caracteres podrás definir la próxima
+              con mas de {MIN_CARACTERES_NOTA_PARA_PROXIMA} caracteres podras definir la proxima
               fecha y guardar el seguimiento.
             </p>
 
             <div className="seguimiento-detalles-meta">
               <div className="seguimiento-detalles-meta__row">
-                <span className="seguimiento-detalles-meta__label">Captación</span>
+                <span className="seguimiento-detalles-meta__label">Captacion</span>
                 <span className="seguimiento-detalles-meta__valor">
                   {etiquetaMedioCaptacion(detallesModal.medio_captacion)}
                 </span>
@@ -952,7 +952,7 @@ export default function SeguimientoVentas() {
             </div>
 
             <div className="form-field form-field-full" style={{ marginTop: "1rem" }}>
-              <label>Histórico de notas</label>
+              <label>Historico de notas</label>
               {partirHistoricoNotas(detallesModal.notasHistorico).length === 0 ? (
                 <textarea
                   className="modal-textarea"
@@ -1015,7 +1015,7 @@ export default function SeguimientoVentas() {
             </div>
 
             <div className="form-field form-field-full" style={{ marginTop: "0.75rem" }}>
-              <label>Próxima llamada *</label>
+              <label>Proxima llamada *</label>
               <input
                 type="date"
                 value={detallesModal.proxima_llamada}
@@ -1027,7 +1027,7 @@ export default function SeguimientoVentas() {
                 title={
                   notaHabilitaProximaLlamada(detallesModal.notaNueva)
                     ? "Fecha objetivo para el siguiente contacto."
-                    : `Escribe más de ${MIN_CARACTERES_NOTA_PARA_PROXIMA} caracteres en la nota para poder cambiar esta fecha.`
+                    : `Escribe mas de ${MIN_CARACTERES_NOTA_PARA_PROXIMA} caracteres en la nota para poder cambiar esta fecha.`
                 }
                 onChange={(e) =>
                   setDetallesModal((m) =>
@@ -1115,14 +1115,14 @@ export default function SeguimientoVentas() {
                           ? {
                             ...m,
                             error:
-                              "Para formalizar hace falta la CURP. Ábre el expediente, captúrala, guarda y vuelve a abrir Detalles.",
+                              "Para formalizar hace falta la CURP. Abre el expediente, capturala, guarda y vuelve a abrir Detalles.",
                           }
                           : m,
                       );
                       return;
                     }
                     const ok = window.confirm(
-                      "Esta acción formaliza al prospecto y lo saca de Seguimiento. ¿Deseas continuar?",
+                      "Esta accion formaliza al prospecto y lo saca de Seguimiento. ¿Deseas continuar?",
                     );
                     if (!ok) return;
                     formalizarMutation.mutate(detallesModal.id);
@@ -1169,7 +1169,7 @@ export default function SeguimientoVentas() {
                         ? {
                           ...m,
                           error:
-                            `Escribe más de ${MIN_CARACTERES_NOTA_PARA_PROXIMA} caracteres en la nota antes de guardar.`,
+                            `Escribe mas de ${MIN_CARACTERES_NOTA_PARA_PROXIMA} caracteres en la nota antes de guardar.`,
                         }
                         : m,
                     );
@@ -1179,7 +1179,7 @@ export default function SeguimientoVentas() {
                   if (!proxima) {
                     setDetallesModal((m) =>
                       m
-                        ? { ...m, error: "La próxima llamada es obligatoria para guardar seguimiento." }
+                        ? { ...m, error: "La proxima llamada es obligatoria para guardar seguimiento." }
                         : m,
                     );
                     return;
@@ -1216,7 +1216,7 @@ export default function SeguimientoVentas() {
         <input
           className="search-input"
           type="text"
-          placeholder="Buscar prospecto por nombre o teléfono..."
+          placeholder="Buscar prospecto por nombre o telefono..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
           style={{ minWidth: "18rem" }}
@@ -1227,7 +1227,7 @@ export default function SeguimientoVentas() {
             className="btn-secondary"
             onClick={() => setBusqueda("")}
           >
-            Limpiar búsqueda
+            Limpiar busqueda
           </button>
         )}
         <label className="checkbox-label" style={{ margin: 0 }}>
@@ -1240,7 +1240,7 @@ export default function SeguimientoVentas() {
         </label>
         <div className="form-field" style={{ margin: 0, minWidth: "11rem" }}>
           <label style={{ fontSize: "0.75rem", display: "block", marginBottom: "0.25rem" }}>
-            Filtrar por día (próx. llamada)
+            Filtrar por dia (prox. llamada)
           </label>
           <input
             type="date"
@@ -1256,7 +1256,7 @@ export default function SeguimientoVentas() {
             className="btn-secondary"
             onClick={() => setDiaFiltro("")}
           >
-            Quitar filtro de día
+            Quitar filtro de dia
           </button>
         )}
         {esAdminSeguimiento && (
@@ -1320,7 +1320,7 @@ export default function SeguimientoVentas() {
             ? "Cargando…"
             : `${filas.length} prospecto${filas.length !== 1 ? "s" : ""}`}
         </span>
-        <div className="seguimiento-leyenda" aria-label="Leyenda de prioridad por próxima llamada">
+        <div className="seguimiento-leyenda" aria-label="Leyenda de prioridad por proxima llamada">
           <span className="seguimiento-leyenda__titulo">Prioridad:</span>
           <span className="seguimiento-leyenda__pill seguimiento-leyenda__pill--verde">
             A tiempo
@@ -1357,9 +1357,9 @@ export default function SeguimientoVentas() {
               <tr>
                 <th>#</th>
                 <th>Nombre</th>
-                <th>Teléfono</th>
-                <th>Fecha captación</th>
-                <th>Próx. llamada</th>
+                <th>Telefono</th>
+                <th>Fecha captacion</th>
+                <th>Prox. llamada</th>
                 <th>Asesor</th>
                 <th>Estatus</th>
                 <th></th>
@@ -1370,7 +1370,7 @@ export default function SeguimientoVentas() {
                 <tr>
                   <td colSpan={8} className="table-empty">
                     {busqueda
-                      ? "No hay prospectos que coincidan con la búsqueda."
+                      ? "No hay prospectos que coincidan con la busqueda."
                       : "No hay prospectos con estos filtros."}
                   </td>
                 </tr>

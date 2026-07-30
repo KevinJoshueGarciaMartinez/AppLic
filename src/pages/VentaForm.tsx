@@ -39,7 +39,7 @@ import { joinNameParts } from "../lib/names";
 const EPSILON_DEUDA = 0.005;
 const NORMALIZED_TEXT_FIELDS = new Set<keyof VentaInsert>(["numero_referencia"]);
 
-/** Quita el foco para que la rueda del ratón no incremente/decremente el valor (type="number"). */
+/** Quita el foco para que la rueda del raton no incremente/decremente el valor (type="number"). */
 const blurNumberInputOnWheel: WheelEventHandler<HTMLInputElement> = (e) => {
   e.currentTarget.blur();
 };
@@ -281,7 +281,7 @@ function hoyLocal(): string {
   return `${y}-${m}-${day}`;
 }
 
-/** Reparte el cobro total en cascada por línea (mismo criterio que al crear venta). */
+/** Reparte el cobro total en cascada por linea (mismo criterio que al crear venta). */
 function distribuirCobroEnCascada(costos: number[], totalCobro: number): number[] {
   let rest = Math.max(0, totalCobro);
   return costos.map((c) => {
@@ -374,7 +374,7 @@ function OperadorSearch({
         onChange={(e) => handleInput(e.target.value)}
         onFocus={() => texto.length >= 2 && setAbierto(resultados.length > 0)}
         onBlur={() => setTimeout(() => setAbierto(false), 150)}
-        placeholder="Buscar por nombre, CURP o teléfono..."
+        placeholder="Buscar por nombre, CURP o telefono..."
         autoFocus={!!autoFocus}
       />
       {abierto && (
@@ -433,7 +433,7 @@ export default function VentaForm({ id }: Props) {
   });
   const [liqForm, setLiqForm] = useState(emptyLiq);
 
-  // ── Cancelación ───────────────────────────────────────────────────────────
+  // ── Cancelacion ───────────────────────────────────────────────────────────
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [motivoCancelacion, setMotivoCancelacion] = useState("");
   const [confirmSobrepago, setConfirmSobrepago] = useState<
@@ -478,7 +478,7 @@ export default function VentaForm({ id }: Props) {
       base.pago_efectivo = Number(base.pago_efectivo ?? 0);
       base.pago_deposito = Number(base.pago_deposito ?? 0);
       base.pago_saldo_operador = Number(base.pago_saldo_operador ?? 0);
-      // En ticket multi-línea el total cobrado se calcula al cargar ítems; no usar cobro de una sola fila.
+      // En ticket multi-linea el total cobrado se calcula al cargar items; no usar cobro de una sola fila.
       if (!tid) {
         base.cobro = cobroRow;
       } else {
@@ -652,7 +652,7 @@ export default function VentaForm({ id }: Props) {
     return { monto, pagoEfectivo, pagoDeposito, pagoSaldo };
   }
 
-  // ── Mutación de liquidación ───────────────────────────────────────────────
+  // ── Mutacion de liquidacion ───────────────────────────────────────────────
   const liqMutation = useMutation({
     mutationFn: async () => {
       const { monto, pagoEfectivo, pagoDeposito, pagoSaldo } = prepareLiquidacionInput();
@@ -694,9 +694,9 @@ export default function VentaForm({ id }: Props) {
 
   const cancelMutation = useMutation({
     mutationFn: async () => {
-      if (!motivoCancelacion.trim()) throw new Error("Indica el motivo de cancelación.");
+      if (!motivoCancelacion.trim()) throw new Error("Indica el motivo de cancelacion.");
       if (!esTicketDelDia) {
-        throw new Error("Solo se pueden cancelar tickets registrados el mismo día.");
+        throw new Error("Solo se pueden cancelar tickets registrados el mismo dia.");
       }
 
       const ahora = new Date().toISOString();
@@ -729,7 +729,7 @@ export default function VentaForm({ id }: Props) {
           .from("ventas_pagos").update({ cancelado: true }).in("id", ids);
         if (markErr) throw new Error(markErr.message);
 
-        // 3. Devolver saldo a favor si se usó en algún pago
+        // 3. Devolver saldo a favor si se uso en algun pago
         const totalSaldoUsado = pagos.reduce(
           (s: number, p: { pago_saldo: number }) => s + Number(p.pago_saldo ?? 0), 0,
         );
@@ -762,7 +762,7 @@ export default function VentaForm({ id }: Props) {
 
   function addLineFromDraft() {
     if (!isNew) {
-      alert("En edición no se agregan líneas al ticket. Crea una venta nueva para otro servicio.");
+      alert("En edicion no se agregan lineas al ticket. Crea una venta nueva para otro servicio.");
       return;
     }
     if (draftServicioId === "") {
@@ -940,7 +940,7 @@ export default function VentaForm({ id }: Props) {
       } else {
         if (ticketIdEdit && validItems.some((it) => !it.ventaId)) {
           throw new Error(
-            "Este ticket tiene líneas sin id. Recarga la página; no se pueden agregar servicios en edición.",
+            "Este ticket tiene lineas sin id. Recarga la pagina; no se pueden agregar servicios en edicion.",
           );
         }
 
@@ -973,7 +973,7 @@ export default function VentaForm({ id }: Props) {
           if (error) throw new Error(error.message);
         }
 
-        // No aplicar saldo a favor aquí: en creación ya se registró; en edición los cobros extra van por liquidación.
+        // No aplicar saldo a favor aqui: en creacion ya se registro; en edicion los cobros extra van por liquidacion.
       }
     },
     onSuccess: () => {
@@ -1036,7 +1036,7 @@ export default function VentaForm({ id }: Props) {
   const tieneCurso = items.some((item) => item.tipo_servicio === 2);
   const faltante = totalItems - form.cobro;
 
-  // Con curso en el ticket: nueva venta → fecha solicitud = hoy (sin date picker). Edición → conservar fecha guardada; si falta, usar hoy.
+  // Con curso en el ticket: nueva venta → fecha solicitud = hoy (sin date picker). Edicion → conservar fecha guardada; si falta, usar hoy.
   useEffect(() => {
     if (!tieneCurso) return;
     const hoy = hoyLocal();
@@ -1072,7 +1072,7 @@ export default function VentaForm({ id }: Props) {
       return;
     }
     if (!Number.isFinite(form.cobro)) {
-      alert("Indica un total cobrado válido.");
+      alert("Indica un total cobrado valido.");
       return;
     }
     if (form.cobro < 0) {
@@ -1081,12 +1081,12 @@ export default function VentaForm({ id }: Props) {
     }
     if (totalItems <= EPSILON_DEUDA && form.cobro > EPSILON_DEUDA) {
       if (form.forma_pago === "Saldo") {
-        alert("Cuando no hay servicios, usa un método de cobro externo para generar el recibo.");
+        alert("Cuando no hay servicios, usa un metodo de cobro externo para generar el recibo.");
         return;
       }
       if (form.forma_pago === "Dividida") {
         if (form.pago_saldo_operador > EPSILON_DEUDA) {
-          alert("El recibo nuevo con pago dividido solo admite efectivo y depósito.");
+          alert("El recibo nuevo con pago dividido solo admite efectivo y deposito.");
           return;
         }
       }
@@ -1109,7 +1109,7 @@ export default function VentaForm({ id }: Props) {
       return;
     }
 
-    /** En edición el cobro y la forma de pago ya están fijados; los pagos nuevos van por «Registrar pago». */
+    /** En edicion el cobro y la forma de pago ya estan fijados; los pagos nuevos van por «Registrar pago». */
     let aplicarSaldo = 0;
     if (isNew) {
       const cobroEfectivoTicket = round2(Math.min(form.cobro, totalItems));
@@ -1119,7 +1119,7 @@ export default function VentaForm({ id }: Props) {
       if (form.forma_pago === "Dividida") {
         const sum = round2(form.pago_efectivo + form.pago_deposito + form.pago_saldo_operador);
         if (Math.abs(form.cobro - sum) > 0.02) {
-          alert("En pago dividido, el total cobrado debe ser la suma de efectivo, depósito y saldo operador.");
+          alert("En pago dividido, el total cobrado debe ser la suma de efectivo, deposito y saldo operador.");
           return;
         }
         aplicarSaldo = round2(form.pago_saldo_operador * ratioCobro);
@@ -1169,7 +1169,7 @@ export default function VentaForm({ id }: Props) {
             pending.payload.forma_pago === "Dividida" &&
             Number(pending.payload.pago_saldo_operador ?? 0) > EPSILON_DEUDA
           ) {
-            alert("El recibo nuevo con pago dividido solo admite efectivo y depósito.");
+            alert("El recibo nuevo con pago dividido solo admite efectivo y deposito.");
             return;
           }
           navigate(
@@ -1267,7 +1267,7 @@ export default function VentaForm({ id }: Props) {
 
       <form onSubmit={handleSubmit} className="record-form">
         <div className="form-grid-ventas">
-          {/* ── Izquierda: operador y promotor (espacio reservado debajo para más secciones) ── */}
+          {/* ── Izquierda: operador y promotor (espacio reservado debajo para mas secciones) ── */}
           <div>
             <div className="form-group-title">Operador</div>
             <div className="venta-operador-bloque">
@@ -1326,11 +1326,11 @@ export default function VentaForm({ id }: Props) {
                   <strong>{operadorResumen.curp?.trim() || "—"}</strong>
                 </div>
                 <div className="venta-operador-detalle__item">
-                  <span className="venta-operador-detalle__label">N expediente médico</span>
+                  <span className="venta-operador-detalle__label">N expediente medico</span>
                   <strong>{operadorResumen.num_exp_med_preventiva?.trim() || "—"}</strong>
                 </div>
                 <div className="venta-operador-detalle__item">
-                  <span className="venta-operador-detalle__label">Número de licencia</span>
+                  <span className="venta-operador-detalle__label">Numero de licencia</span>
                   <strong>{operadorResumen.licencia_numero?.trim() || "—"}</strong>
                 </div>
                 <div className="venta-operador-detalle__item">
@@ -1338,14 +1338,14 @@ export default function VentaForm({ id }: Props) {
                   <strong>{fmtFechaCorta(operadorResumen.licencia_vigencia)}</strong>
                 </div>
                 <div className="venta-operador-detalle__item">
-                  <span className="venta-operador-detalle__label">Teléfono</span>
+                  <span className="venta-operador-detalle__label">Telefono</span>
                   <strong>{operadorResumen.telefono_1?.trim() || "—"}</strong>
                 </div>
               </div>
             )}
             {form.operador_id != null && operadorResumenError && (
               <p className="field-hint" style={{ color: "#b91c1c" }}>
-                No se pudieron cargar los datos básicos del operador:{" "}
+                No se pudieron cargar los datos basicos del operador:{" "}
                 {(operadorResumenErrorData as Error).message}
               </p>
             )}
@@ -1393,7 +1393,7 @@ export default function VentaForm({ id }: Props) {
             </div>
             {isNew && form.operador_id != null && !promotorRevisado && (
               <p className="field-hint" style={{ marginTop: "10px" }}>
-                Elige una opción en «Promotor» (o deja «Sin promotor») y sal del campo (Tab o clic fuera)
+                Elige una opcion en «Promotor» (o deja «Sin promotor») y sal del campo (Tab o clic fuera)
                 para habilitar servicios y ticket.
               </p>
             )}
@@ -1455,7 +1455,7 @@ export default function VentaForm({ id }: Props) {
 
               {items.length === 0 ? (
                 <p className="ticket-empty-hint">
-                  Usa «Servicios» arriba para agregar líneas al ticket.
+                  Usa «Servicios» arriba para agregar lineas al ticket.
                 </p>
               ) : (
                 <div className="ticket-desglose-wrap">
@@ -1561,7 +1561,7 @@ export default function VentaForm({ id }: Props) {
                     }
                   >
                     <option value="Efectivo">Efectivo</option>
-                    <option value="Deposito">Depósito</option>
+                    <option value="Deposito">Deposito</option>
                     <option value="Saldo">Saldo a favor</option>
                     <option value="Dividida">Dividida</option>
                   </select>
@@ -1583,7 +1583,7 @@ export default function VentaForm({ id }: Props) {
                     />
                   </div>
                   <div className="form-field">
-                    <label>Depósito (MXN)</label>
+                    <label>Deposito (MXN)</label>
                     <input
                       type="text"
                       className="venta-pago-dividido-input"
@@ -1595,7 +1595,7 @@ export default function VentaForm({ id }: Props) {
                     />
                   </div>
                   <div className="form-field">
-                    <label>Referencia (depósito)</label>
+                    <label>Referencia (deposito)</label>
                     <input
                       type="text"
                       className="venta-pago-dividido-input"
@@ -1640,7 +1640,7 @@ export default function VentaForm({ id }: Props) {
                     <span>{fmt(form.pago_efectivo)}</span>
                   </div>
                   <div className="desglose-readonly__fila">
-                    <span>Depósito</span>
+                    <span>Deposito</span>
                     <span>{fmt(form.pago_deposito)}</span>
                   </div>
                   {form.numero_referencia && (
@@ -1675,7 +1675,7 @@ export default function VentaForm({ id }: Props) {
                 </div>
               )}
 
-              {/* Referencia readonly al editar con depósito */}
+              {/* Referencia readonly al editar con deposito */}
               {!isNew && form.forma_pago === "Deposito" && form.numero_referencia && (
                 <div className="desglose-readonly">
                   <div className="desglose-readonly__fila desglose-readonly__ref">
@@ -1697,7 +1697,7 @@ export default function VentaForm({ id }: Props) {
                   <>
                     <div className="venta-total-cobro-readonly">{fmt(form.cobro)}</div>
                     <span className="field-hint">
-                      Suma automática de efectivo, depósito y saldo operador.
+                      Suma automatica de efectivo, deposito y saldo operador.
                     </span>
                   </>
                 ) : (
@@ -1709,12 +1709,12 @@ export default function VentaForm({ id }: Props) {
                       onWheel={blurNumberInputOnWheel}
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => set("cobro", Number(e.target.value))}
-                      title="Suma aplicada al ticket (efectivo, depósito y/o saldo a favor)"
+                      title="Suma aplicada al ticket (efectivo, deposito y/o saldo a favor)"
                       required
                     />
                     <span className="field-hint">
                       Incluye lo recibido del cliente. Si excede el total de servicios, antes de guardar
-                      se confirmará el saldo a favor para el operador.
+                      se confirmara el saldo a favor para el operador.
                     </span>
                   </>
                 )}
@@ -1754,7 +1754,7 @@ export default function VentaForm({ id }: Props) {
           </div>
         </div>
 
-        {/* ── Historial de pagos + Liquidación (solo al editar) ── */}
+        {/* ── Historial de pagos + Liquidacion (solo al editar) ── */}
         {!isNew && (
           <div className="liquidacion-section">
 
@@ -1819,7 +1819,7 @@ export default function VentaForm({ id }: Props) {
                               }`}
                             >
                               {linea.mov.tipo === "devolucion_cancelacion"
-                                ? "Devolución"
+                                ? "Devolucion"
                                 : "Saldo a favor"}
                             </span>
                           </td>
@@ -1834,11 +1834,11 @@ export default function VentaForm({ id }: Props) {
               </div>
             )}
 
-            {/* Formulario de liquidación (solo si hay faltante) */}
+            {/* Formulario de liquidacion (solo si hay faltante) */}
             {!esCancelado && faltante > 0.005 && (
               <div className="liquidacion-form-wrap">
                 <div className="form-group-title" style={{ color: "#b91c1c" }}>
-                  💳 Registrar pago de liquidación — Faltante: {fmt(faltante)}
+                  💳 Registrar pago de liquidacion — Faltante: {fmt(faltante)}
                 </div>
 
                 {liqMutation.isError && (
@@ -1866,7 +1866,7 @@ export default function VentaForm({ id }: Props) {
                       onChange={(e) => setLiqForm((p) => ({ ...p, monto: e.target.value }))}
                     />
                     <span className="field-hint">
-                      Faltante: {fmt(faltante)}. Si pagas más, el exceso se registrará como saldo a favor del operador.
+                      Faltante: {fmt(faltante)}. Si pagas mas, el exceso se registrara como saldo a favor del operador.
                     </span>
                   </div>
 
@@ -1885,7 +1885,7 @@ export default function VentaForm({ id }: Props) {
                       }
                     >
                       <option value="Efectivo">Efectivo</option>
-                      <option value="Deposito">Depósito</option>
+                      <option value="Deposito">Deposito</option>
                       <option value="Saldo">Saldo a favor</option>
                       <option value="Dividida">Dividida</option>
                     </select>
@@ -1894,7 +1894,7 @@ export default function VentaForm({ id }: Props) {
                   {(liqForm.formaPago === "Deposito" ||
                     liqForm.formaPago === "Dividida") && (
                     <div className="form-field">
-                      <label>Referencia (depósito)</label>
+                      <label>Referencia (deposito)</label>
                       <input
                         type="text"
                         placeholder="Folio / CLABE / transferencia…"
@@ -1944,7 +1944,7 @@ export default function VentaForm({ id }: Props) {
                       />
                     </div>
                     <div className="form-field">
-                      <label>Depósito (MXN)</label>
+                      <label>Deposito (MXN)</label>
                       <input
                         type="number"
                         min={0}
@@ -2040,17 +2040,17 @@ export default function VentaForm({ id }: Props) {
 
       {!isNew && !esCancelado && ventaData && !esTicketDelDia && (
         <div className="field-hint" style={{ marginTop: "10px" }}>
-          Los tickets solo se pueden cancelar el mismo día en que fueron registrados.
+          Los tickets solo se pueden cancelar el mismo dia en que fueron registrados.
         </div>
       )}
 
-      {/* Confirmación de sobrepago (nueva venta) */}
+      {/* Confirmacion de sobrepago (nueva venta) */}
       {confirmSobrepago != null && (
         <div className="modal-overlay" onClick={dismissConfirmSobrepago}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <h2 className="modal-title modal-title--info">Confirmar sobrepago</h2>
             <p className="modal-desc">
-              Se agregará al operador saldo a favor:{" "}
+              Se agregara al operador saldo a favor:{" "}
               <strong style={{ color: "#0f172a" }}>{fmt(confirmSobrepago.amount)}</strong>.
             </p>
             <div className="modal-actions">
@@ -2070,17 +2070,17 @@ export default function VentaForm({ id }: Props) {
         </div>
       )}
 
-      {/* Modal de cancelación */}
+      {/* Modal de cancelacion */}
       {showCancelModal && (
         <div className="modal-overlay" onClick={() => setShowCancelModal(false)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <h2 className="modal-title">⛔ Cancelar ticket</h2>
             <p className="modal-desc">
-              Esta acción es irreversible. El ticket quedará cancelado y no se podrán
-              registrar más pagos. El historial se conserva.
+              Esta accion es irreversible. El ticket quedara cancelado y no se podran
+              registrar mas pagos. El historial se conserva.
             </p>
             <div className="form-field" style={{ marginTop: "12px" }}>
-              <label>Motivo de cancelación *</label>
+              <label>Motivo de cancelacion *</label>
               <textarea
                 className="modal-textarea"
                 rows={3}
@@ -2108,7 +2108,7 @@ export default function VentaForm({ id }: Props) {
                 disabled={cancelMutation.isPending}
                 onClick={() => cancelMutation.mutate()}
               >
-                {cancelMutation.isPending ? "Cancelando…" : "Sí, cancelar ticket"}
+                {cancelMutation.isPending ? "Cancelando…" : "Si, cancelar ticket"}
               </button>
             </div>
           </div>

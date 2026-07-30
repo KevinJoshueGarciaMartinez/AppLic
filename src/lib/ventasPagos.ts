@@ -35,7 +35,7 @@ function round2(n: number) {
 /**
  * Distribuye `montoAdicional` sobre un arreglo de faltantes actuales
  * usando cascada (llena el primero, luego el siguiente, etc.).
- * Devuelve el incremento de cobro para cada línea.
+ * Devuelve el incremento de cobro para cada linea.
  */
 function distribuirEnFaltantes(faltantes: number[], montoAdicional: number): number[] {
   let rest = Math.max(0, montoAdicional);
@@ -46,12 +46,12 @@ function distribuirEnFaltantes(faltantes: number[], montoAdicional: number): num
   });
 }
 
-// ── Parámetros de liquidación ─────────────────────────────────────────────────
+// ── Parametros de liquidacion ─────────────────────────────────────────────────
 
 export interface LiquidacionParams {
   /** ID de la venta (cuando es venta sin ticket). */
   ventaId: number | null;
-  /** ID del ticket (cuando agrupa múltiples ventas). */
+  /** ID del ticket (cuando agrupa multiples ventas). */
   ticketId: number | null;
   /** ID del operador (necesario si el pago usa saldo a favor). */
   operadorId: number | null;
@@ -65,13 +65,13 @@ export interface LiquidacionParams {
   concepto: string | null;
 }
 
-// ── Mutación principal ────────────────────────────────────────────────────────
+// ── Mutacion principal ────────────────────────────────────────────────────────
 
 /**
- * Registra un pago de liquidación:
+ * Registra un pago de liquidacion:
  * 1. Inserta un registro en `ventas_pagos`.
  * 2. Actualiza `ventas.cobro` de cada fila afectada (cobro += delta),
- *    lo que corrige automáticamente la columna generada `faltante`.
+ *    lo que corrige automaticamente la columna generada `faltante`.
  * 3. Si el pago usa saldo a favor, descuenta de `operador_saldo_movimientos`.
  */
 export async function registrarLiquidacion(params: LiquidacionParams): Promise<void> {
@@ -184,7 +184,7 @@ export async function registrarLiquidacion(params: LiquidacionParams): Promise<v
         "Se requiere un operador en el ticket para registrar el sobrepago como saldo a favor.",
       );
     }
-    await insertAbonoSaldo(operadorId, sobrepago, "Sobrepago (liquidación)", {
+    await insertAbonoSaldo(operadorId, sobrepago, "Sobrepago (liquidacion)", {
       ventaId,
       ticketId,
       fecha,
@@ -193,7 +193,7 @@ export async function registrarLiquidacion(params: LiquidacionParams): Promise<v
     });
   }
 
-  // ── 6. Descontar saldo a favor del operador (solo parte que liquidó) ────
+  // ── 6. Descontar saldo a favor del operador (solo parte que liquido) ────
   const saldoUsado = round2(psLiq);
   if (saldoUsado > 0.005 && operadorId != null) {
     await insertAplicacionSaldoTicket(operadorId, saldoUsado, {

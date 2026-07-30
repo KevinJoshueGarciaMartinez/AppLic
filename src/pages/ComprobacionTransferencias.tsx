@@ -150,10 +150,10 @@ export default function ComprobacionTransferencias() {
       <div className="page-header">
         <div>
           <h1 className="page-title">
-            <span className="page-icon">🏦</span> Comprobación de transferencias
+            <span className="page-icon">🏦</span> Comprobacion de transferencias
           </h1>
           <p className="page-subtitle">
-            Pagos con depósito o transferencia (incluye la parte digital en pagos divididos).
+            Pagos con deposito o transferencia (incluye la parte digital en pagos divididos).
             {soloPendientes
               ? esHoy
                 ? " Solo pendientes de comprobar — hoy."
@@ -238,7 +238,7 @@ export default function ComprobacionTransferencias() {
                 <tr>
                   <td colSpan={9} className="table-empty">
                     {busqueda
-                      ? "No hay resultados para la búsqueda."
+                      ? "No hay resultados para la busqueda."
                       : soloPendientes
                         ? "No hay transferencias pendientes de comprobar para esta fecha."
                         : "No hay movimientos digitales para esta fecha."}

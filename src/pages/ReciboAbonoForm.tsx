@@ -158,7 +158,7 @@ function OperadorSearch({
         onChange={(e) => handleInput(e.target.value)}
         onFocus={() => texto.length >= 2 && setAbierto(resultados.length > 0)}
         onBlur={() => setTimeout(() => setAbierto(false), 150)}
-        placeholder="Buscar por nombre, CURP o teléfono..."
+        placeholder="Buscar por nombre, CURP o telefono..."
       />
       {operadorId != null && <span className="field-hint">ID: #{operadorId}</span>}
       {abierto && (
@@ -363,7 +363,7 @@ export default function ReciboAbonoForm({ id }: Props) {
                     <strong>{fmtMoneda(Number(recibo.pago_efectivo ?? 0))}</strong>
                   </div>
                   <div className="recibo-field">
-                    <span className="recibo-label">Depósito</span>
+                    <span className="recibo-label">Deposito</span>
                     <strong>{fmtMoneda(Number(recibo.pago_deposito ?? 0))}</strong>
                   </div>
                 </>
@@ -378,7 +378,7 @@ export default function ReciboAbonoForm({ id }: Props) {
               </div>
               {(recibo.ticket_id != null || recibo.venta_id != null) && (
                 <div className="recibo-field recibo-field--full">
-                  <span className="recibo-label">Vinculación</span>
+                  <span className="recibo-label">Vinculacion</span>
                   <strong>
                     {recibo.ticket_id != null
                       ? `Ticket #${recibo.ticket_id}`
@@ -452,7 +452,7 @@ export default function ReciboAbonoForm({ id }: Props) {
               <label>Forma de pago</label>
               <select value={formaPago} onChange={(e) => handleFormaPagoChange(e.target.value)}>
                 <option value="Efectivo">Efectivo</option>
-                <option value="Deposito">Depósito</option>
+                <option value="Deposito">Deposito</option>
                 <option value="Transferencia">Transferencia</option>
                 <option value="Tarjeta">Tarjeta</option>
                 <option value="Dividida">Dividida</option>
@@ -473,7 +473,7 @@ export default function ReciboAbonoForm({ id }: Props) {
                   />
                 </div>
                 <div className="form-field">
-                  <label>Depósito (MXN)</label>
+                  <label>Deposito (MXN)</label>
                   <input
                     type="number"
                     min="0"
@@ -490,7 +490,7 @@ export default function ReciboAbonoForm({ id }: Props) {
               <label>Referencia</label>
               <input
                 type="text"
-                placeholder="Ej. folio, transferencia, autorización..."
+                placeholder="Ej. folio, transferencia, autorizacion..."
                 value={referencia}
                 onChange={(e) => setReferencia(e.target.value)}
               />

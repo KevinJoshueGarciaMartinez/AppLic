@@ -45,7 +45,7 @@ export default function Operadores() {
           </h1>
           <p className="page-subtitle">
             Registro y consulta de operadores formalizados. Datos personales, documentos,
-            licencia y curso. Los prospectos no aparecen aquí; úsalos en Seguimiento.
+            licencia y curso. Los prospectos no aparecen aqui; usalos en Seguimiento.
           </p>
         </div>
       </div>
@@ -54,7 +54,7 @@ export default function Operadores() {
         <input
           className="search-input"
           type="text"
-          placeholder="Buscar por nombre, CURP o teléfono..."
+          placeholder="Buscar por nombre, CURP o telefono..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
@@ -80,7 +80,7 @@ export default function Operadores() {
                 <th>#</th>
                 <th>Nombre completo</th>
                 <th>CURP</th>
-                <th>Teléfono</th>
+                <th>Telefono</th>
                 <th>Promotor</th>
                 <th>Licencia</th>
                 <th>Fecha</th>
@@ -91,7 +91,7 @@ export default function Operadores() {
                 <tr>
                   <td colSpan={7} className="table-empty">
                     {busqueda
-                      ? "No hay resultados para la búsqueda."
+                      ? "No hay resultados para la busqueda."
                       : "No hay operadores registrados. Crea el primero."}
                   </td>
                 </tr>

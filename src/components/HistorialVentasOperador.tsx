@@ -44,7 +44,7 @@ async function fetchVentasHistorialOperador(
 
 type Props = {
   operadorId: number;
-  /** Estilo más compacto (p. ej. columna izquierda en nueva venta). */
+  /** Estilo mas compacto (p. ej. columna izquierda en nueva venta). */
   compact?: boolean;
 };
 
@@ -64,7 +64,7 @@ export default function HistorialVentasOperador({ operadorId, compact }: Props) 
         Historial de ventas
       </div>
       <p className="historial-ventas-op__hint">
-        Servicios ya cobrados a este operador. Evita duplicar líneas si no aplica.
+        Servicios ya cobrados a este operador. Evita duplicar lineas si no aplica.
       </p>
 
       {isLoading && (

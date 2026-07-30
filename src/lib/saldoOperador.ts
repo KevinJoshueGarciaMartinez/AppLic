@@ -127,7 +127,7 @@ export async function fetchMovimientosSaldoTicket(
   return (data ?? []) as OperadorSaldoMovimientoRow[];
 }
 
-/** Devuelve saldo a favor al operador al cancelar un ticket (importe positivo = crédito). */
+/** Devuelve saldo a favor al operador al cancelar un ticket (importe positivo = credito). */
 export async function insertDevolucionCancelacion(
   operadorId: number,
   importePositivo: number,
@@ -138,7 +138,7 @@ export async function insertDevolucionCancelacion(
     operador_id: operadorId,
     tipo: "devolucion_cancelacion",
     importe: importePositivo,
-    concepto: "Devolución por cancelación de ticket",
+    concepto: "Devolucion por cancelacion de ticket",
     ticket_id: opts.ticketId,
     venta_id: opts.ventaId,
   });
@@ -156,7 +156,7 @@ export async function insertAplicacionSaldoTicket(
     operador_id: operadorId,
     tipo: "aplicacion_ticket",
     importe: -importePositivo,
-    concepto: "Aplicación a liquidación de ticket",
+    concepto: "Aplicacion a liquidacion de ticket",
     ticket_id: opts.ticketId,
     venta_id: opts.ventaId,
   });

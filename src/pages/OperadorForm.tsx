@@ -77,7 +77,7 @@ const ESCOLARIDADES = [
   "Primaria",
   "Secundaria",
   "Preparatoria",
-  "Técnico",
+  "Tecnico",
   "Licenciatura",
   "Posgrado",
 ];
@@ -90,7 +90,7 @@ const MEDIOS_SOLICITUD = [
   "Referido",
 ];
 
-const FORMAS_COBRO = ["Efectivo", "Transferencia", "Tarjeta", "Depósito"];
+const FORMAS_COBRO = ["Efectivo", "Transferencia", "Tarjeta", "Deposito"];
 
 // ── default empty form ────────────────────────────────────────────────────────
 void MEDIOS_SOLICITUD;
@@ -327,7 +327,7 @@ export default function OperadorForm({ id }: Props) {
     setErrorCliente(null);
     if (form.es_prospecto) {
       if (!(form.proxima_llamada?.trim())) {
-        setErrorCliente("La próxima llamada es obligatoria mientras sea prospecto (sirve para filtros y orden en Seguimiento).");
+        setErrorCliente("La proxima llamada es obligatoria mientras sea prospecto (sirve para filtros y orden en Seguimiento).");
         return;
       }
     } else {
@@ -470,7 +470,7 @@ export default function OperadorForm({ id }: Props) {
                 />
               </div>
               <div className="form-field">
-                <label>Teléfono</label>
+                <label>Telefono</label>
                 <input
                   type="tel"
                   value={form.telefono_1 ?? ""}
@@ -481,7 +481,7 @@ export default function OperadorForm({ id }: Props) {
             </div>
 
             <div className="form-field form-field-full">
-              <label>Dirección</label>
+              <label>Direccion</label>
               <textarea
                 value={form.direccion ?? ""}
                 onChange={(e) => set("direccion", e.target.value || null)}
@@ -521,7 +521,7 @@ export default function OperadorForm({ id }: Props) {
                 </select>
               </div>
               <div className="form-field">
-                <label>Trámite a realizar</label>
+                <label>Tramite a realizar</label>
                 <input
                   type="text"
                   value={form.tramite_a_realizar ?? ""}
@@ -529,7 +529,7 @@ export default function OperadorForm({ id }: Props) {
                 />
               </div>
               <div className="form-field">
-                <label>Número de expediente méd. prev.</label>
+                <label>Numero de expediente med. prev.</label>
                 <input
                   type="text"
                   value={form.num_exp_med_preventiva ?? ""}
@@ -539,7 +539,7 @@ export default function OperadorForm({ id }: Props) {
                 />
               </div>
               <div className="form-field">
-                <label>Número de licencia</label>
+                <label>Numero de licencia</label>
                 <input
                   type="text"
                   value={form.licencia_numero ?? ""}
@@ -564,7 +564,7 @@ export default function OperadorForm({ id }: Props) {
             <h3 className="section-subtitle">Seguimiento comercial</h3>
             <div className="form-grid form-grid-2">
               <div className="form-field">
-                <label>Medio de captación</label>
+                <label>Medio de captacion</label>
                 <select
                   value={form.medio_captacion ?? ""}
                   onChange={(e) =>
@@ -587,19 +587,19 @@ export default function OperadorForm({ id }: Props) {
                 </select>
               </div>
               <div className="form-field">
-                <label>Fecha de captación (automática)</label>
+                <label>Fecha de captacion (automatica)</label>
                 <input
                   type="date"
                   value={form.fecha_captacion ?? ""}
                   disabled
                 />
                 <span className="field-hint">
-                  Se registra automáticamente con la fecha de alta.
+                  Se registra automaticamente con la fecha de alta.
                 </span>
               </div>
               <div className="form-field">
                 <label>
-                  Próxima llamada
+                  Proxima llamada
                   {form.es_prospecto ? " *" : ""}
                 </label>
                 <input
@@ -647,7 +647,7 @@ export default function OperadorForm({ id }: Props) {
                   set("notas_seguimiento", e.target.value || null)
                 }
                 rows={2}
-                placeholder="Recordatorios para la próxima llamada…"
+                placeholder="Recordatorios para la proxima llamada…"
               />
             </div>
             <div className="form-field form-field-full">
@@ -657,7 +657,7 @@ export default function OperadorForm({ id }: Props) {
                 value={form.asesor ?? ""}
                 onChange={(e) => set("asesor", e.target.value || null)}
                 maxLength={120}
-                placeholder="Quién da seguimiento al prospecto"
+                placeholder="Quien da seguimiento al prospecto"
               />
             </div>
 
@@ -721,7 +721,7 @@ export default function OperadorForm({ id }: Props) {
                 </select>
               </div>
               <div className="form-field">
-                <label>Teléfono</label>
+                <label>Telefono</label>
                 <input
                   type="tel"
                   value={form.telefono_1 ?? ""}
@@ -732,7 +732,7 @@ export default function OperadorForm({ id }: Props) {
             </div>
 
             <div className="form-field form-field-full">
-              <label>Dirección</label>
+              <label>Direccion</label>
               <textarea
                 value={form.direccion ?? ""}
                 onChange={(e) => set("direccion", e.target.value || null)}
@@ -756,7 +756,7 @@ export default function OperadorForm({ id }: Props) {
                 </select>
               </div>
               <div className="form-field">
-                <label>Trámite a realizar</label>
+                <label>Tramite a realizar</label>
                 <input
                   type="text"
                   value={form.tramite_a_realizar ?? ""}
@@ -764,7 +764,7 @@ export default function OperadorForm({ id }: Props) {
                 />
               </div>
               <div className="form-field">
-                <label>Número de expediente méd. prev.</label>
+                <label>Numero de expediente med. prev.</label>
                 <input
                   type="text"
                   value={form.num_exp_med_preventiva ?? ""}
@@ -777,7 +777,7 @@ export default function OperadorForm({ id }: Props) {
 
             <div className="form-grid form-grid-3">
               <div className="form-field">
-                <label>Número de licencia</label>
+                <label>Numero de licencia</label>
                 <input
                   type="text"
                   value={form.licencia_numero ?? ""}
@@ -870,7 +870,7 @@ export default function OperadorForm({ id }: Props) {
                           {m.tipo === "abono"
                             ? "Abono"
                             : m.tipo === "aplicacion_ticket"
-                              ? "Aplicación a ticket"
+                              ? "Aplicacion a ticket"
                               : m.tipo}
                         </td>
                         <td className="col-money col-money--center">

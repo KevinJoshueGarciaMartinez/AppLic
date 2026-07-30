@@ -1,4 +1,4 @@
-/** Catálogo actual de estatus de seguimiento (operadores / prospectos). */
+/** Catalogo actual de estatus de seguimiento (operadores / prospectos). */
 export const ESTATUS_SEGUIMIENTO_OPCIONES = [
   "Seguimiento",
   "Agendado",
@@ -32,7 +32,7 @@ export function esEstatusSeguimientoOcultoPendientes(
   );
 }
 
-/** Fila gris en semáforo (sin urgencia por fecha). */
+/** Fila gris en semaforo (sin urgencia por fecha). */
 export function esEstatusSeguimientoTerminalSemaforo(
   s: string | null | undefined,
 ): boolean {

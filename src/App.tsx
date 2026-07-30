@@ -53,17 +53,17 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     href: "/comprobacion-transferencias",
-    label: "Comprobación",
+    label: "Comprobacion",
     icon: "🏦",
     description:
-      "Revisar depósitos y transferencias contra el banco: pendientes y por fecha.",
+      "Revisar depositos y transferencias contra el banco: pendientes y por fecha.",
   },
   {
     href: "/seguimiento",
     label: "Seguimiento",
     icon: "📞",
     description:
-      "Prospectos como operadores ligeros: captación, próxima llamada y estatus.",
+      "Prospectos como operadores ligeros: captacion, proxima llamada y estatus.",
   },
   {
     href: "/reportes",
@@ -262,7 +262,7 @@ function Dashboard({ role }: { role: UserRole }) {
   );
 }
 
-// ─── Placeholder genérico ────────────────────────────────────────────────────
+// ─── Placeholder generico ────────────────────────────────────────────────────
 
 function Placeholder({ item }: { item: NavItem }) {
   return (
@@ -528,21 +528,21 @@ function ResetPasswordScreen({
 function OperadorEditWrapper() {
   const { id } = useParams<{ id: string }>();
   const numId = Number(id);
-  if (!id || isNaN(numId)) return <div>ID inválido</div>;
+  if (!id || isNaN(numId)) return <div>ID invalido</div>;
   return <OperadorForm id={numId} />;
 }
 
 function VentaEditWrapper() {
   const { id } = useParams<{ id: string }>();
   const numId = Number(id);
-  if (!id || isNaN(numId)) return <div>ID inválido</div>;
+  if (!id || isNaN(numId)) return <div>ID invalido</div>;
   return <VentaForm id={numId} />;
 }
 
 function ReciboAbonoEditWrapper() {
   const { id } = useParams<{ id: string }>();
   const numId = Number(id);
-  if (!id || isNaN(numId)) return <div>ID inválido</div>;
+  if (!id || isNaN(numId)) return <div>ID invalido</div>;
   return <ReciboAbonoForm id={numId} />;
 }
 
@@ -789,7 +789,7 @@ export default function App() {
           {hasRoleAccess(role, "/usuarios") ? <Usuarios /> : <UnauthorizedScreen />}
         </Route>
 
-        {/* ── Resto de módulos (placeholders) ── */}
+        {/* ── Resto de modulos (placeholders) ── */}
         {NAV_ITEMS.filter(
           (n) =>
             ![

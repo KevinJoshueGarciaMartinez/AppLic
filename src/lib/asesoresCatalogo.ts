@@ -10,7 +10,7 @@ export const ASESORES_OPCIONES = [
 const CATALOGO = ASESORES_OPCIONES as readonly string[];
 
 /**
- * Clases CSS para un tono estable por asesor: fijos para el catálogo y hash para texto libre.
+ * Clases CSS para un tono estable por asesor: fijos para el catalogo y hash para texto libre.
  */
 export function asesorTonoClass(asesor: string | null | undefined): string {
   const t = asesor?.trim();

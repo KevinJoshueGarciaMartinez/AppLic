@@ -15,7 +15,7 @@ export interface Operador {
   nombre: string;
   apellido_paterno: string | null;
   apellido_materno: string | null;
-  /** Nulo si es prospecto (`es_prospecto`) y aún no se captura. */
+  /** Nulo si es prospecto (`es_prospecto`) y aun no se captura. */
   curp: string | null;
   telefono_1: string | null;
   telefono_2: string | null;
@@ -28,7 +28,7 @@ export interface Operador {
   id_promotor: number | null;
   promotores?: { nombre: string | null } | null;
 
-  // Licencia y médico
+  // Licencia y medico
   num_exp_med_preventiva: string | null;
   licencia_numero: string | null;
   licencia_vigencia: string | null;
@@ -55,7 +55,7 @@ export interface Operador {
   observaciones_ruta: string | null;
   documentos_ruta: string | null;
 
-  // Documentación
+  // Documentacion
   acta: boolean;
   identificacion: boolean;
   comprobante_domicilio: boolean;
@@ -105,7 +105,7 @@ export type OperadorInsert = Omit<
   "numero_consecutivo" | "created_at" | "updated_at" | "promotores"
 >;
 
-// ── Catálogo de servicios ─────────────────────────────────────────────────────
+// ── Catalogo de servicios ─────────────────────────────────────────────────────
 export interface Servicio {
   id_servicio: number;
   orden: number;
@@ -115,18 +115,18 @@ export interface Servicio {
   com_1: number;
 }
 
-// ── Línea de servicio (estado local del formulario) ──────────────────────────
+// ── Linea de servicio (estado local del formulario) ──────────────────────────
 export interface VentaItem {
   id_servicio: number | null;
   servicio: string;
   tipo_servicio: number | null;
   costo: number;
   com_1: number;
-  /** Nota por línea; se guarda en ventas.observaciones por fila */
+  /** Nota por linea; se guarda en ventas.observaciones por fila */
   observaciones: string | null;
   /** Id de la fila en `ventas` al editar un ticket o venta existente */
   ventaId?: number;
-  /** Valores cargados desde BD (edición) */
+  /** Valores cargados desde BD (edicion) */
   cobro?: number;
   egreso?: number;
 }
@@ -215,7 +215,7 @@ export interface VentaPago {
   referencia: string | null;
   concepto: string | null;
   cancelado: boolean;
-  /** Revisión contra estado de cuenta (depósito / transferencia). */
+  /** Revision contra estado de cuenta (deposito / transferencia). */
   comprobado: boolean;
   comprobado_at: string | null;
   created_at: string;

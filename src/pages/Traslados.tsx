@@ -84,7 +84,7 @@ export default function Traslados() {
     setFechaBuscar(fecha);
   }
 
-  // Agrupar por punto de reunión
+  // Agrupar por punto de reunion
   const grupos = operadores.reduce<Record<string, OperadorTraslado[]>>(
     (acc, op) => {
       const key = op.punto_reunion ?? "Sin punto definido";
@@ -106,7 +106,7 @@ export default function Traslados() {
           </h1>
           <p className="page-subtitle">
             Operadores programados para traslado por fecha. Agrupados por punto
-            de reunión.
+            de reunion.
           </p>
         </div>
       </div>
@@ -158,7 +158,7 @@ export default function Traslados() {
         </div>
       )}
 
-      {/* Grupos por punto de reunión */}
+      {/* Grupos por punto de reunion */}
       {Object.entries(grupos).map(([punto, ops]) => (
         <div key={punto} className="traslado-grupo">
           <div className="traslado-grupo-header">
@@ -178,7 +178,7 @@ export default function Traslados() {
                   <th>#</th>
                   <th>Nombre completo</th>
                   <th>CURP</th>
-                  <th>Teléfono</th>
+                  <th>Telefono</th>
                   <th>Observaciones</th>
                   <th>Progreso</th>
                   <th>Concluido</th>
