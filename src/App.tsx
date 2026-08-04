@@ -15,6 +15,7 @@ import ReporteSeguimientoProspectos from "./pages/ReporteSeguimientoProspectos";
 import SeguimientoVentas from "./pages/SeguimientoVentas";
 import ComprobacionTransferencias from "./pages/ComprobacionTransferencias";
 import Usuarios from "./pages/Usuarios";
+import Reembolsos from "./pages/Reembolsos";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -59,6 +60,13 @@ const NAV_ITEMS: NavItem[] = [
       "Revisar depositos y transferencias contra el banco: pendientes y por fecha.",
   },
   {
+    href: "/reembolsos",
+    label: "Reembolsos",
+    icon: "↩",
+    description:
+      "Solicitudes, autorizaciones y devoluciones de dinero vinculadas a ventas.",
+  },
+  {
     href: "/seguimiento",
     label: "Seguimiento",
     icon: "📞",
@@ -86,7 +94,7 @@ const SYSTEM_ITEMS: NavItem[] = [
 
 const NAV_BY_ROLE: Record<UserRole, string[]> = {
   admin: NAV_ITEMS.map((item) => item.href),
-  recepcion: ["/", "/operadores", "/ventas", "/reportes"],
+  recepcion: ["/", "/operadores", "/ventas", "/reembolsos", "/reportes"],
   ventas: ["/", "/seguimiento"],
 };
 
@@ -759,6 +767,14 @@ export default function App() {
           )}
         </Route>
 
+        <Route path="/reembolsos">
+          {hasRoleAccess(role, "/reembolsos") ? (
+            <Reembolsos role={role} />
+          ) : (
+            <UnauthorizedScreen />
+          )}
+        </Route>
+
         <Route path="/seguimiento">
           {hasRoleAccess(role, "/seguimiento") ? <SeguimientoVentas /> : <UnauthorizedScreen />}
         </Route>
@@ -797,6 +813,7 @@ export default function App() {
               "/operadores",
               "/ventas",
               "/comprobacion-transferencias",
+              "/reembolsos",
               "/seguimiento",
               "/reportes",
             ].includes(n.href),

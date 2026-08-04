@@ -17,12 +17,18 @@ import {
   fetchPagosDeTicket,
   registrarLiquidacion,
 } from "../lib/ventasPagos";
+import {
+  fetchReembolsos,
+  fetchResumenReembolsable,
+  solicitarReembolso,
+} from "../lib/reembolsos";
 import type {
   Venta,
   VentaInsert,
   VentaItem,
   VentaPago,
   FormaPagoLiquidacion,
+  FormaReembolso,
   Servicio,
   Promotor,
   Operador,
@@ -433,6 +439,19 @@ export default function VentaForm({ id }: Props) {
   });
   const [liqForm, setLiqForm] = useState(emptyLiq);
 
+  const emptyReembolso = () => ({
+    monto: "",
+    formaReembolso: "Efectivo" as FormaReembolso,
+    reembolsoEfectivo: "",
+    reembolsoDeposito: "",
+    reembolsoSaldo: "",
+    motivo: "",
+    observaciones: "",
+    idempotencyKey: crypto.randomUUID(),
+  });
+  const [showReembolsoModal, setShowReembolsoModal] = useState(false);
+  const [reembolsoForm, setReembolsoForm] = useState(emptyReembolso);
+
   // ── Cancelacion ───────────────────────────────────────────────────────────
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [motivoCancelacion, setMotivoCancelacion] = useState("");
@@ -569,6 +588,28 @@ export default function VentaForm({ id }: Props) {
   // ── Historial de pagos de esta venta / ticket ─────────────────────────────
   const ticketIdParaPagos = ventaData?.ticket_id ?? null;
   const historialTicketQueryKey = ["historial_ticket", ticketIdParaPagos, id] as const;
+  const reembolsoTarget = {
+    ventaId: ticketIdParaPagos ? null : (id ?? null),
+    ticketId: ticketIdParaPagos,
+  };
+  const reembolsoResumenQueryKey = ["reembolso_resumen", ticketIdParaPagos, id] as const;
+  const reembolsosQueryKey = ["reembolsos", ticketIdParaPagos, id] as const;
+
+  const {
+    data: resumenReembolso,
+    isError: resumenReembolsoError,
+    error: resumenReembolsoErrorData,
+  } = useQuery({
+    queryKey: reembolsoResumenQueryKey,
+    queryFn: () => fetchResumenReembolsable(reembolsoTarget),
+    enabled: !isNew && id != null && ventaData != null,
+  });
+
+  const { data: reembolsos = [] } = useQuery({
+    queryKey: reembolsosQueryKey,
+    queryFn: () => fetchReembolsos(reembolsoTarget),
+    enabled: !isNew && id != null && ventaData != null,
+  });
 
   const { data: historialTicketData } = useQuery({
     queryKey: historialTicketQueryKey,
@@ -750,6 +791,100 @@ export default function VentaForm({ id }: Props) {
       queryClient.invalidateQueries({ queryKey: ["operador_saldo_movs"] });
       setShowCancelModal(false);
       setMotivoCancelacion("");
+    },
+  });
+
+  function abrirSolicitudReembolso() {
+    if (!resumenReembolso || resumenReembolso.disponible <= EPSILON_DEUDA) return;
+    reembolsoMutation.reset();
+
+    const disponibles = [
+      resumenReembolso.disponible_efectivo > EPSILON_DEUDA,
+      resumenReembolso.disponible_deposito > EPSILON_DEUDA,
+      resumenReembolso.disponible_saldo > EPSILON_DEUDA,
+    ].filter(Boolean).length;
+    const forma: FormaReembolso =
+      disponibles > 1
+        ? "Dividida"
+        : resumenReembolso.disponible_efectivo > EPSILON_DEUDA
+          ? "Efectivo"
+          : resumenReembolso.disponible_deposito > EPSILON_DEUDA
+            ? "Deposito"
+            : "Saldo";
+
+    setReembolsoForm({
+      ...emptyReembolso(),
+      monto: resumenReembolso.disponible.toFixed(2),
+      formaReembolso: forma,
+      reembolsoEfectivo:
+        forma === "Dividida" ? resumenReembolso.disponible_efectivo.toFixed(2) : "",
+      reembolsoDeposito:
+        forma === "Dividida" ? resumenReembolso.disponible_deposito.toFixed(2) : "",
+      reembolsoSaldo:
+        forma === "Dividida" ? resumenReembolso.disponible_saldo.toFixed(2) : "",
+    });
+    setShowReembolsoModal(true);
+  }
+
+  function prepararSolicitudReembolso() {
+    if (!resumenReembolso) throw new Error("No se pudo consultar el monto reembolsable.");
+    const monto = parseMontoInput(reembolsoForm.monto);
+    if (monto <= EPSILON_DEUDA) throw new Error("Indica un monto mayor a cero.");
+    if (monto > resumenReembolso.disponible + EPSILON_DEUDA) {
+      throw new Error(`El maximo disponible es ${fmt(resumenReembolso.disponible)}.`);
+    }
+    if (reembolsoForm.motivo.trim().length < 5) {
+      throw new Error("El motivo debe contener al menos 5 caracteres.");
+    }
+
+    let efectivo = 0;
+    let deposito = 0;
+    let saldo = 0;
+    if (reembolsoForm.formaReembolso === "Efectivo") efectivo = monto;
+    else if (reembolsoForm.formaReembolso === "Deposito") deposito = monto;
+    else if (reembolsoForm.formaReembolso === "Saldo") saldo = monto;
+    else {
+      efectivo = parseMontoInput(reembolsoForm.reembolsoEfectivo);
+      deposito = parseMontoInput(reembolsoForm.reembolsoDeposito);
+      saldo = parseMontoInput(reembolsoForm.reembolsoSaldo);
+      if (Math.abs(efectivo + deposito + saldo - monto) > 0.02) {
+        throw new Error("El desglose debe sumar exactamente el monto del reembolso.");
+      }
+    }
+
+    if (efectivo > resumenReembolso.disponible_efectivo + EPSILON_DEUDA) {
+      throw new Error(`Solo hay ${fmt(resumenReembolso.disponible_efectivo)} disponibles en efectivo.`);
+    }
+    if (deposito > resumenReembolso.disponible_deposito + EPSILON_DEUDA) {
+      throw new Error(`Solo hay ${fmt(resumenReembolso.disponible_deposito)} disponibles en deposito.`);
+    }
+    if (saldo > resumenReembolso.disponible_saldo + EPSILON_DEUDA) {
+      throw new Error(`Solo hay ${fmt(resumenReembolso.disponible_saldo)} disponibles en saldo.`);
+    }
+
+    return { monto, efectivo, deposito, saldo };
+  }
+
+  const reembolsoMutation = useMutation({
+    mutationFn: async () => {
+      const { monto, efectivo, deposito, saldo } = prepararSolicitudReembolso();
+      return solicitarReembolso({
+        ...reembolsoTarget,
+        monto,
+        formaReembolso: reembolsoForm.formaReembolso,
+        reembolsoEfectivo: efectivo,
+        reembolsoDeposito: deposito,
+        reembolsoSaldo: saldo,
+        motivo: reembolsoForm.motivo.trim(),
+        observaciones: reembolsoForm.observaciones.trim() || null,
+        idempotencyKey: reembolsoForm.idempotencyKey,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: reembolsoResumenQueryKey });
+      queryClient.invalidateQueries({ queryKey: reembolsosQueryKey });
+      setShowReembolsoModal(false);
+      setReembolsoForm(emptyReembolso());
     },
   });
 
@@ -2010,6 +2145,15 @@ export default function VentaForm({ id }: Props) {
           >
             Volver
           </button>
+          {!isNew && (resumenReembolso?.disponible ?? 0) > EPSILON_DEUDA && (
+            <button
+              type="button"
+              className="btn-reembolso"
+              onClick={abrirSolicitudReembolso}
+            >
+              Solicitar reembolso
+            </button>
+          )}
           {!isNew && !esCancelado && esTicketDelDia && (
             <button
               type="button"
@@ -2038,6 +2182,68 @@ export default function VentaForm({ id }: Props) {
         </div>
       </form>
 
+      {!isNew && resumenReembolsoError && (
+        <div className="alert-error" style={{ marginTop: "12px" }}>
+          No se pudo consultar reembolsos: {(resumenReembolsoErrorData as Error).message}
+        </div>
+      )}
+
+      {!isNew && resumenReembolso && (
+        <section className="reembolso-section">
+          <div className="reembolso-section__header">
+            <div>
+              <div className="form-group-title">Reembolsos</div>
+              <p className="field-hint">
+                Solicitudes y devoluciones relacionadas con este ticket.
+              </p>
+            </div>
+            <div className="reembolso-resumen">
+              <span>Pagado <strong>{fmt(resumenReembolso.pagado)}</strong></span>
+              <span>Comprometido <strong>{fmt(resumenReembolso.reservado)}</strong></span>
+              <span>Procesado <strong>{fmt(resumenReembolso.procesado)}</strong></span>
+              <span>Disponible <strong>{fmt(resumenReembolso.disponible)}</strong></span>
+            </div>
+          </div>
+
+          {reembolsos.length === 0 ? (
+            <p className="reembolso-empty">No hay solicitudes de reembolso.</p>
+          ) : (
+            <div className="table-wrapper">
+              <table className="data-table reembolso-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Fecha</th>
+                    <th>Tipo</th>
+                    <th>Forma</th>
+                    <th>Motivo</th>
+                    <th>Estado</th>
+                    <th className="col-money">Monto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reembolsos.map((reembolso) => (
+                    <tr key={reembolso.id}>
+                      <td className="col-id">{reembolso.id}</td>
+                      <td>{new Date(reembolso.solicitado_at).toLocaleDateString("es-MX")}</td>
+                      <td>{reembolso.tipo}</td>
+                      <td>{reembolso.forma_reembolso}</td>
+                      <td>{reembolso.motivo}</td>
+                      <td>
+                        <span className={`badge reembolso-estado reembolso-estado--${reembolso.estado}`}>
+                          {reembolso.estado}
+                        </span>
+                      </td>
+                      <td className="col-money">{fmt(reembolso.monto)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
+
       {!isNew && !esCancelado && ventaData && !esTicketDelDia && (
         <div className="field-hint" style={{ marginTop: "10px" }}>
           Los tickets solo se pueden cancelar el mismo dia en que fueron registrados.
@@ -2064,6 +2270,187 @@ export default function VentaForm({ id }: Props) {
                 onClick={confirmSobrepagoAndSave}
               >
                 Continuar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showReembolsoModal && resumenReembolso && (
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            setShowReembolsoModal(false);
+            reembolsoMutation.reset();
+          }}
+        >
+          <div className="modal-card modal-card--lg" onClick={(e) => e.stopPropagation()}>
+            <h2 className="modal-title modal-title--info">Solicitar reembolso</h2>
+            <p className="modal-desc">
+              La solicitud reservara el importe. Administracion debera autorizarla antes de entregar el dinero.
+            </p>
+
+            <div className="reembolso-disponibles">
+              <span>Efectivo: {fmt(resumenReembolso.disponible_efectivo)}</span>
+              <span>Deposito: {fmt(resumenReembolso.disponible_deposito)}</span>
+              <span>Saldo: {fmt(resumenReembolso.disponible_saldo)}</span>
+            </div>
+
+            <div className="modal-form-grid">
+              <div className="form-field">
+                <label>Monto *</label>
+                <div className="reembolso-monto-control">
+                  <input
+                    type="number"
+                    min={0.01}
+                    max={resumenReembolso.disponible}
+                    step={0.01}
+                    value={reembolsoForm.monto}
+                    onWheel={blurNumberInputOnWheel}
+                    onChange={(e) => setReembolsoForm((p) => ({ ...p, monto: e.target.value }))}
+                  />
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setReembolsoForm((p) => ({
+                      ...p,
+                      monto: resumenReembolso.disponible.toFixed(2),
+                      reembolsoEfectivo:
+                        p.formaReembolso === "Dividida"
+                          ? resumenReembolso.disponible_efectivo.toFixed(2)
+                          : p.reembolsoEfectivo,
+                      reembolsoDeposito:
+                        p.formaReembolso === "Dividida"
+                          ? resumenReembolso.disponible_deposito.toFixed(2)
+                          : p.reembolsoDeposito,
+                      reembolsoSaldo:
+                        p.formaReembolso === "Dividida"
+                          ? resumenReembolso.disponible_saldo.toFixed(2)
+                          : p.reembolsoSaldo,
+                    }))}
+                  >
+                    Total
+                  </button>
+                </div>
+              </div>
+
+              <div className="form-field">
+                <label>Forma de devolucion *</label>
+                <select
+                  value={reembolsoForm.formaReembolso}
+                  onChange={(e) => setReembolsoForm((p) => ({
+                    ...p,
+                    formaReembolso: e.target.value as FormaReembolso,
+                  }))}
+                >
+                  <option value="Efectivo" disabled={resumenReembolso.disponible_efectivo <= EPSILON_DEUDA}>
+                    Efectivo
+                  </option>
+                  <option value="Deposito" disabled={resumenReembolso.disponible_deposito <= EPSILON_DEUDA}>
+                    Deposito
+                  </option>
+                  <option value="Saldo" disabled={resumenReembolso.disponible_saldo <= EPSILON_DEUDA}>
+                    Saldo a favor
+                  </option>
+                  <option
+                    value="Dividida"
+                    disabled={
+                      Number(resumenReembolso.disponible_efectivo > EPSILON_DEUDA)
+                      + Number(resumenReembolso.disponible_deposito > EPSILON_DEUDA)
+                      + Number(resumenReembolso.disponible_saldo > EPSILON_DEUDA) < 2
+                    }
+                  >
+                    Dividida
+                  </option>
+                </select>
+              </div>
+
+              {reembolsoForm.formaReembolso === "Dividida" && (
+                <>
+                  <div className="form-field">
+                    <label>Efectivo</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={resumenReembolso.disponible_efectivo}
+                      step={0.01}
+                      value={reembolsoForm.reembolsoEfectivo}
+                      onWheel={blurNumberInputOnWheel}
+                      onChange={(e) => setReembolsoForm((p) => ({ ...p, reembolsoEfectivo: e.target.value }))}
+                    />
+                  </div>
+                  <div className="form-field">
+                    <label>Deposito</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={resumenReembolso.disponible_deposito}
+                      step={0.01}
+                      value={reembolsoForm.reembolsoDeposito}
+                      onWheel={blurNumberInputOnWheel}
+                      onChange={(e) => setReembolsoForm((p) => ({ ...p, reembolsoDeposito: e.target.value }))}
+                    />
+                  </div>
+                  <div className="form-field">
+                    <label>Saldo a favor</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={resumenReembolso.disponible_saldo}
+                      step={0.01}
+                      value={reembolsoForm.reembolsoSaldo}
+                      onWheel={blurNumberInputOnWheel}
+                      onChange={(e) => setReembolsoForm((p) => ({ ...p, reembolsoSaldo: e.target.value }))}
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="form-field form-field-full">
+                <label>Motivo *</label>
+                <textarea
+                  className="modal-textarea"
+                  rows={3}
+                  placeholder="Ej. Servicio no realizado, solicitud del cliente..."
+                  value={reembolsoForm.motivo}
+                  onChange={(e) => setReembolsoForm((p) => ({ ...p, motivo: e.target.value }))}
+                />
+              </div>
+              <div className="form-field form-field-full">
+                <label>Observaciones</label>
+                <textarea
+                  className="modal-textarea"
+                  rows={2}
+                  value={reembolsoForm.observaciones}
+                  onChange={(e) => setReembolsoForm((p) => ({ ...p, observaciones: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            {reembolsoMutation.isError && (
+              <div className="alert-error" style={{ marginTop: "12px" }}>
+                {(reembolsoMutation.error as Error).message}
+              </div>
+            )}
+
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  setShowReembolsoModal(false);
+                  reembolsoMutation.reset();
+                }}
+              >
+                Volver
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={reembolsoMutation.isPending}
+                onClick={() => reembolsoMutation.mutate()}
+              >
+                {reembolsoMutation.isPending ? "Solicitando..." : "Crear solicitud"}
               </button>
             </div>
           </div>

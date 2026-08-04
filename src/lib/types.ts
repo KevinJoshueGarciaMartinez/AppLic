@@ -225,3 +225,45 @@ export type VentaPagoInsert = Omit<
   VentaPago,
   "id" | "created_at" | "cancelado" | "comprobado" | "comprobado_at"
 >;
+
+// ── Reembolsos ──────────────────────────────────────────────────────────────
+
+export type EstadoReembolso =
+  | "solicitado"
+  | "autorizado"
+  | "procesado"
+  | "rechazado"
+  | "anulado";
+
+export type FormaReembolso = "Efectivo" | "Deposito" | "Saldo" | "Dividida";
+
+export interface ResumenReembolsable {
+  pagado: number;
+  reservado: number;
+  procesado: number;
+  disponible: number;
+  disponible_efectivo: number;
+  disponible_deposito: number;
+  disponible_saldo: number;
+}
+
+export interface Reembolso {
+  id: number;
+  venta_id: number | null;
+  ticket_id: number | null;
+  operador_id: number | null;
+  tipo: "total" | "parcial";
+  estado: EstadoReembolso;
+  monto: number;
+  forma_reembolso: FormaReembolso;
+  reembolso_efectivo: number;
+  reembolso_deposito: number;
+  reembolso_saldo: number;
+  motivo: string;
+  referencia: string | null;
+  observaciones: string | null;
+  solicitado_por: string;
+  solicitado_at: string;
+  autorizado_at: string | null;
+  procesado_at: string | null;
+}
