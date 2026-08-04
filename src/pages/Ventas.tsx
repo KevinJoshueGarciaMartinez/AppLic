@@ -221,10 +221,13 @@ export default function Ventas() {
     );
   });
 
-  const totalCobrado = filtradas.reduce((s, v) => s + (v.cobro ?? 0), 0);
-  const totalFaltante = filtradas.reduce((s, v) => s + (v.faltante ?? 0), 0);
-  const totalCosto = filtradas.reduce((s, v) => s + (v.costo ?? 0), 0);
-  const pagosUnicos = sumarPagosUnicos(filtradas);
+  // Las canceladas y reembolsadas se muestran como historial, pero ya no
+  // forman parte de los importes vigentes del dia.
+  const registrosVigentes = filtradas.filter((v) => !v.cancelado);
+  const totalCobrado = registrosVigentes.reduce((s, v) => s + (v.cobro ?? 0), 0);
+  const totalFaltante = registrosVigentes.reduce((s, v) => s + (v.faltante ?? 0), 0);
+  const totalCosto = registrosVigentes.reduce((s, v) => s + (v.costo ?? 0), 0);
+  const pagosUnicos = sumarPagosUnicos(registrosVigentes);
   const totalEfectivo = pagosUnicos.efectivo;
   const totalDeposito = pagosUnicos.deposito;
   const totalResguardo = pagosUnicos.resguardo;
@@ -323,7 +326,7 @@ export default function Ventas() {
           </div>
           <div className="summary-item">
             <span className="summary-label">Registros</span>
-            <span className="summary-value">{filtradas.length}</span>
+            <span className="summary-value">{registrosVigentes.length}</span>
           </div>
           <div className="summary-item">
             <span className="summary-label">Cobrado en efectivo</span>
@@ -385,9 +388,9 @@ export default function Ventas() {
                     <td className="col-money">{fmt(v.costo)}</td>
                     <td className="col-money col-money--green">{fmt(v.cobro)}</td>
                     <td
-                      className={`col-money ${(v.faltante ?? 0) > 0 ? "col-money--red" : "col-money--green"}`}
+                      className={`col-money ${!v.cancelado && (v.faltante ?? 0) > 0 ? "col-money--red" : "col-money--green"}`}
                     >
-                      {fmt(v.faltante ?? 0)}
+                      {fmt(v.cancelado ? 0 : (v.faltante ?? 0))}
                     </td>
                     <td>
                       {v.cancelado ? (
@@ -414,7 +417,7 @@ export default function Ventas() {
                     </td>
                     <td>{v.promotor ?? asesorDelRegistro(v) ?? "—"}</td>
                     <td>
-                      {v.kind === "recibo_abono" ? (
+                      {v.kind === "recibo_abono" || v.cancelado ? (
                         <span className="badge badge--gray">—</span>
                       ) : (
                         <span

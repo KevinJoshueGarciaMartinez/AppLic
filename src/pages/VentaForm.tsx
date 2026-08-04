@@ -1169,6 +1169,7 @@ export default function VentaForm({ id }: Props) {
   const totalItems = items.reduce((s, item) => s + item.costo, 0);
   const tieneCurso = items.some((item) => item.tipo_servicio === 2);
   const faltante = totalItems - form.cobro;
+  const faltanteVigente = esCancelado ? 0 : faltante;
 
   // Con curso en el ticket: nueva venta → fecha solicitud = hoy (sin date picker). Edicion → conservar fecha guardada; si falta, usar hoy.
   useEffect(() => {
@@ -1864,8 +1865,8 @@ export default function VentaForm({ id }: Props) {
 
               <div className="calc-row">
                 <span>Faltante</span>
-                <span className={faltante > 0 ? "calc-red" : "calc-green"}>
-                  {fmt(faltante)}
+                <span className={faltanteVigente > 0 ? "calc-red" : "calc-green"}>
+                  {fmt(faltanteVigente)}
                 </span>
               </div>
 

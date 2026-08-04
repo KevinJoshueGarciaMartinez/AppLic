@@ -15,6 +15,7 @@ export type VentaHistorialOperadorRow = {
   faltante: number;
   forma_pago: string;
   cancelado: boolean;
+  motivo_cancelacion: string | null;
 };
 
 function fmt(n: number) {
@@ -31,7 +32,7 @@ async function fetchVentasHistorialOperador(
   const { data, error } = await supabase
     .from("ventas")
     .select(
-      "id, fecha, ticket_id, servicio, costo, cobro, faltante, forma_pago, cancelado",
+      "id, fecha, ticket_id, servicio, costo, cobro, faltante, forma_pago, cancelado, motivo_cancelacion",
     )
     .eq("operador_id", operadorId)
     .order("fecha", { ascending: false })
@@ -114,14 +115,16 @@ export default function HistorialVentasOperador({ operadorId, compact }: Props) 
                   </td>
                   <td className="col-monto">{fmt(Number(v.costo))}</td>
                   <td className="col-monto">{fmt(Number(v.cobro))}</td>
-                  <td className="col-monto">{fmt(Number(v.faltante))}</td>
+                  <td className="col-monto">{fmt(v.cancelado ? 0 : Number(v.faltante))}</td>
                   <td>
                     <span className="historial-ventas-op__forma">
                       {v.forma_pago === "Saldo" ? "Saldo a favor" : v.forma_pago}
                     </span>
                     {v.cancelado && (
                       <span className="badge badge--cancelado historial-ventas-op__badge-cancel">
-                        Cancelada
+                        {v.motivo_cancelacion?.startsWith("REEMBOLSO TOTAL #")
+                          ? "Reembolsada"
+                          : "Cancelada"}
                       </span>
                     )}
                   </td>
