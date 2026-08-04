@@ -5,11 +5,9 @@ import { supabase } from "../lib/supabase";
 import { normalizeForSearch } from "../lib/inputNormalization";
 import {
   anularReembolso,
-  completarEntregaReembolso,
-  procesarReembolso,
   resolverReembolso,
 } from "../lib/reembolsos";
-import type { EstadoReembolso, FormaReembolso, Reembolso } from "../lib/types";
+import type { EstadoReembolso, Reembolso } from "../lib/types";
 
 type VentaContexto = {
   id: number;
@@ -24,16 +22,6 @@ type ReembolsoListado = Reembolso & {
 
 type Props = {
   role: "admin" | "recepcion" | "ventas";
-};
-
-type ProcesarForm = {
-  reembolso: ReembolsoListado;
-  modo: "procesar" | "completar";
-  forma: FormaReembolso;
-  efectivo: string;
-  deposito: string;
-  referencia: string;
-  saldoActual: number | null;
 };
 
 const ESTADOS: Array<{ value: "todos" | EstadoReembolso; label: string }> = [
@@ -106,11 +94,10 @@ export default function Reembolsos({ role }: Props) {
   const queryClient = useQueryClient();
   const esAdmin = role === "admin";
   const [estado, setEstado] = useState<"todos" | EstadoReembolso>(
-    esAdmin ? "solicitado" : "autorizado",
+    esAdmin ? "solicitado" : "todos",
   );
   const [busqueda, setBusqueda] = useState("");
   const [mensaje, setMensaje] = useState("");
-  const [procesarForm, setProcesarForm] = useState<ProcesarForm | null>(null);
 
   const { data: currentUserId = null } = useQuery({
     queryKey: ["auth_user_id"],
@@ -139,36 +126,9 @@ export default function Reembolsos({ role }: Props) {
       observaciones: string | null;
     }) => resolverReembolso(id, autorizar, observaciones),
     onSuccess: async (_, variables) => {
-      setMensaje(variables.autorizar ? "REEMBOLSO AUTORIZADO." : "REEMBOLSO RECHAZADO.");
-      await queryClient.invalidateQueries({ queryKey });
-      await queryClient.invalidateQueries({ queryKey: ["reembolsos"] });
-      await queryClient.invalidateQueries({ queryKey: ["reembolso_resumen"] });
-    },
-  });
-
-  const procesarMutation = useMutation({
-    mutationFn: ({
-      id,
-      forma,
-      efectivo,
-      deposito,
-      referencia,
-      modo,
-    }: {
-      id: number;
-      forma: FormaReembolso;
-      efectivo: number;
-      deposito: number;
-      referencia: string | null;
-      modo: "procesar" | "completar";
-    }) => modo === "procesar"
-      ? procesarReembolso(id, forma, efectivo, deposito, referencia)
-      : completarEntregaReembolso(id, forma, efectivo, deposito, referencia),
-    onSuccess: async (_, variables) => {
-      setMensaje(variables.modo === "procesar"
-        ? "REEMBOLSO PROCESADO."
-        : "FORMA DE ENTREGA ACTUALIZADA.");
-      setProcesarForm(null);
+      setMensaje(variables.autorizar
+        ? "REEMBOLSO AUTORIZADO Y REGISTRADO."
+        : "REEMBOLSO RECHAZADO.");
       await queryClient.invalidateQueries({ queryKey });
       await queryClient.invalidateQueries({ queryKey: ["reembolsos"] });
       await queryClient.invalidateQueries({ queryKey: ["reembolso_resumen"] });
@@ -205,13 +165,13 @@ export default function Reembolsos({ role }: Props) {
 
   const totalFiltrado = filtrados.reduce((sum, reembolso) => sum + reembolso.monto, 0);
   const pendienteAutorizar = reembolsos.filter((r) => r.estado === "solicitado").length;
-  const pendienteProcesar = reembolsos.filter((r) => r.estado === "autorizado").length;
-  const mutationError = resolverMutation.error ?? procesarMutation.error ?? anularMutation.error;
-  const mutando = resolverMutation.isPending || procesarMutation.isPending || anularMutation.isPending;
+  const procesados = reembolsos.filter((r) => r.estado === "procesado").length;
+  const mutationError = resolverMutation.error ?? anularMutation.error;
+  const mutando = resolverMutation.isPending || anularMutation.isPending;
 
   function autorizar(reembolso: ReembolsoListado) {
     if (!window.confirm(
-      `AUTORIZAR EL REEMBOLSO #${reembolso.id} POR ${fmt(reembolso.monto)}?`,
+      `AUTORIZAR EL REEMBOLSO #${reembolso.id} POR ${fmt(reembolso.monto)}? AL CONFIRMAR QUEDARA REGISTRADO Y SE ACTUALIZARA EL SALDO DEL OPERADOR.`,
     )) return;
     setMensaje("");
     resolverMutation.mutate({ id: reembolso.id, autorizar: true, observaciones: null });
@@ -225,90 +185,6 @@ export default function Reembolsos({ role }: Props) {
       return;
     }
     resolverMutation.mutate({ id: reembolso.id, autorizar: false, observaciones: motivo.trim() });
-  }
-
-  async function abrirProcesar(
-    reembolso: ReembolsoListado,
-    modo: "procesar" | "completar" = "procesar",
-  ) {
-    setMensaje("");
-    let saldoActual: number | null = null;
-    if (modo === "procesar" && reembolso.origen_saldo > 0 && reembolso.operador_id != null) {
-      const { data, error: saldoError } = await supabase
-        .from("operador_saldo_movimientos")
-        .select("importe")
-        .eq("operador_id", reembolso.operador_id);
-      if (saldoError) {
-        setMensaje(`NO SE PUDO CONSULTAR EL SALDO: ${saldoError.message}`);
-        return;
-      }
-      saldoActual = (data ?? []).reduce(
-        (sum, movimiento) => sum + Number(movimiento.importe ?? 0),
-        0,
-      );
-    }
-
-    const forma: FormaReembolso = reembolso.forma_reembolso === "Saldo"
-      ? "Efectivo"
-      : reembolso.forma_reembolso;
-    setProcesarForm({
-      reembolso,
-      modo,
-      forma,
-      efectivo: forma === "Efectivo"
-        ? reembolso.monto.toFixed(2)
-        : forma === "Dividida" ? String(reembolso.reembolso_efectivo || "") : "",
-      deposito: forma === "Deposito"
-        ? reembolso.monto.toFixed(2)
-        : forma === "Dividida" ? String(reembolso.reembolso_deposito || "") : "",
-      referencia: reembolso.referencia ?? "",
-      saldoActual,
-    });
-  }
-
-  function cambiarFormaProcesar(forma: FormaReembolso) {
-    setProcesarForm((prev) => prev && ({
-      ...prev,
-      forma,
-      efectivo: forma === "Efectivo" ? prev.reembolso.monto.toFixed(2) : "",
-      deposito: forma === "Deposito" ? prev.reembolso.monto.toFixed(2) : "",
-    }));
-  }
-
-  function confirmarProcesar() {
-    if (!procesarForm) return;
-    const efectivo = Number(procesarForm.efectivo) || 0;
-    const deposito = Number(procesarForm.deposito) || 0;
-    if (Math.abs(efectivo + deposito - procesarForm.reembolso.monto) > 0.02) {
-      setMensaje("EL DESGLOSE DEBE SUMAR EXACTAMENTE EL MONTO DEL REEMBOLSO.");
-      return;
-    }
-    if (procesarForm.forma === "Dividida" && (efectivo <= 0 || deposito <= 0)) {
-      setMensaje("EN AMBOS, EFECTIVO Y DEPOSITO DEBEN SER MAYORES A CERO.");
-      return;
-    }
-    if (deposito > 0 && procesarForm.referencia.trim().length < 3) {
-      setMensaje("LA REFERENCIA BANCARIA ES OBLIGATORIA.");
-      return;
-    }
-    if (procesarForm.saldoActual != null
-      && procesarForm.reembolso.origen_saldo > procesarForm.saldoActual + 0.005) {
-      setMensaje("EL OPERADOR NO TIENE SALDO SUFICIENTE PARA PROCESAR EL REEMBOLSO.");
-      return;
-    }
-    const confirmacion = procesarForm.modo === "procesar"
-      ? `CONFIRMAS QUE YA SE ENTREGO ${fmt(procesarForm.reembolso.monto)} AL OPERADOR? ESTA ACCION REGISTRA LA SALIDA DE DINERO.`
-      : `CONFIRMAS QUE ESTOS SON LOS DATOS REALES DE ENTREGA DEL REEMBOLSO #${procesarForm.reembolso.id}?`;
-    if (!window.confirm(confirmacion)) return;
-    setMensaje("");
-    procesarMutation.mutate({
-      id: procesarForm.reembolso.id,
-      forma: procesarForm.forma,
-      efectivo,
-      deposito,
-      referencia: procesarForm.referencia.trim() || null,
-      modo: procesarForm.modo,
-    });
   }
 
   function anular(reembolso: ReembolsoListado) {
@@ -326,8 +202,8 @@ export default function Reembolsos({ role }: Props) {
           </h1>
           <p className="page-subtitle">
             {esAdmin
-              ? "Autoriza, rechaza y procesa devoluciones solicitadas."
-              : "Consulta y procesa devoluciones previamente autorizadas."}
+              ? "REVISA Y AUTORIZA REEMBOLSOS EN UNA SOLA CONFIRMACION."
+              : "CONSULTA LAS SOLICITUDES Y REEMBOLSOS REGISTRADOS."}
           </p>
         </div>
       </div>
@@ -338,8 +214,8 @@ export default function Reembolsos({ role }: Props) {
           <span className="summary-value">{pendienteAutorizar}</span>
         </div>
         <div className="summary-item">
-          <span className="summary-label">Por procesar</span>
-          <span className="summary-value">{pendienteProcesar}</span>
+          <span className="summary-label">Procesados</span>
+          <span className="summary-value">{procesados}</span>
         </div>
         <div className="summary-item">
           <span className="summary-label">Total filtrado</span>
@@ -412,7 +288,7 @@ export default function Reembolsos({ role }: Props) {
                     <td title={reembolso.observaciones ?? ""}>{reembolso.motivo}</td>
                     <td>
                       <span className="badge badge--blue">
-                        {reembolso.forma_reembolso === "Saldo" ? "Por definir" : reembolso.forma_reembolso}
+                        {reembolso.forma_reembolso === "Saldo" ? "Registro anterior" : reembolso.forma_reembolso}
                       </span>
                       {reembolso.origen_saldo > 0 && (
                         <div className="reembolso-contexto">DESCUENTA {fmt(reembolso.origen_saldo)} DE SALDO</div>
@@ -435,12 +311,6 @@ export default function Reembolsos({ role }: Props) {
                           <button type="button" className="btn-danger" disabled={mutando} onClick={() => rechazar(reembolso)}>Rechazar</button>
                         </>
                       )}
-                      {reembolso.estado === "autorizado" && (
-                        <button type="button" className="btn-primary" disabled={mutando} onClick={() => abrirProcesar(reembolso)}>Procesar</button>
-                      )}
-                      {reembolso.estado === "procesado" && reembolso.forma_reembolso === "Saldo" && (
-                        <button type="button" className="btn-primary" disabled={mutando} onClick={() => abrirProcesar(reembolso, "completar")}>Completar</button>
-                      )}
                       {(esAdmin || reembolso.solicitado_por === currentUserId)
                         && (reembolso.estado === "solicitado" || reembolso.estado === "autorizado") && (
                         <button type="button" className="btn-secondary" disabled={mutando} onClick={() => anular(reembolso)}>Anular</button>
@@ -458,95 +328,6 @@ export default function Reembolsos({ role }: Props) {
         <div className="loading-state"><div className="spinner" /><span>Cargando reembolsos...</span></div>
       )}
 
-      {procesarForm && (
-        <div className="modal-overlay" onClick={() => setProcesarForm(null)}>
-          <div className="modal-card" onClick={(event) => event.stopPropagation()}>
-            <h2 className="modal-title modal-title--info">
-              {procesarForm.modo === "procesar" ? "Procesar reembolso" : "Completar reembolso"}
-            </h2>
-            <p className="modal-desc">
-              CAPTURA COMO SE ENTREGO REALMENTE {fmt(procesarForm.reembolso.monto)} AL OPERADOR.
-            </p>
-
-            {procesarForm.modo === "procesar" && procesarForm.reembolso.origen_saldo > 0 && (
-              <div className="reembolso-disponibles">
-                <span>SALDO ACTUAL: {fmt(procesarForm.saldoActual ?? 0)}</span>
-                <span>DESCUENTO: {fmt(procesarForm.reembolso.origen_saldo)}</span>
-                <span>SALDO FINAL: {fmt((procesarForm.saldoActual ?? 0) - procesarForm.reembolso.origen_saldo)}</span>
-              </div>
-            )}
-
-            {(mensaje || procesarMutation.isError) && (
-              <div className="alert-error" style={{ marginTop: "12px" }}>
-                {procesarMutation.isError
-                  ? (procesarMutation.error as Error).message
-                  : mensaje}
-              </div>
-            )}
-
-            <div className="modal-form-grid">
-              <div className="form-field form-field-full">
-                <label>Forma de entrega *</label>
-                <select
-                  value={procesarForm.forma}
-                  onChange={(event) => cambiarFormaProcesar(event.target.value as FormaReembolso)}
-                >
-                  <option value="Efectivo">Efectivo</option>
-                  <option value="Deposito">Deposito</option>
-                  <option value="Dividida">Ambos</option>
-                </select>
-              </div>
-
-              {procesarForm.forma === "Dividida" && (
-                <>
-                  <div className="form-field">
-                    <label>Efectivo</label>
-                    <input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={procesarForm.efectivo}
-                      onChange={(event) => setProcesarForm((prev) => prev && ({ ...prev, efectivo: event.target.value }))}
-                    />
-                  </div>
-                  <div className="form-field">
-                    <label>Deposito</label>
-                    <input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={procesarForm.deposito}
-                      onChange={(event) => setProcesarForm((prev) => prev && ({ ...prev, deposito: event.target.value }))}
-                    />
-                  </div>
-                </>
-              )}
-
-              {(procesarForm.forma === "Deposito" || procesarForm.forma === "Dividida") && (
-                <div className="form-field form-field-full">
-                  <label>Referencia bancaria *</label>
-                  <input
-                    type="text"
-                    value={procesarForm.referencia}
-                    onChange={(event) => setProcesarForm((prev) => prev && ({ ...prev, referencia: event.target.value }))}
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="modal-actions">
-              <button type="button" className="btn-secondary" onClick={() => setProcesarForm(null)}>
-                Volver
-              </button>
-              <button type="button" className="btn-primary" disabled={procesarMutation.isPending} onClick={confirmarProcesar}>
-                {procesarMutation.isPending
-                  ? "Guardando..."
-                  : procesarForm.modo === "procesar" ? "Confirmar reembolso" : "Guardar entrega"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

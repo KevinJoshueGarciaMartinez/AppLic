@@ -2264,7 +2264,7 @@ export default function VentaForm({ id }: Props) {
           <div className="modal-card modal-card--lg" onClick={(e) => e.stopPropagation()}>
             <h2 className="modal-title modal-title--info">Solicitar reembolso</h2>
             <p className="modal-desc">
-              La solicitud reservara el importe. Administracion debera autorizarla antes de entregar el dinero.
+              CAPTURA LOS DATOS DEL REEMBOLSO. AL AUTORIZARLO, ADMINISTRACION LO REGISTRARA Y ACTUALIZARA EL SALDO.
             </p>
 
             <div className="reembolso-disponibles">
@@ -2345,7 +2345,7 @@ export default function VentaForm({ id }: Props) {
 
               {resumenReembolso.disponible_saldo > EPSILON_DEUDA && (
                 <div className="alert-info form-field-full">
-                  AL PROCESAR, EL SISTEMA DESCONTARA AUTOMATICAMENTE LA PARTE PROVENIENTE DEL SALDO A FAVOR.
+                  AL AUTORIZAR, EL SISTEMA DESCONTARA AUTOMATICAMENTE LA PARTE PROVENIENTE DEL SALDO A FAVOR.
                 </div>
               )}
 
