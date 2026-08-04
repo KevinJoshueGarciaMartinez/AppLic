@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
+import { fechaLocalISO } from "../lib/dates";
 import { joinNameParts, normalizeNamePart } from "../lib/names";
 import type { Operador, OperadorInsert } from "../lib/types";
 import { MEDIOS_CAPTACION, etiquetaMedioCaptacion } from "../lib/mediosCaptacion";
@@ -119,7 +120,7 @@ function nombreCompleto(op: FilaSeguimiento) {
 }
 
 function hoyISO() {
-  return new Date().toISOString().slice(0, 10);
+  return fechaLocalISO();
 }
 
 function truncar(s: string | null, max: number) {
@@ -145,7 +146,7 @@ function claseSemaforoSeguimiento(op: FilaSeguimiento, hoy: string): string {
 
 /** Base para insert de prospecto (resto de columnas con valores por defecto). */
 function baseProspectoInsert(): OperadorInsert {
-  const fecha = new Date().toISOString().slice(0, 10);
+  const fecha = fechaLocalISO();
   const hora = new Date().toTimeString().slice(0, 5);
   return {
     fecha,
@@ -1184,7 +1185,7 @@ export default function SeguimientoVentas() {
                     );
                     return;
                   }
-                  const fechaISO = new Date().toISOString().slice(0, 10);
+                  const fechaISO = fechaLocalISO();
                   const entradaNueva = construirEntradaHistoricaNota({
                     nota: detallesModal.notaNueva,
                     proximaLlamada: proxima,

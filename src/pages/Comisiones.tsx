@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 import type { Promotor } from "../lib/types";
+import { fechaLocalISO } from "../lib/dates";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -71,7 +72,7 @@ function fmt(n: number) {
 }
 
 function hoy() {
-  return new Date().toISOString().slice(0, 10);
+  return fechaLocalISO();
 }
 
 function primerDiaMes() {

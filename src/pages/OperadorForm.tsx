@@ -20,6 +20,7 @@ import {
 import { normalizeUppercaseNoAccents } from "../lib/inputNormalization";
 import { joinNameParts, normalizeNamePart } from "../lib/names";
 import HistorialVentasOperador from "../components/HistorialVentasOperador";
+import { fechaLocalISO } from "../lib/dates";
 
 /** Pestañas visibles en expediente simplificado. */
 const TAB_IDX_VENTAS = 1;
@@ -98,7 +99,7 @@ void FORMAS_COBRO;
 
 function emptyForm(): OperadorInsert {
   return {
-    fecha: new Date().toISOString().slice(0, 10),
+    fecha: fechaLocalISO(),
     hora: new Date().toTimeString().slice(0, 5),
     nombre: "",
     apellido_paterno: null,
@@ -157,7 +158,7 @@ function emptyForm(): OperadorInsert {
     asistencia: false,
     es_prospecto: false,
     medio_captacion: null,
-    fecha_captacion: new Date().toISOString().slice(0, 10),
+    fecha_captacion: fechaLocalISO(),
     proxima_llamada: null,
     estatus_seguimiento: null,
     notas_seguimiento: null,
@@ -340,7 +341,7 @@ export default function OperadorForm({ id }: Props) {
     const payload: OperadorInsert = {
       ...form,
       fecha_captacion: isNew
-        ? (form.fecha_captacion || new Date().toISOString().slice(0, 10))
+        ? (form.fecha_captacion || fechaLocalISO())
         : form.fecha_captacion,
       nombre: normalizeNamePart(form.nombre),
       apellido_paterno: normalizeNamePart(form.apellido_paterno) || null,

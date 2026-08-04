@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
+import { fechaLocalISO } from "../lib/dates";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -61,13 +62,13 @@ async function fetchCitas(
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function hoy() {
-  return new Date().toISOString().slice(0, 10);
+  return fechaLocalISO();
 }
 
 function hace30() {
   const d = new Date();
   d.setDate(d.getDate() - 30);
-  return d.toISOString().slice(0, 10);
+  return fechaLocalISO(d);
 }
 
 function nombreCompleto(op: OperadorCita) {

@@ -4,9 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 import { joinNameParts } from "../lib/names";
 import { normalizeForSearch } from "../lib/inputNormalization";
+import { fechaLocalISO } from "../lib/dates";
 
 function hoy() {
-  return new Date().toISOString().slice(0, 10);
+  return fechaLocalISO();
 }
 
 type VentaListadoRow = {
@@ -391,7 +392,9 @@ export default function Ventas() {
                     <td>
                       {v.cancelado ? (
                         <span className="badge badge--cancelado" title={v.motivo_cancelacion ?? ""}>
-                          Cancelada
+                          {v.motivo_cancelacion?.startsWith("REEMBOLSO TOTAL #")
+                            ? "Reembolsada"
+                            : "Cancelada"}
                         </span>
                       ) : (
                         <span
@@ -431,7 +434,7 @@ export default function Ventas() {
                           <Link href={`/ventas/${v.id}`}>
                             <button className="btn-edit">Ver</button>
                           </Link>
-                          {(v.faltante ?? 0) > 0.005 && (
+                          {!v.cancelado && (v.faltante ?? 0) > 0.005 && (
                             <button
                               className="btn-liquidar"
                               title="Registrar pago de liquidacion"

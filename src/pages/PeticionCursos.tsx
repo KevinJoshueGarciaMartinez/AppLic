@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
+import { fechaLocalISO } from "../lib/dates";
 import { joinNameParts } from "../lib/names";
 import type { Promotor } from "../lib/types";
 
@@ -98,7 +99,7 @@ function fmt(n: number) {
 }
 
 function hoy() {
-  return new Date().toISOString().slice(0, 10);
+  return fechaLocalISO();
 }
 
 function formatearFechaCorta(valor: string | null | undefined) {

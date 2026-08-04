@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 import { etiquetaMedioCaptacion } from "../lib/mediosCaptacion";
 import { asesorTonoClass } from "../lib/asesoresCatalogo";
+import { fechaLocalISO } from "../lib/dates";
 
 type FilaProspecto = {
   numero_consecutivo: number;
@@ -41,7 +42,7 @@ async function fetchProspectosSeguimiento(): Promise<FilaProspecto[]> {
 }
 
 function hoyISO() {
-  return new Date().toISOString().slice(0, 10);
+  return fechaLocalISO();
 }
 
 function formatLocalISO(date: Date) {

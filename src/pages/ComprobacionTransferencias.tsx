@@ -2,11 +2,12 @@ import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
+import { fechaLocalISO } from "../lib/dates";
 import { normalizeForSearch } from "../lib/inputNormalization";
 import type { VentaPago } from "../lib/types";
 
 function hoy() {
-  return new Date().toISOString().slice(0, 10);
+  return fechaLocalISO();
 }
 
 type EmbeddedVenta = {

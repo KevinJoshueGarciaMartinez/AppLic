@@ -3,6 +3,7 @@ import type { WheelEventHandler } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
+import { fechaLocalISO } from "../lib/dates";
 import {
   fetchSaldoFavorWallet,
   fetchSaldoEnContraDeuda,
@@ -280,11 +281,7 @@ function buildReciboAbonoUrl(input: {
 
 /** Fecha local YYYY-MM-DD (evita desfase vs UTC de toISOString). */
 function hoyLocal(): string {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  return fechaLocalISO();
 }
 
 /** Reparte el cobro total en cascada por linea (mismo criterio que al crear venta). */
@@ -300,7 +297,7 @@ function distribuirCobroEnCascada(costos: number[], totalCobro: number): number[
 function emptyForm(): VentaInsert {
   return {
     ticket_id: null,
-    fecha: new Date().toISOString().slice(0, 10),
+    fecha: hoyLocal(),
     hora: new Date().toTimeString().slice(0, 5),
     operador_id: null,
     operador_nombre: null,
@@ -731,6 +728,8 @@ export default function VentaForm({ id }: Props) {
   });
 
   const esCancelado = ventaData?.cancelado === true;
+  const esReembolsadoTotal =
+    esCancelado && ventaData?.motivo_cancelacion?.startsWith("REEMBOLSO TOTAL #");
   const esTicketDelDia = (ventaData?.fecha ?? "") === hoyLocal();
 
   const cancelMutation = useMutation({
@@ -1003,7 +1002,7 @@ export default function VentaForm({ id }: Props) {
         if (isMulti) {
           const { data: ticketData, error: ticketErr } = await supabase
             .from("tickets")
-            .insert({ fecha: payload.fecha ?? new Date().toISOString().slice(0, 10) })
+            .insert({ fecha: payload.fecha ?? hoyLocal() })
             .select("id")
             .single();
           if (ticketErr) throw new Error(ticketErr.message);
@@ -1039,7 +1038,7 @@ export default function VentaForm({ id }: Props) {
           const { error: pagoErr } = await supabase.from("ventas_pagos").insert({
             venta_id:      ticketId ? null : firstId,
             ticket_id:     ticketId,
-            fecha:         payload.fecha ?? new Date().toISOString().slice(0, 10),
+            fecha:         payload.fecha ?? hoyLocal(),
             monto:         cobroEfectivo,
             forma_pago:    payload.forma_pago,
             pago_efectivo: peTicket,
@@ -1067,7 +1066,7 @@ export default function VentaForm({ id }: Props) {
           await insertAbonoSaldo(operadorId, sobrepagoInicial, "Sobrepago (pago inicial)", {
             ventaId: firstId,
             ticketId,
-            fecha: payload.fecha ?? new Date().toISOString().slice(0, 10),
+            fecha: payload.fecha ?? hoyLocal(),
             formaPago: payload.forma_pago,
             referencia: payload.numero_referencia ?? null,
           });
@@ -1379,7 +1378,9 @@ export default function VentaForm({ id }: Props) {
 
       {esCancelado && (
         <div className="cancelado-banner">
-          <span className="cancelado-banner__titulo">⛔ TICKET CANCELADO</span>
+          <span className="cancelado-banner__titulo">
+            {esReembolsadoTotal ? "TICKET REEMBOLSADO" : "TICKET CANCELADO"}
+          </span>
           <span className="cancelado-banner__motivo">
             Motivo: {ventaData?.motivo_cancelacion ?? "—"}
           </span>
