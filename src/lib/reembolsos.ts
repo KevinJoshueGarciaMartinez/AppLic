@@ -37,7 +37,7 @@ export async function fetchReembolsos({
   let query = supabase
     .from("reembolsos")
     .select(
-      "id, venta_id, ticket_id, operador_id, tipo, estado, monto, forma_reembolso, reembolso_efectivo, reembolso_deposito, reembolso_saldo, motivo, referencia, observaciones, solicitado_por, solicitado_at, autorizado_at, procesado_at",
+      "id, venta_id, ticket_id, operador_id, tipo, estado, monto, forma_reembolso, reembolso_efectivo, reembolso_deposito, reembolso_saldo, origen_efectivo, origen_deposito, origen_saldo, motivo, referencia, observaciones, solicitado_por, solicitado_at, autorizado_at, procesado_at",
     )
     .order("solicitado_at", { ascending: false });
 
@@ -53,6 +53,9 @@ export async function fetchReembolsos({
     reembolso_efectivo: Number(row.reembolso_efectivo ?? 0),
     reembolso_deposito: Number(row.reembolso_deposito ?? 0),
     reembolso_saldo: Number(row.reembolso_saldo ?? 0),
+    origen_efectivo: Number(row.origen_efectivo ?? row.reembolso_efectivo ?? 0),
+    origen_deposito: Number(row.origen_deposito ?? row.reembolso_deposito ?? 0),
+    origen_saldo: Number(row.origen_saldo ?? row.reembolso_saldo ?? 0),
   }));
 }
 
@@ -99,10 +102,33 @@ export async function resolverReembolso(
 
 export async function procesarReembolso(
   reembolsoId: number,
+  formaReembolso: FormaReembolso,
+  reembolsoEfectivo: number,
+  reembolsoDeposito: number,
   referencia: string | null,
 ): Promise<void> {
   const { error } = await supabase.rpc("procesar_reembolso", {
     p_reembolso_id: reembolsoId,
+    p_forma_reembolso: formaReembolso,
+    p_reembolso_efectivo: reembolsoEfectivo,
+    p_reembolso_deposito: reembolsoDeposito,
+    p_referencia: referencia,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function completarEntregaReembolso(
+  reembolsoId: number,
+  formaReembolso: FormaReembolso,
+  reembolsoEfectivo: number,
+  reembolsoDeposito: number,
+  referencia: string | null,
+): Promise<void> {
+  const { error } = await supabase.rpc("completar_entrega_reembolso", {
+    p_reembolso_id: reembolsoId,
+    p_forma_reembolso: formaReembolso,
+    p_reembolso_efectivo: reembolsoEfectivo,
+    p_reembolso_deposito: reembolsoDeposito,
     p_referencia: referencia,
   });
   if (error) throw new Error(error.message);

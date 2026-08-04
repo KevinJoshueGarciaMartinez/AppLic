@@ -235,7 +235,7 @@ export type EstadoReembolso =
   | "rechazado"
   | "anulado";
 
-export type FormaReembolso = "Efectivo" | "Deposito" | "Saldo" | "Dividida";
+export type FormaReembolso = "Efectivo" | "Deposito" | "Dividida";
 
 export interface ResumenReembolsable {
   pagado: number;
@@ -255,10 +255,13 @@ export interface Reembolso {
   tipo: "total" | "parcial";
   estado: EstadoReembolso;
   monto: number;
-  forma_reembolso: FormaReembolso;
+  forma_reembolso: FormaReembolso | "Saldo";
   reembolso_efectivo: number;
   reembolso_deposito: number;
   reembolso_saldo: number;
+  origen_efectivo: number;
+  origen_deposito: number;
+  origen_saldo: number;
   motivo: string;
   referencia: string | null;
   observaciones: string | null;

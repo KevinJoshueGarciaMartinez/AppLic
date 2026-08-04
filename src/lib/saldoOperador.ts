@@ -104,7 +104,7 @@ export async function insertAbonoSaldo(
   return Number((data as { id: number } | null)?.id ?? 0);
 }
 
-/** Movimientos de saldo vinculados a un ticket o venta (abonos, sobrepagos, devoluciones). */
+/** Movimientos de saldo vinculados a un ticket o venta. */
 export async function fetchMovimientosSaldoTicket(
   ticketId: number | null,
   ventaId: number | null,
@@ -115,7 +115,7 @@ export async function fetchMovimientosSaldoTicket(
     .select(
       "id, operador_id, tipo, importe, fecha, forma_pago, pago_efectivo, pago_deposito, referencia, concepto, venta_id, ticket_id, created_at",
     )
-    .in("tipo", ["abono", "devolucion_cancelacion"])
+    .in("tipo", ["abono", "devolucion_cancelacion", "reembolso"])
     .order("created_at", { ascending: true });
   if (ticketId) {
     q = q.eq("ticket_id", ticketId);

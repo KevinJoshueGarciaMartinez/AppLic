@@ -441,7 +441,6 @@ export default function VentaForm({ id }: Props) {
     formaReembolso: "Efectivo" as FormaReembolso,
     reembolsoEfectivo: "",
     reembolsoDeposito: "",
-    reembolsoSaldo: "",
     motivo: "",
     observaciones: "",
     idempotencyKey: crypto.randomUUID(),
@@ -797,30 +796,10 @@ export default function VentaForm({ id }: Props) {
     if (!resumenReembolso || resumenReembolso.disponible <= EPSILON_DEUDA) return;
     reembolsoMutation.reset();
 
-    const disponibles = [
-      resumenReembolso.disponible_efectivo > EPSILON_DEUDA,
-      resumenReembolso.disponible_deposito > EPSILON_DEUDA,
-      resumenReembolso.disponible_saldo > EPSILON_DEUDA,
-    ].filter(Boolean).length;
-    const forma: FormaReembolso =
-      disponibles > 1
-        ? "Dividida"
-        : resumenReembolso.disponible_efectivo > EPSILON_DEUDA
-          ? "Efectivo"
-          : resumenReembolso.disponible_deposito > EPSILON_DEUDA
-            ? "Deposito"
-            : "Saldo";
-
     setReembolsoForm({
       ...emptyReembolso(),
       monto: resumenReembolso.disponible.toFixed(2),
-      formaReembolso: forma,
-      reembolsoEfectivo:
-        forma === "Dividida" ? resumenReembolso.disponible_efectivo.toFixed(2) : "",
-      reembolsoDeposito:
-        forma === "Dividida" ? resumenReembolso.disponible_deposito.toFixed(2) : "",
-      reembolsoSaldo:
-        forma === "Dividida" ? resumenReembolso.disponible_saldo.toFixed(2) : "",
+      formaReembolso: "Efectivo",
     });
     setShowReembolsoModal(true);
   }
@@ -838,42 +817,32 @@ export default function VentaForm({ id }: Props) {
 
     let efectivo = 0;
     let deposito = 0;
-    let saldo = 0;
     if (reembolsoForm.formaReembolso === "Efectivo") efectivo = monto;
     else if (reembolsoForm.formaReembolso === "Deposito") deposito = monto;
-    else if (reembolsoForm.formaReembolso === "Saldo") saldo = monto;
     else {
       efectivo = parseMontoInput(reembolsoForm.reembolsoEfectivo);
       deposito = parseMontoInput(reembolsoForm.reembolsoDeposito);
-      saldo = parseMontoInput(reembolsoForm.reembolsoSaldo);
-      if (Math.abs(efectivo + deposito + saldo - monto) > 0.02) {
+      if (Math.abs(efectivo + deposito - monto) > 0.02) {
         throw new Error("El desglose debe sumar exactamente el monto del reembolso.");
+      }
+      if (efectivo <= EPSILON_DEUDA || deposito <= EPSILON_DEUDA) {
+        throw new Error("En una entrega dividida ambos importes deben ser mayores a cero.");
       }
     }
 
-    if (efectivo > resumenReembolso.disponible_efectivo + EPSILON_DEUDA) {
-      throw new Error(`Solo hay ${fmt(resumenReembolso.disponible_efectivo)} disponibles en efectivo.`);
-    }
-    if (deposito > resumenReembolso.disponible_deposito + EPSILON_DEUDA) {
-      throw new Error(`Solo hay ${fmt(resumenReembolso.disponible_deposito)} disponibles en deposito.`);
-    }
-    if (saldo > resumenReembolso.disponible_saldo + EPSILON_DEUDA) {
-      throw new Error(`Solo hay ${fmt(resumenReembolso.disponible_saldo)} disponibles en saldo.`);
-    }
-
-    return { monto, efectivo, deposito, saldo };
+    return { monto, efectivo, deposito };
   }
 
   const reembolsoMutation = useMutation({
     mutationFn: async () => {
-      const { monto, efectivo, deposito, saldo } = prepararSolicitudReembolso();
+      const { monto, efectivo, deposito } = prepararSolicitudReembolso();
       return solicitarReembolso({
         ...reembolsoTarget,
         monto,
         formaReembolso: reembolsoForm.formaReembolso,
         reembolsoEfectivo: efectivo,
         reembolsoDeposito: deposito,
-        reembolsoSaldo: saldo,
+        reembolsoSaldo: 0,
         motivo: reembolsoForm.motivo.trim(),
         observaciones: reembolsoForm.observaciones.trim() || null,
         idempotencyKey: reembolsoForm.idempotencyKey,
@@ -1950,19 +1919,25 @@ export default function VentaForm({ id }: Props) {
                           <td>
                             <span
                               className={`badge ${
-                                linea.mov.tipo === "devolucion_cancelacion"
+                                linea.mov.tipo === "reembolso"
+                                  ? "badge--cancelado"
+                                  : linea.mov.tipo === "devolucion_cancelacion"
                                   ? "badge--amber"
                                   : "badge--green"
                               }`}
                             >
-                              {linea.mov.tipo === "devolucion_cancelacion"
+                              {linea.mov.tipo === "reembolso"
+                                ? "Reembolso"
+                                : linea.mov.tipo === "devolucion_cancelacion"
                                 ? "Devolucion"
                                 : "Saldo a favor"}
                             </span>
                           </td>
                           <td>{linea.mov.concepto ?? "—"}</td>
                           <td>—</td>
-                          <td className="col-money col-money--green">{fmt(linea.mov.importe)}</td>
+                          <td className={`col-money ${linea.mov.importe < 0 ? "col-money--red" : "col-money--green"}`}>
+                            {fmt(linea.mov.importe)}
+                          </td>
                         </tr>
                       ),
                     )}
@@ -2229,7 +2204,7 @@ export default function VentaForm({ id }: Props) {
                       <td className="col-id">{reembolso.id}</td>
                       <td>{new Date(reembolso.solicitado_at).toLocaleDateString("es-MX")}</td>
                       <td>{reembolso.tipo}</td>
-                      <td>{reembolso.forma_reembolso}</td>
+                      <td>{reembolso.forma_reembolso === "Saldo" ? "Por definir" : reembolso.forma_reembolso}</td>
                       <td>{reembolso.motivo}</td>
                       <td>
                         <span className={`badge reembolso-estado reembolso-estado--${reembolso.estado}`}>
@@ -2293,9 +2268,9 @@ export default function VentaForm({ id }: Props) {
             </p>
 
             <div className="reembolso-disponibles">
-              <span>Efectivo: {fmt(resumenReembolso.disponible_efectivo)}</span>
-              <span>Deposito: {fmt(resumenReembolso.disponible_deposito)}</span>
-              <span>Saldo: {fmt(resumenReembolso.disponible_saldo)}</span>
+              <span>Pagado: {fmt(resumenReembolso.pagado)}</span>
+              <span>Disponible: {fmt(resumenReembolso.disponible)}</span>
+              <span>Origen saldo: {fmt(resumenReembolso.disponible_saldo)}</span>
             </div>
 
             <div className="modal-form-grid">
@@ -2317,18 +2292,6 @@ export default function VentaForm({ id }: Props) {
                     onClick={() => setReembolsoForm((p) => ({
                       ...p,
                       monto: resumenReembolso.disponible.toFixed(2),
-                      reembolsoEfectivo:
-                        p.formaReembolso === "Dividida"
-                          ? resumenReembolso.disponible_efectivo.toFixed(2)
-                          : p.reembolsoEfectivo,
-                      reembolsoDeposito:
-                        p.formaReembolso === "Dividida"
-                          ? resumenReembolso.disponible_deposito.toFixed(2)
-                          : p.reembolsoDeposito,
-                      reembolsoSaldo:
-                        p.formaReembolso === "Dividida"
-                          ? resumenReembolso.disponible_saldo.toFixed(2)
-                          : p.reembolsoSaldo,
                     }))}
                   >
                     Total
@@ -2345,25 +2308,9 @@ export default function VentaForm({ id }: Props) {
                     formaReembolso: e.target.value as FormaReembolso,
                   }))}
                 >
-                  <option value="Efectivo" disabled={resumenReembolso.disponible_efectivo <= EPSILON_DEUDA}>
-                    Efectivo
-                  </option>
-                  <option value="Deposito" disabled={resumenReembolso.disponible_deposito <= EPSILON_DEUDA}>
-                    Deposito
-                  </option>
-                  <option value="Saldo" disabled={resumenReembolso.disponible_saldo <= EPSILON_DEUDA}>
-                    Saldo a favor
-                  </option>
-                  <option
-                    value="Dividida"
-                    disabled={
-                      Number(resumenReembolso.disponible_efectivo > EPSILON_DEUDA)
-                      + Number(resumenReembolso.disponible_deposito > EPSILON_DEUDA)
-                      + Number(resumenReembolso.disponible_saldo > EPSILON_DEUDA) < 2
-                    }
-                  >
-                    Dividida
-                  </option>
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Deposito">Deposito</option>
+                  <option value="Dividida">Ambos</option>
                 </select>
               </div>
 
@@ -2374,7 +2321,7 @@ export default function VentaForm({ id }: Props) {
                     <input
                       type="number"
                       min={0}
-                      max={resumenReembolso.disponible_efectivo}
+                      max={parseMontoInput(reembolsoForm.monto)}
                       step={0.01}
                       value={reembolsoForm.reembolsoEfectivo}
                       onWheel={blurNumberInputOnWheel}
@@ -2386,26 +2333,20 @@ export default function VentaForm({ id }: Props) {
                     <input
                       type="number"
                       min={0}
-                      max={resumenReembolso.disponible_deposito}
+                      max={parseMontoInput(reembolsoForm.monto)}
                       step={0.01}
                       value={reembolsoForm.reembolsoDeposito}
                       onWheel={blurNumberInputOnWheel}
                       onChange={(e) => setReembolsoForm((p) => ({ ...p, reembolsoDeposito: e.target.value }))}
                     />
                   </div>
-                  <div className="form-field">
-                    <label>Saldo a favor</label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={resumenReembolso.disponible_saldo}
-                      step={0.01}
-                      value={reembolsoForm.reembolsoSaldo}
-                      onWheel={blurNumberInputOnWheel}
-                      onChange={(e) => setReembolsoForm((p) => ({ ...p, reembolsoSaldo: e.target.value }))}
-                    />
-                  </div>
                 </>
+              )}
+
+              {resumenReembolso.disponible_saldo > EPSILON_DEUDA && (
+                <div className="alert-info form-field-full">
+                  AL PROCESAR, EL SISTEMA DESCONTARA AUTOMATICAMENTE LA PARTE PROVENIENTE DEL SALDO A FAVOR.
+                </div>
               )}
 
               <div className="form-field form-field-full">
