@@ -1980,6 +1980,9 @@ fieldset.venta-flujo-bloque:disabled {
 
 .print-only { display: none; }
 
+/* Las notas del seguimiento se reservan para la impresion del reporte. */
+.reporte-seguimiento-notas { display: none; }
+
 @media print {
   /* Ocultar todo el DOM, luego revelar solo el page-container */
   body * { visibility: hidden; }
@@ -2044,6 +2047,26 @@ fieldset.venta-flujo-bloque:disabled {
   .data-table th { background: #f0f0f0 !important; }
 
   .badge { border: 1px solid #aaa; background: none !important; color: #333 !important; }
+
+  .reporte-seguimiento-table {
+    table-layout: fixed;
+    font-size: 0.68rem;
+  }
+
+  .reporte-seguimiento-table th,
+  .reporte-seguimiento-table td {
+    padding: 4px 5px;
+    vertical-align: top;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .reporte-seguimiento-notas {
+    display: table-cell !important;
+    width: 30%;
+    white-space: pre-wrap !important;
+    line-height: 1.35;
+  }
 
   .table-total-row td { border-top: 2px solid #333; font-weight: bold; }
 }

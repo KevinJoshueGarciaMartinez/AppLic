@@ -16,6 +16,7 @@ type FilaProspecto = {
   estatus_seguimiento: string | null;
   medio_captacion: string | null;
   asesor: string | null;
+  notas_seguimiento: string | null;
 };
 
 type TipoPeriodo = "semana_actual" | "mes_actual" | "personalizado" | "todos";
@@ -32,7 +33,7 @@ async function fetchProspectosSeguimiento(): Promise<FilaProspecto[]> {
   const { data, error } = await supabase
     .from("operadores")
     .select(
-      "numero_consecutivo, nombre, apellido_paterno, apellido_materno, fecha_captacion, proxima_llamada, estatus_seguimiento, medio_captacion, asesor",
+      "numero_consecutivo, nombre, apellido_paterno, apellido_materno, fecha_captacion, proxima_llamada, estatus_seguimiento, medio_captacion, asesor, notas_seguimiento",
     )
     .eq("es_prospecto", true)
     .order("fecha_captacion", { ascending: false });
@@ -379,7 +380,7 @@ export default function ReporteSeguimientoProspectos() {
           )}
 
           <div className="table-wrapper" style={{ marginTop: "14px" }}>
-            <table className="data-table">
+            <table className="data-table reporte-seguimiento-table">
               <thead>
                 <tr>
                   <th>#</th>
@@ -389,12 +390,13 @@ export default function ReporteSeguimientoProspectos() {
                   <th>Estatus</th>
                   <th>Prox. llamada</th>
                   <th>Medio</th>
+                  <th className="reporte-seguimiento-notas">Notas</th>
                 </tr>
               </thead>
               <tbody>
                 {filas.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="table-empty">
+                    <td colSpan={8} className="table-empty">
                       No hay prospectos para los filtros seleccionados.
                     </td>
                   </tr>
@@ -416,6 +418,9 @@ export default function ReporteSeguimientoProspectos() {
                       </td>
                       <td className="col-fecha">{row.proxima_llamada ?? "—"}</td>
                       <td>{etiquetaMedioCaptacion(row.medio_captacion)}</td>
+                      <td className="reporte-seguimiento-notas">
+                        {(row.notas_seguimiento ?? "").trim() || "SIN NOTAS"}
+                      </td>
                     </tr>
                   ))
                 )}
