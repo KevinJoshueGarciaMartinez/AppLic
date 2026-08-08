@@ -53,6 +53,7 @@ const blurNumberInputOnWheel: WheelEventHandler<HTMLInputElement> = (e) => {
 
 /** Servicios cuyo costo se captura manualmente en la venta. */
 const ID_SERVICIO_IVA = 57;
+const ID_SERVICIO_OTRO = 78;
 const SERVICIOS_MNP_COSTO_MANUAL = new Set([46, 67]);
 const SERVICIOS_OCULTOS_EN_SELECTOR = new Set([
   "MEDICO MNP NUEVO INGRESO",
@@ -64,12 +65,17 @@ function esLineaIva(item: VentaItem): boolean {
   return item.servicio?.trim().toUpperCase() === "IVA";
 }
 
+function esLineaOtro(item: VentaItem): boolean {
+  if (item.id_servicio === ID_SERVICIO_OTRO) return true;
+  return item.servicio?.trim().toUpperCase() === "OTRO";
+}
+
 function esLineaMnpEditable(item: VentaItem): boolean {
   return item.id_servicio != null && SERVICIOS_MNP_COSTO_MANUAL.has(item.id_servicio);
 }
 
 function permiteCapturaManualDeCosto(item: VentaItem): boolean {
-  return esLineaIva(item) || esLineaMnpEditable(item);
+  return esLineaIva(item) || esLineaOtro(item) || esLineaMnpEditable(item);
 }
 
 // ── Fetchers ──────────────────────────────────────────────────────────────────
