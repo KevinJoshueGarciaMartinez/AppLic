@@ -2298,6 +2298,239 @@ fieldset.venta-flujo-bloque:disabled {
   margin-top: 20px;
 }
 
+/* Administracion de servicios */
+.servicios-modal {
+  width: min(680px, calc(100vw - 32px));
+  max-width: 680px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.servicios-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
+}
+
+.servicios-modal-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.servicios-modal-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border-radius: 11px;
+  color: #1d4ed8;
+  background: #dbeafe;
+  font-size: 20px;
+}
+
+.servicios-modal .modal-title {
+  margin: 0;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.servicios-modal-heading p {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.servicios-modal-close {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border: 0;
+  border-radius: 8px;
+  color: #64748b;
+  background: transparent;
+  font-size: 25px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.servicios-modal-close:hover {
+  color: #0f172a;
+  background: #e2e8f0;
+}
+
+.servicios-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  padding: 22px 24px 8px;
+}
+
+.servicios-form-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 7px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.servicios-form-field--full {
+  grid-column: 1 / -1;
+}
+
+.servicios-form-field small {
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.servicios-form-control {
+  box-sizing: border-box;
+  width: 100%;
+  height: 42px;
+  min-width: 0;
+  flex: none;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  padding: 9px 12px;
+  color: #0f172a;
+  background: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  outline: none;
+}
+
+.servicios-form-control:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+}
+
+.servicios-form-control:disabled {
+  color: #94a3b8;
+  background: #f1f5f9;
+  cursor: not-allowed;
+}
+
+.servicios-money-control {
+  position: relative;
+}
+
+.servicios-money-control > span {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 12px;
+  color: #64748b;
+  transform: translateY(-50%);
+}
+
+.servicios-money-control .servicios-form-control {
+  padding-left: 29px;
+}
+
+.servicios-open-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 14px;
+  border: 1px solid #dbe3ef;
+  border-radius: 10px;
+  background: #f8fafc;
+  cursor: pointer;
+}
+
+.servicios-open-toggle--active {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.servicios-open-toggle > input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.servicios-open-toggle > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: #1e293b;
+  font-size: 12px;
+}
+
+.servicios-open-toggle small {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.servicios-toggle-control {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  flex: 0 0 40px;
+  border-radius: 999px;
+  background: #cbd5e1;
+  transition: background 0.15s;
+}
+
+.servicios-toggle-control i {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+  transition: transform 0.15s;
+}
+
+.servicios-open-toggle--active .servicios-toggle-control {
+  background: #2563eb;
+}
+
+.servicios-open-toggle--active .servicios-toggle-control i {
+  transform: translateX(18px);
+}
+
+.servicios-modal-actions {
+  margin-top: 14px;
+  padding: 16px 24px 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
+@media (max-width: 600px) {
+  .servicios-modal {
+    width: min(94vw, 680px);
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+
+  .servicios-form-grid {
+    grid-template-columns: 1fr;
+    padding: 18px;
+  }
+
+  .servicios-form-field--full {
+    grid-column: auto;
+  }
+
+  .servicios-modal-header,
+  .servicios-modal-actions {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+}
+
 .reembolso-section {
   margin-top: 18px;
   padding: 18px;

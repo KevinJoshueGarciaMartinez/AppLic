@@ -237,38 +237,60 @@ export default function Servicios() {
       {form && (
         <div className="modal-overlay" onClick={() => setForm(null)}>
           <form
-            className="modal-card modal-card--lg"
+            className="modal-card modal-card--lg servicios-modal"
             onClick={(e) => e.stopPropagation()}
             onSubmit={(e) => { e.preventDefault(); guardar.mutate(form); }}
           >
-            <h2 className="modal-title">{form.id_servicio == null ? "NUEVO SERVICIO" : "EDITAR SERVICIO"}</h2>
-            <div className="modal-form-grid">
-              <label className="form-field form-field-full">
-                <span>NOMBRE *</span>
-                <input className="search-input" value={form.servicio} onChange={(e) => setForm({ ...form, servicio: e.target.value })} required />
+            <div className="servicios-modal-header">
+              <div className="servicios-modal-heading">
+                <span className="servicios-modal-icon">⚙</span>
+                <div>
+                  <h2 className="modal-title">{form.id_servicio == null ? "NUEVO SERVICIO" : "EDITAR SERVICIO"}</h2>
+                  <p>CONFIGURA COMO APARECERA EN NUEVA VENTA.</p>
+                </div>
+              </div>
+              <button type="button" className="servicios-modal-close" onClick={() => setForm(null)} aria-label="CERRAR">×</button>
+            </div>
+
+            <div className="servicios-form-grid">
+              <label className="servicios-form-field servicios-form-field--full">
+                <span>NOMBRE DEL SERVICIO *</span>
+                <input className="servicios-form-control" value={form.servicio} onChange={(e) => setForm({ ...form, servicio: e.target.value })} required autoFocus />
               </label>
-              <label className="form-field">
+              <label className="servicios-form-field">
                 <span>ORDEN</span>
-                <input className="search-input" type="number" min="0" value={form.orden} onChange={(e) => setForm({ ...form, orden: e.target.value })} />
+                <input className="servicios-form-control" type="number" min="0" value={form.orden} onChange={(e) => setForm({ ...form, orden: e.target.value })} />
+                <small>POSICION EN LA LISTA.</small>
               </label>
-              <label className="form-field">
+              <label className="servicios-form-field">
                 <span>TIPO</span>
-                <input className="search-input" type="number" min="0" value={form.tipo_servicio} onChange={(e) => setForm({ ...form, tipo_servicio: e.target.value })} />
+                <input className="servicios-form-control" type="number" min="0" value={form.tipo_servicio} onChange={(e) => setForm({ ...form, tipo_servicio: e.target.value })} />
+                <small>CLASIFICACION INTERNA.</small>
               </label>
-              <label className="form-field">
+              <label className="servicios-form-field">
                 <span>COSTO BASE</span>
-                <input className="search-input" type="number" min="0" step="0.01" disabled={form.costo_abierto} value={form.costo_base} onChange={(e) => setForm({ ...form, costo_base: e.target.value })} />
+                <div className="servicios-money-control">
+                  <span>$</span>
+                  <input className="servicios-form-control" type="number" min="0" step="0.01" disabled={form.costo_abierto} value={form.costo_base} onChange={(e) => setForm({ ...form, costo_base: e.target.value })} />
+                </div>
               </label>
-              <label className="form-field">
+              <label className="servicios-form-field">
                 <span>COMISION</span>
-                <input className="search-input" type="number" min="0" step="0.01" value={form.com_1} onChange={(e) => setForm({ ...form, com_1: e.target.value })} />
+                <div className="servicios-money-control">
+                  <span>$</span>
+                  <input className="servicios-form-control" type="number" min="0" step="0.01" value={form.com_1} onChange={(e) => setForm({ ...form, com_1: e.target.value })} />
+                </div>
               </label>
-              <label className="form-field form-field-full" style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "10px" }}>
+              <label className={`servicios-open-toggle servicios-form-field--full${form.costo_abierto ? " servicios-open-toggle--active" : ""}`}>
                 <input type="checkbox" checked={form.costo_abierto} onChange={(e) => setForm({ ...form, costo_abierto: e.target.checked })} />
-                <span>IMPORTE ABIERTO: EL COSTO SE CAPTURA AL HACER LA VENTA</span>
+                <span className="servicios-toggle-control" aria-hidden="true"><i /></span>
+                <span>
+                  <strong>IMPORTE ABIERTO</strong>
+                  <small>EL COSTO SE CAPTURA AL MOMENTO DE HACER LA VENTA.</small>
+                </span>
               </label>
             </div>
-            <div className="modal-actions">
+            <div className="modal-actions servicios-modal-actions">
               <button type="button" className="btn-secondary" onClick={() => setForm(null)}>CANCELAR</button>
               <button type="submit" className="btn-primary" disabled={guardar.isPending}>{guardar.isPending ? "GUARDANDO..." : "GUARDAR"}</button>
             </div>
