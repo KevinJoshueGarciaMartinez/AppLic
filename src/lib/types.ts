@@ -113,6 +113,8 @@ export interface Servicio {
   tipo_servicio: number | null;
   costo_base: number;
   com_1: number;
+  activo: boolean;
+  costo_abierto: boolean;
 }
 
 // ── Linea de servicio (estado local del formulario) ──────────────────────────
@@ -122,6 +124,8 @@ export interface VentaItem {
   tipo_servicio: number | null;
   costo: number;
   com_1: number;
+  /** Permite capturar el importe al agregar la linea a una venta. */
+  costo_abierto?: boolean;
   /** Nota por linea; se guarda en ventas.observaciones por fila */
   observaciones: string | null;
   /** Id de la fila en `ventas` al editar un ticket o venta existente */

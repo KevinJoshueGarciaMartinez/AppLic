@@ -75,7 +75,7 @@ function esLineaMnpEditable(item: VentaItem): boolean {
 }
 
 function permiteCapturaManualDeCosto(item: VentaItem): boolean {
-  return esLineaIva(item) || esLineaOtro(item) || esLineaMnpEditable(item);
+  return item.costo_abierto === true || esLineaIva(item) || esLineaOtro(item) || esLineaMnpEditable(item);
 }
 
 // ── Fetchers ──────────────────────────────────────────────────────────────────
@@ -115,7 +115,8 @@ async function fetchTicketItems(ticketId: number): Promise<VentaItem[]> {
 async function fetchServicios(): Promise<Servicio[]> {
   const { data, error } = await supabase
     .from("catalogo_servicios_costos")
-    .select("id_servicio, orden, servicio, tipo_servicio, costo_base, com_1")
+    .select("id_servicio, orden, servicio, tipo_servicio, costo_base, com_1, activo, costo_abierto")
+    .eq("activo", true)
     .order("orden");
   if (error) throw new Error(error.message);
   return ((data ?? []) as Servicio[]).filter(
@@ -889,6 +890,7 @@ export default function VentaForm({ id }: Props) {
         tipo_servicio: srv.tipo_servicio,
         costo: srv.costo_base,
         com_1: srv.com_1,
+        costo_abierto: srv.costo_abierto,
         observaciones: obs,
       },
     ]);
@@ -912,6 +914,7 @@ export default function VentaForm({ id }: Props) {
               tipo_servicio: srv?.tipo_servicio ?? null,
               costo: srv?.costo_base ?? 0,
               com_1: srv?.com_1 ?? 0,
+              costo_abierto: srv?.costo_abierto ?? false,
             }
           : item,
       ),
@@ -937,6 +940,12 @@ export default function VentaForm({ id }: Props) {
     mutationFn: async ({ payload, aplicarSaldo }: VentaSaveVars) => {
       const validItems = items.filter((i) => i.servicio);
       if (validItems.length === 0) throw new Error("Agrega al menos un servicio.");
+      const importeAbiertoSinMonto = validItems.find(
+        (item) => item.costo_abierto === true && item.costo <= 0,
+      );
+      if (importeAbiertoSinMonto) {
+        throw new Error(`Captura un importe mayor a cero para ${importeAbiertoSinMonto.servicio}.`);
+      }
 
       const operadorId = payload.operador_id;
       if (aplicarSaldo > EPSILON_DEUDA && operadorId == null) {

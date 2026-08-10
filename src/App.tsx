@@ -16,6 +16,7 @@ import SeguimientoVentas from "./pages/SeguimientoVentas";
 import ComprobacionTransferencias from "./pages/ComprobacionTransferencias";
 import Usuarios from "./pages/Usuarios";
 import Reembolsos from "./pages/Reembolsos";
+import Servicios from "./pages/Servicios";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -84,6 +85,12 @@ const NAV_ITEMS: NavItem[] = [
 
 const SYSTEM_ITEMS: NavItem[] = [
   {
+    href: "/servicios",
+    label: "Servicios",
+    icon: "⚙",
+    description: "Administrar servicios, costos, comisiones y conceptos de importe abierto.",
+  },
+  {
     href: "/usuarios",
     label: "Usuarios",
     icon: "🔐",
@@ -111,6 +118,7 @@ const EXTRA_ROUTE_ACCESS: Record<UserRole, string[]> = {
     "/reportes/peticion-cursos",
     "/reportes/seguimiento-prospectos",
     "/usuarios",
+    "/servicios",
   ],
   recepcion: [
     "/operadores/nuevo",
@@ -234,7 +242,7 @@ function Layout({
               className={`nav-link${location === item.href ? " nav-link--active" : ""}`}
             >
               <span className="nav-icon">{item.icon}</span>
-              Sistema
+              {item.label}
             </Link>
           ))}
           <p className="user-email">{userEmail}</p>
@@ -803,6 +811,10 @@ export default function App() {
 
         <Route path="/usuarios">
           {hasRoleAccess(role, "/usuarios") ? <Usuarios /> : <UnauthorizedScreen />}
+        </Route>
+
+        <Route path="/servicios">
+          {hasRoleAccess(role, "/servicios") ? <Servicios /> : <UnauthorizedScreen />}
         </Route>
 
         {/* ── Resto de modulos (placeholders) ── */}
