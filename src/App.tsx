@@ -81,15 +81,15 @@ const NAV_ITEMS: NavItem[] = [
     description:
       "Hub de reportes: traslados, ventas y solicitudes de servicio.",
   },
-];
-
-const SYSTEM_ITEMS: NavItem[] = [
   {
     href: "/servicios",
     label: "Servicios",
     icon: "⚙",
     description: "Administrar servicios, costos, comisiones y conceptos de importe abierto.",
   },
+];
+
+const SYSTEM_ITEMS: NavItem[] = [
   {
     href: "/usuarios",
     label: "Usuarios",
