@@ -16,7 +16,6 @@ type ServicioAdmin = {
 type ServicioForm = {
   id_servicio: number | null;
   servicio: string;
-  tipo_servicio: string;
   costo_base: string;
   com_1: string;
   orden: string;
@@ -26,7 +25,6 @@ type ServicioForm = {
 const EMPTY_FORM: ServicioForm = {
   id_servicio: null,
   servicio: "",
-  tipo_servicio: "1",
   costo_base: "0",
   com_1: "0",
   orden: "0",
@@ -77,7 +75,7 @@ export default function Servicios() {
       const { error: rpcError } = await supabase.rpc("guardar_catalogo_servicio", {
         p_id_servicio: values.id_servicio,
         p_servicio: nombre,
-        p_tipo_servicio: values.tipo_servicio === "" ? null : Number(values.tipo_servicio),
+        p_tipo_servicio: 1,
         p_costo_base: costo,
         p_com_1: comision,
         p_orden: orden,
@@ -125,7 +123,6 @@ export default function Servicios() {
     setForm({
       id_servicio: servicio.id_servicio,
       servicio: servicio.servicio,
-      tipo_servicio: servicio.tipo_servicio == null ? "" : String(servicio.tipo_servicio),
       costo_base: String(servicio.costo_base),
       com_1: String(servicio.com_1),
       orden: String(servicio.orden),
@@ -257,15 +254,10 @@ export default function Servicios() {
                 <span>NOMBRE DEL SERVICIO *</span>
                 <input className="servicios-form-control" value={form.servicio} onChange={(e) => setForm({ ...form, servicio: e.target.value })} required autoFocus />
               </label>
-              <label className="servicios-form-field">
+              <label className="servicios-form-field servicios-form-field--full">
                 <span>ORDEN</span>
                 <input className="servicios-form-control" type="number" min="0" value={form.orden} onChange={(e) => setForm({ ...form, orden: e.target.value })} />
                 <small>POSICION EN LA LISTA.</small>
-              </label>
-              <label className="servicios-form-field">
-                <span>TIPO</span>
-                <input className="servicios-form-control" type="number" min="0" value={form.tipo_servicio} onChange={(e) => setForm({ ...form, tipo_servicio: e.target.value })} />
-                <small>CLASIFICACION INTERNA.</small>
               </label>
               <label className="servicios-form-field">
                 <span>COSTO BASE</span>
