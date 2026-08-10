@@ -437,6 +437,8 @@ export default function SeguimientoVentas() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["seguimiento_operadores"] });
       queryClient.invalidateQueries({ queryKey: ["operadores"] });
+      queryClient.invalidateQueries({ queryKey: ["reporte_seguimiento_prospectos"] });
+      queryClient.invalidateQueries({ queryKey: ["reporte_seguimiento_prospectos"] });
       setDetallesModal(null);
     },
   });
@@ -452,6 +454,7 @@ export default function SeguimientoVentas() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["seguimiento_operadores"] });
       queryClient.invalidateQueries({ queryKey: ["operadores"] });
+      queryClient.invalidateQueries({ queryKey: ["reporte_seguimiento_prospectos"] });
       setDetallesModal(null);
     },
   });

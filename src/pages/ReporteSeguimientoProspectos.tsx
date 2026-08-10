@@ -17,9 +17,11 @@ type FilaProspecto = {
   medio_captacion: string | null;
   asesor: string | null;
   notas_seguimiento: string | null;
+  es_prospecto: boolean;
 };
 
 type TipoPeriodo = "semana_actual" | "mes_actual" | "personalizado" | "todos";
+type TipoRegistro = "todos" | "prospectos" | "formalizados";
 
 type Filtros = {
   periodo: TipoPeriodo;
@@ -27,15 +29,16 @@ type Filtros = {
   fecha_hasta: string;
   asesor: string;
   estatus: string;
+  tipo_registro: TipoRegistro;
 };
 
 async function fetchProspectosSeguimiento(): Promise<FilaProspecto[]> {
   const { data, error } = await supabase
     .from("operadores")
     .select(
-      "numero_consecutivo, nombre, apellido_paterno, apellido_materno, fecha_captacion, proxima_llamada, estatus_seguimiento, medio_captacion, asesor, notas_seguimiento",
+      "numero_consecutivo, nombre, apellido_paterno, apellido_materno, fecha_captacion, proxima_llamada, estatus_seguimiento, medio_captacion, asesor, notas_seguimiento, es_prospecto",
     )
-    .eq("es_prospecto", true)
+    .or("es_prospecto.eq.true,asesor.not.is.null")
     .order("fecha_captacion", { ascending: false });
 
   if (error) throw new Error(error.message);
@@ -102,6 +105,7 @@ export default function ReporteSeguimientoProspectos() {
     fecha_hasta: finSemanaISO(),
     asesor: "",
     estatus: "",
+    tipo_registro: "todos",
   });
 
   const { data = [], isLoading, isError, error } = useQuery({
@@ -180,6 +184,11 @@ export default function ReporteSeguimientoProspectos() {
         (r) => (r.estatus_seguimiento ?? "").trim() === filtros.estatus,
       );
     }
+    if (filtros.tipo_registro === "prospectos") {
+      rows = rows.filter((r) => r.es_prospecto);
+    } else if (filtros.tipo_registro === "formalizados") {
+      rows = rows.filter((r) => !r.es_prospecto);
+    }
 
     rows.sort((a, b) => {
       const fa = a.fecha_captacion ?? "";
@@ -201,6 +210,8 @@ export default function ReporteSeguimientoProspectos() {
     const ingresados = filas.filter(
       (r) => (r.estatus_seguimiento ?? "").trim().toLowerCase() === "ingresado",
     ).length;
+    const prospectosActivos = filas.filter((r) => r.es_prospecto).length;
+    const formalizados = filas.filter((r) => !r.es_prospecto).length;
     const conLlamadaHoy = filas.filter((r) => r.proxima_llamada === hoy).length;
     const llamadasSemana = filas.filter(
       (r) =>
@@ -210,6 +221,8 @@ export default function ReporteSeguimientoProspectos() {
     ).length;
     return {
       total: filas.length,
+      prospectosActivos,
+      formalizados,
       agendados,
       ingresados,
       conLlamadaHoy,
@@ -220,14 +233,16 @@ export default function ReporteSeguimientoProspectos() {
   const resumenAsesores = useMemo(() => {
     const acc: Record<
       string,
-      { asesor: string; total: number; agendados: number; ingresados: number }
+      { asesor: string; total: number; prospectos: number; formalizados: number; agendados: number; ingresados: number }
     > = {};
     for (const row of filas) {
       const asesor = (row.asesor ?? "").trim() || "Sin asesor";
       if (!acc[asesor]) {
-        acc[asesor] = { asesor, total: 0, agendados: 0, ingresados: 0 };
+        acc[asesor] = { asesor, total: 0, prospectos: 0, formalizados: 0, agendados: 0, ingresados: 0 };
       }
       acc[asesor].total += 1;
+      if (row.es_prospecto) acc[asesor].prospectos += 1;
+      else acc[asesor].formalizados += 1;
       const estatus = (row.estatus_seguimiento ?? "").trim().toLowerCase();
       if (estatus === "agendado") acc[asesor].agendados += 1;
       if (estatus === "ingresado") acc[asesor].ingresados += 1;
@@ -246,7 +261,7 @@ export default function ReporteSeguimientoProspectos() {
             <span className="page-icon">📞</span> Seguimiento de Prospectos
           </h1>
           <p className="page-subtitle">
-            Reporte para analizar captacion semanal (lunes a domingo), responsables y estatus de seguimiento.
+            Reporte de captacion, seguimiento y operadores formalizados por asesor.
           </p>
         </div>
       </div>
@@ -320,6 +335,18 @@ export default function ReporteSeguimientoProspectos() {
               ))}
             </select>
           </div>
+
+          <div className="form-field">
+            <label>Tipo de registro</label>
+            <select
+              value={filtros.tipo_registro}
+              onChange={(e) => setF("tipo_registro", e.target.value as TipoRegistro)}
+            >
+              <option value="todos">Todos</option>
+              <option value="prospectos">Prospectos activos</option>
+              <option value="formalizados">Operadores formalizados</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -340,8 +367,16 @@ export default function ReporteSeguimientoProspectos() {
         <>
           <div className="summary-bar" style={{ marginTop: "20px" }}>
             <div className="summary-item">
-              <span className="summary-label">Prospectos captados</span>
+              <span className="summary-label">Captados</span>
               <span className="summary-value">{kpis.total}</span>
+            </div>
+            <div className="summary-item">
+              <span className="summary-label">Prospectos activos</span>
+              <span className="summary-value">{kpis.prospectosActivos}</span>
+            </div>
+            <div className="summary-item">
+              <span className="summary-label">Formalizados</span>
+              <span className="summary-value summary-value--green">{kpis.formalizados}</span>
             </div>
             <div className="summary-item">
               <span className="summary-label">Agendados</span>
@@ -370,7 +405,9 @@ export default function ReporteSeguimientoProspectos() {
                 {resumenAsesores.map((a) => (
                   <div key={a.asesor} className="promotor-chip">
                     <strong>{a.asesor}</strong>
-                    <span>{a.total} prospectos</span>
+                    <span>{a.total} captados</span>
+                    <span>Activos: {a.prospectos}</span>
+                    <span>Formalizados: {a.formalizados}</span>
                     <span>Agendados: {a.agendados}</span>
                     <span>Ingresados: {a.ingresados}</span>
                   </div>
@@ -387,6 +424,7 @@ export default function ReporteSeguimientoProspectos() {
                   <th>Nombre</th>
                   <th>Captacion</th>
                   <th>Asesor</th>
+                  <th>Registro</th>
                   <th>Estatus</th>
                   <th>Prox. llamada</th>
                   <th>Medio</th>
@@ -396,8 +434,8 @@ export default function ReporteSeguimientoProspectos() {
               <tbody>
                 {filas.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="table-empty">
-                      No hay prospectos para los filtros seleccionados.
+                    <td colSpan={9} className="table-empty">
+                      No hay registros para los filtros seleccionados.
                     </td>
                   </tr>
                 ) : (
@@ -409,6 +447,11 @@ export default function ReporteSeguimientoProspectos() {
                       <td>
                         <span className={asesorTonoClass(row.asesor)}>
                           {(row.asesor ?? "").trim() || "Sin asesor"}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`badge ${row.es_prospecto ? "badge--yellow" : "badge--green"}`}>
+                          {row.es_prospecto ? "PROSPECTO" : "FORMALIZADO"}
                         </span>
                       </td>
                       <td>
