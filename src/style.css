@@ -1437,6 +1437,10 @@ fieldset.venta-flujo-bloque:disabled {
   font-size: 11px;
 }
 
+.page-header .reembolso-saldo-compacto {
+  width: auto;
+}
+
 .reembolso-saldo-modal {
   max-width: 650px;
 }

@@ -9,6 +9,10 @@ import type { FormaReembolso } from "../lib/types";
 type Props = {
   operadorId: number;
   compact?: boolean;
+  montoSugerido?: number;
+  motivoSugerido?: string;
+  observacionesSugeridas?: string;
+  etiquetaCompacta?: string;
 };
 
 function fmt(n: number) {
@@ -24,7 +28,14 @@ function numero(value: string) {
   return Number.isFinite(parsed) ? Math.round(parsed * 100) / 100 : 0;
 }
 
-export default function SolicitudReembolsoSaldo({ operadorId, compact = false }: Props) {
+export default function SolicitudReembolsoSaldo({
+  operadorId,
+  compact = false,
+  montoSugerido,
+  motivoSugerido = "",
+  observacionesSugeridas = "",
+  etiquetaCompacta,
+}: Props) {
   const queryClient = useQueryClient();
   const queryKey = ["reembolso_saldo_operador_resumen", operadorId] as const;
   const [abierto, setAbierto] = useState(false);
@@ -44,6 +55,9 @@ export default function SolicitudReembolsoSaldo({ operadorId, compact = false }:
   });
 
   const disponible = resumen?.disponible ?? 0;
+  const montoDisponibleSugerido = montoSugerido != null && montoSugerido > 0
+    ? Math.min(montoSugerido, disponible)
+    : disponible;
   const montoNumero = numero(monto);
   const efectivoNumero = forma === "Efectivo"
     ? montoNumero
@@ -71,15 +85,18 @@ export default function SolicitudReembolsoSaldo({ operadorId, compact = false }:
 
   useEffect(() => {
     if (!abierto) return;
-    setMonto(disponible > 0 ? disponible.toFixed(2) : "");
+    const sugerido = montoSugerido != null && montoSugerido > 0
+      ? Math.min(montoSugerido, disponible)
+      : disponible;
+    setMonto(sugerido > 0 ? sugerido.toFixed(2) : "");
     setForma("Deposito");
     setEfectivo("");
     setDeposito("");
-    setMotivo("");
+    setMotivo(motivoSugerido);
     setReferencia("");
-    setObservaciones("");
+    setObservaciones(observacionesSugeridas);
     setErrorLocal("");
-  }, [abierto, disponible]);
+  }, [abierto, disponible, montoSugerido, motivoSugerido, observacionesSugeridas]);
 
   const solicitar = useMutation({
     mutationFn: () => solicitarReembolsoSaldoOperador({
@@ -118,7 +135,10 @@ export default function SolicitudReembolsoSaldo({ operadorId, compact = false }:
           onClick={() => { setMensaje(""); setAbierto(true); }}
           title={error ? (error as Error).message : `DISPONIBLE: ${fmt(disponible)}`}
         >
-          {mensaje || `REEMBOLSAR SALDO A FAVOR (${fmt(disponible)})`}
+          {mensaje
+            || ((resumen?.reservado ?? 0) > 0 && disponible <= 0
+              ? "REEMBOLSO EN AUTORIZACION"
+              : `${etiquetaCompacta ?? "REEMBOLSAR SALDO A FAVOR"} (${fmt(montoDisponibleSugerido)})`)}
         </button>
       ) : (
         <div className="operador-reembolso-saldo">

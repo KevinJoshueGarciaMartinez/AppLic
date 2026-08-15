@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 import { insertAbonoSaldo } from "../lib/saldoOperador";
 import type { Operador } from "../lib/types";
+import SolicitudReembolsoSaldo from "../components/SolicitudReembolsoSaldo";
 
 function fmtMoneda(n: number) {
   return new Intl.NumberFormat("es-MX", {
@@ -322,6 +323,16 @@ export default function ReciboAbonoForm({ id }: Props) {
             <button type="button" className="btn-secondary" onClick={() => navigate(`/recibos-abono/nuevo?operadorId=${recibo.operador_id}`)}>
               Nuevo recibo
             </button>
+            {recibo.tipo === "abono" && (
+              <SolicitudReembolsoSaldo
+                operadorId={recibo.operador_id}
+                compact
+                montoSugerido={Number(recibo.importe)}
+                motivoSugerido={`REEMBOLSO DE ABONO #${recibo.id}`}
+                observacionesSugeridas={`ORIGEN: RECIBO #${recibo.id}`}
+                etiquetaCompacta="REEMBOLSAR ESTE ABONO"
+              />
+            )}
             <button type="button" className="btn-primary" onClick={() => window.print()}>
               Imprimir
             </button>
