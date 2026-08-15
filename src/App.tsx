@@ -65,7 +65,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Reembolsos",
     icon: "↩",
     description:
-      "Solicitudes, autorizaciones y devoluciones de dinero vinculadas a ventas.",
+      "Solicitudes, autorizaciones y devoluciones de ventas o saldo a favor.",
   },
   {
     href: "/seguimiento",

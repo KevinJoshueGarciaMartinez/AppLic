@@ -20,6 +20,7 @@ import {
 import { normalizeUppercaseNoAccents } from "../lib/inputNormalization";
 import { joinNameParts, normalizeNamePart } from "../lib/names";
 import HistorialVentasOperador from "../components/HistorialVentasOperador";
+import SolicitudReembolsoSaldo from "../components/SolicitudReembolsoSaldo";
 import { fechaLocalISO } from "../lib/dates";
 
 /** Pestañas visibles en expediente simplificado. */
@@ -826,17 +827,23 @@ export default function OperadorForm({ id }: Props) {
               servicio al ticket.
             </p>
 
-            <div className="operador-abono-directo">
-              <div className="form-group-title">Recibo de abono</div>
-              <div className="venta-abono-en-venta-inner">
-                <button
-                  type="button"
-                  className="btn-primary"
-                  onClick={() => navigate(`/recibos-abono/nuevo?operadorId=${id}`)}
-                >
-                  Crear recibo
-                </button>
+            <div className="operador-saldo-acciones-grid">
+              <div className="operador-abono-directo">
+                <div className="form-group-title">Recibo de abono</div>
+                <p className="operador-reembolso-saldo__texto">
+                  REGISTRA DINERO RECIBIDO DEL OPERADOR SIN CREAR UNA VENTA.
+                </p>
+                <div className="venta-abono-en-venta-inner">
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => navigate(`/recibos-abono/nuevo?operadorId=${id}`)}
+                  >
+                    Crear recibo
+                  </button>
+                </div>
               </div>
+              {id != null && <SolicitudReembolsoSaldo operadorId={id} />}
             </div>
 
             <div className="form-group-title">Historial de movimientos</div>

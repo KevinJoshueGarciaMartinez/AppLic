@@ -18,6 +18,12 @@ type VentaContexto = {
 type ReembolsoListado = Reembolso & {
   venta_directa: VentaContexto | null;
   ticket: { id: number; ventas: VentaContexto[] | null } | null;
+  operador: {
+    numero_consecutivo: number;
+    nombre: string;
+    apellido_paterno: string | null;
+    apellido_materno: string | null;
+  } | null;
 };
 
 type Props = {
@@ -45,6 +51,9 @@ async function fetchBandejaReembolsos(): Promise<ReembolsoListado[]> {
       ticket:tickets!ticket_id (
         id,
         ventas ( id, operador_nombre, servicio )
+      ),
+      operador:operadores!operador_id (
+        numero_consecutivo, nombre, apellido_paterno, apellido_materno
       )
     `)
     .order("solicitado_at", { ascending: false })
@@ -80,6 +89,19 @@ function contexto(reembolso: ReembolsoListado): VentaContexto | null {
 
 function ventaLinkId(reembolso: ReembolsoListado): number | null {
   return contexto(reembolso)?.id ?? reembolso.venta_id;
+}
+
+function nombreOperador(reembolso: ReembolsoListado) {
+  if (!reembolso.operador) return contexto(reembolso)?.operador_nombre ?? "—";
+  return [
+    reembolso.operador.nombre,
+    reembolso.operador.apellido_paterno,
+    reembolso.operador.apellido_materno,
+  ].filter(Boolean).join(" ");
+}
+
+function esReembolsoDirectoSaldo(reembolso: ReembolsoListado) {
+  return reembolso.venta_id == null && reembolso.ticket_id == null;
 }
 
 function fmtFecha(iso: string | null) {
@@ -157,6 +179,7 @@ export default function Reembolsos({ role }: Props) {
         String(reembolso.id),
         reembolso.motivo,
         reembolso.referencia,
+        nombreOperador(reembolso),
         ctx?.operador_nombre,
         ctx?.servicio,
       ].some((value) => normalizeForSearch(value).includes(text));
@@ -262,7 +285,7 @@ export default function Reembolsos({ role }: Props) {
               <tr>
                 <th>#</th>
                 <th>Solicitud</th>
-                <th>Ticket / cliente</th>
+                <th>Origen / cliente</th>
                 <th>Motivo</th>
                 <th>Forma</th>
                 <th>Estado</th>
@@ -276,14 +299,23 @@ export default function Reembolsos({ role }: Props) {
               ) : filtrados.map((reembolso) => {
                 const ctx = contexto(reembolso);
                 const linkId = ventaLinkId(reembolso);
+                const directoSaldo = esReembolsoDirectoSaldo(reembolso);
                 return (
                   <tr key={reembolso.id}>
                     <td className="col-id">{reembolso.id}</td>
                     <td>{fmtFecha(reembolso.solicitado_at)}</td>
                     <td>
-                      <strong>{reembolso.ticket_id != null ? `TICKET #${reembolso.ticket_id}` : `VENTA #${reembolso.venta_id}`}</strong>
-                      <div className="reembolso-contexto">{ctx?.operador_nombre ?? "—"}</div>
-                      <div className="reembolso-contexto">{ctx?.servicio ?? "—"}</div>
+                      <strong>
+                        {directoSaldo
+                          ? `SALDO OPERADOR #${reembolso.operador_id}`
+                          : reembolso.ticket_id != null
+                            ? `TICKET #${reembolso.ticket_id}`
+                            : `VENTA #${reembolso.venta_id}`}
+                      </strong>
+                      <div className="reembolso-contexto">{nombreOperador(reembolso)}</div>
+                      <div className="reembolso-contexto">
+                        {directoSaldo ? "SALDO A FAVOR" : (ctx?.servicio ?? "—")}
+                      </div>
                     </td>
                     <td title={reembolso.observaciones ?? ""}>{reembolso.motivo}</td>
                     <td>
@@ -304,6 +336,9 @@ export default function Reembolsos({ role }: Props) {
                     <td className="col-actions reembolso-acciones">
                       {linkId != null && (
                         <Link href={`/ventas/${linkId}`}><button type="button" className="btn-edit">Venta</button></Link>
+                      )}
+                      {directoSaldo && reembolso.operador_id != null && (
+                        <Link href={`/operadores/${reembolso.operador_id}`}><button type="button" className="btn-edit">Operador</button></Link>
                       )}
                       {esAdmin && reembolso.estado === "solicitado" && (
                         <>

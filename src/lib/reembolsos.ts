@@ -87,6 +87,57 @@ export async function solicitarReembolso(params: SolicitudReembolsoParams): Prom
   return Number(data);
 }
 
+export type ResumenReembolsoSaldoOperador = {
+  saldo: number;
+  reservado: number;
+  disponible: number;
+};
+
+export async function fetchResumenReembolsoSaldoOperador(
+  operadorId: number,
+): Promise<ResumenReembolsoSaldoOperador> {
+  const { data, error } = await supabase
+    .rpc("resumen_reembolsable_saldo_operador", { p_operador_id: operadorId })
+    .single();
+  if (error) throw new Error(error.message);
+  const row = data as Record<string, unknown>;
+  return {
+    saldo: Number(row.saldo ?? 0),
+    reservado: Number(row.reservado ?? 0),
+    disponible: Number(row.disponible ?? 0),
+  };
+}
+
+export interface SolicitudReembolsoSaldoOperadorParams {
+  operadorId: number;
+  monto: number;
+  formaReembolso: FormaReembolso;
+  reembolsoEfectivo: number;
+  reembolsoDeposito: number;
+  motivo: string;
+  referencia: string | null;
+  observaciones: string | null;
+  idempotencyKey: string;
+}
+
+export async function solicitarReembolsoSaldoOperador(
+  params: SolicitudReembolsoSaldoOperadorParams,
+): Promise<number> {
+  const { data, error } = await supabase.rpc("solicitar_reembolso_saldo_operador", {
+    p_operador_id: params.operadorId,
+    p_monto: params.monto,
+    p_forma_reembolso: params.formaReembolso,
+    p_reembolso_efectivo: params.reembolsoEfectivo,
+    p_reembolso_deposito: params.reembolsoDeposito,
+    p_motivo: params.motivo,
+    p_referencia: params.referencia,
+    p_observaciones: params.observaciones,
+    p_idempotency_key: params.idempotencyKey,
+  });
+  if (error) throw new Error(error.message);
+  return Number(data);
+}
+
 export async function resolverReembolso(
   reembolsoId: number,
   autorizar: boolean,

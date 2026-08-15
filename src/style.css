@@ -1358,11 +1358,110 @@ fieldset.venta-flujo-bloque:disabled {
 }
 
 .operador-abono-directo {
-  margin-bottom: 1.25rem;
   padding: 14px;
   border: 1px solid #dbeafe;
   border-radius: 12px;
   background: #f8fbff;
+}
+
+.operador-saldo-acciones-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: stretch;
+  margin-bottom: 1.25rem;
+}
+
+.operador-reembolso-saldo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px 18px;
+  align-items: start;
+  padding: 14px;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f8fbff 0%, #eff6ff 100%);
+}
+
+.operador-reembolso-saldo__texto {
+  max-width: 520px;
+  margin: 5px 0 12px;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.operador-reembolso-saldo__resumen {
+  display: flex;
+  min-width: 145px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  color: #64748b;
+  font-size: 10px;
+}
+
+.operador-reembolso-saldo__resumen strong {
+  color: #1d4ed8;
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.operador-reembolso-saldo__resumen small {
+  max-width: 170px;
+  color: #b45309;
+  text-align: right;
+}
+
+.operador-reembolso-saldo > .btn-primary {
+  width: max-content;
+}
+
+.operador-reembolso-saldo__alerta {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.reembolso-saldo-modal {
+  max-width: 650px;
+}
+
+.reembolso-saldo-modal .modal-title {
+  padding-right: 30px;
+}
+
+.reembolso-saldo-modal .modal-subtitle {
+  margin: 8px 0 20px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.reembolso-saldo-form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font: inherit;
+  resize: vertical;
+}
+
+@media (max-width: 800px) {
+  .operador-saldo-acciones-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .operador-reembolso-saldo {
+    grid-template-columns: 1fr;
+  }
+
+  .operador-reembolso-saldo__resumen {
+    align-items: flex-start;
+  }
+
+  .operador-reembolso-saldo__resumen small {
+    text-align: left;
+  }
 }
 
 .recibo-page {
