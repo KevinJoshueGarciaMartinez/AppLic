@@ -8,6 +8,7 @@ import type { FormaReembolso } from "../lib/types";
 
 type Props = {
   operadorId: number;
+  compact?: boolean;
 };
 
 function fmt(n: number) {
@@ -23,7 +24,7 @@ function numero(value: string) {
   return Number.isFinite(parsed) ? Math.round(parsed * 100) / 100 : 0;
 }
 
-export default function SolicitudReembolsoSaldo({ operadorId }: Props) {
+export default function SolicitudReembolsoSaldo({ operadorId, compact = false }: Props) {
   const queryClient = useQueryClient();
   const queryKey = ["reembolso_saldo_operador_resumen", operadorId] as const;
   const [abierto, setAbierto] = useState(false);
@@ -109,31 +110,43 @@ export default function SolicitudReembolsoSaldo({ operadorId }: Props) {
 
   return (
     <>
-      <div className="operador-reembolso-saldo">
-        <div>
-          <div className="form-group-title">Reembolso de saldo</div>
-          <p className="operador-reembolso-saldo__texto">
-            REGISTRA EL DINERO QUE YA SE DEVOLVIO AL OPERADOR. EL SALDO BAJARA CUANDO ADMINISTRACION LO AUTORICE.
-          </p>
-        </div>
-        <div className="operador-reembolso-saldo__resumen">
-          <span>DISPONIBLE</span>
-          <strong>{isLoading ? "…" : fmt(disponible)}</strong>
-          {(resumen?.reservado ?? 0) > 0 && (
-            <small>{fmt(resumen?.reservado ?? 0)} EN ESPERA DE AUTORIZACION</small>
-          )}
-        </div>
+      {compact ? (
         <button
           type="button"
-          className="btn-primary"
+          className={mensaje ? "btn-secondary reembolso-saldo-compacto" : "btn-reembolso reembolso-saldo-compacto"}
           disabled={isLoading || disponible <= 0 || Boolean(error)}
           onClick={() => { setMensaje(""); setAbierto(true); }}
+          title={error ? (error as Error).message : `DISPONIBLE: ${fmt(disponible)}`}
         >
-          Solicitar reembolso
+          {mensaje || `REEMBOLSAR SALDO A FAVOR (${fmt(disponible)})`}
         </button>
-        {mensaje && <div className="alert-success operador-reembolso-saldo__alerta">{mensaje}</div>}
-        {error && <div className="alert-error operador-reembolso-saldo__alerta">{(error as Error).message}</div>}
-      </div>
+      ) : (
+        <div className="operador-reembolso-saldo">
+          <div>
+            <div className="form-group-title">Reembolso de saldo</div>
+            <p className="operador-reembolso-saldo__texto">
+              REGISTRA EL DINERO QUE YA SE DEVOLVIO AL OPERADOR. EL SALDO BAJARA CUANDO ADMINISTRACION LO AUTORICE.
+            </p>
+          </div>
+          <div className="operador-reembolso-saldo__resumen">
+            <span>DISPONIBLE</span>
+            <strong>{isLoading ? "…" : fmt(disponible)}</strong>
+            {(resumen?.reservado ?? 0) > 0 && (
+              <small>{fmt(resumen?.reservado ?? 0)} EN ESPERA DE AUTORIZACION</small>
+            )}
+          </div>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={isLoading || disponible <= 0 || Boolean(error)}
+            onClick={() => { setMensaje(""); setAbierto(true); }}
+          >
+            Solicitar reembolso
+          </button>
+          {mensaje && <div className="alert-success operador-reembolso-saldo__alerta">{mensaje}</div>}
+          {error && <div className="alert-error operador-reembolso-saldo__alerta">{(error as Error).message}</div>}
+        </div>
+      )}
 
       {abierto && (
         <div className="modal-overlay" onClick={() => setAbierto(false)}>

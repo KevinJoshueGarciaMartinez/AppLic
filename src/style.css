@@ -1422,6 +1422,21 @@ fieldset.venta-flujo-bloque:disabled {
   margin: 0;
 }
 
+.venta-saldos-con-reembolso {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.reembolso-saldo-compacto {
+  width: 100%;
+  min-height: 34px;
+  padding: 7px 10px;
+  white-space: normal;
+  font-size: 11px;
+}
+
 .reembolso-saldo-modal {
   max-width: 650px;
 }

@@ -37,6 +37,7 @@ import type {
 import HistorialVentasOperador, {
   VENTAS_POR_OPERADOR_QUERY_KEY,
 } from "../components/HistorialVentasOperador";
+import SolicitudReembolsoSaldo from "../components/SolicitudReembolsoSaldo";
 import {
   normalizeForSearch,
   normalizeUppercaseNoAccents,
@@ -1417,21 +1418,24 @@ export default function VentaForm({ id }: Props) {
                 </div>
               </div>
               {form.operador_id != null && (
-                <div className="venta-saldos-cards" aria-live="polite">
-                  <div className="saldo-mini-card saldo-mini-card--favor">
-                    <span className="saldo-mini-card__titulo">Saldo a favor</span>
-                    <span className="saldo-mini-card__monto">
-                      {saldoLoading ? "…" : fmt(saldoFavor)}
-                    </span>
-                    <span className="saldo-mini-card__hint">Abonos registrados</span>
+                <div className="venta-saldos-con-reembolso">
+                  <div className="venta-saldos-cards" aria-live="polite">
+                    <div className="saldo-mini-card saldo-mini-card--favor">
+                      <span className="saldo-mini-card__titulo">Saldo a favor</span>
+                      <span className="saldo-mini-card__monto">
+                        {saldoLoading ? "…" : fmt(saldoFavor)}
+                      </span>
+                      <span className="saldo-mini-card__hint">Abonos registrados</span>
+                    </div>
+                    <div className="saldo-mini-card saldo-mini-card--contra">
+                      <span className="saldo-mini-card__titulo">Saldo en contra</span>
+                      <span className="saldo-mini-card__monto">
+                        {saldoLoading ? "…" : fmt(saldoContra)}
+                      </span>
+                      <span className="saldo-mini-card__hint">Suma de faltantes en ventas</span>
+                    </div>
                   </div>
-                  <div className="saldo-mini-card saldo-mini-card--contra">
-                    <span className="saldo-mini-card__titulo">Saldo en contra</span>
-                    <span className="saldo-mini-card__monto">
-                      {saldoLoading ? "…" : fmt(saldoContra)}
-                    </span>
-                    <span className="saldo-mini-card__hint">Suma de faltantes en ventas</span>
-                  </div>
+                  <SolicitudReembolsoSaldo operadorId={form.operador_id} compact />
                 </div>
               )}
             </div>
@@ -2143,7 +2147,7 @@ export default function VentaForm({ id }: Props) {
               className="btn-reembolso"
               onClick={abrirSolicitudReembolso}
             >
-              Solicitar reembolso
+              Reembolsar cobro de venta
             </button>
           )}
           {!isNew && !esCancelado && esTicketDelDia && (
