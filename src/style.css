@@ -487,6 +487,40 @@ textarea::placeholder {
   flex-wrap: wrap;
 }
 
+.usuarios-asesores-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(130px, 1fr));
+  gap: 6px;
+  min-width: 300px;
+}
+
+.usuarios-asesor-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.usuarios-asesor-check--activo {
+  border-color: #93c5fd;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.usuarios-asesor-check input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: #2563eb;
+}
+
 .ventas-toolbar-secundaria {
   margin-top: -4px;
 }

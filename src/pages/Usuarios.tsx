@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
+import { ASESORES_OPCIONES } from "../lib/asesoresCatalogo";
 
 type Nivel = {
   id_nivel: number;
@@ -13,6 +14,7 @@ type UsuarioRow = {
   usuario: string | null;
   id_nivel: number | null;
   asesor_asignado: string | null;
+  usuarios_asesores: Array<{ asesor: string }> | null;
   activo: boolean;
   created_at: string;
   usuarios_nivel: Nivel | null;
@@ -31,7 +33,7 @@ async function fetchNiveles(): Promise<Nivel[]> {
 async function fetchUsuarios(): Promise<UsuarioRow[]> {
   const { data, error } = await supabase
     .from("usuarios")
-    .select("id_usuario, nombre_usuario, usuario, id_nivel, asesor_asignado, activo, created_at, usuarios_nivel(id_nivel, nivel_usuario)")
+    .select("id_usuario, nombre_usuario, usuario, id_nivel, asesor_asignado, activo, created_at, usuarios_nivel(id_nivel, nivel_usuario), usuarios_asesores(asesor)")
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(error.message);
@@ -89,6 +91,28 @@ export default function Usuarios() {
     },
   });
 
+  const asesoresMutation = useMutation({
+    mutationFn: async ({ idUsuario, asesores }: { idUsuario: string; asesores: string[] }) => {
+      const { error: updateError } = await supabase.rpc("set_usuario_asesores", {
+        p_usuario_id: idUsuario,
+        p_asesores: asesores,
+      });
+      if (updateError) throw new Error(updateError.message);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["usuarios_admin"] });
+      await queryClient.invalidateQueries({ queryKey: ["seguimiento_contexto_usuario"] });
+    },
+  });
+
+  function asesoresDeUsuario(usuario: UsuarioRow) {
+    const asignados = (usuario.usuarios_asesores ?? [])
+      .map((fila) => fila.asesor?.trim())
+      .filter(Boolean);
+    if (asignados.length > 0) return asignados;
+    return usuario.asesor_asignado?.trim() ? [usuario.asesor_asignado.trim()] : [];
+  }
+
   const filtrados = useMemo(() => {
     const txt = busqueda.toLowerCase().trim();
     if (!txt) return usuarios;
@@ -96,7 +120,8 @@ export default function Usuarios() {
       const correo = (u.usuario ?? "").toLowerCase();
       const nombre = (u.nombre_usuario ?? "").toLowerCase();
       const nivel = (u.usuarios_nivel?.nivel_usuario ?? "sin nivel").toLowerCase();
-      return correo.includes(txt) || nombre.includes(txt) || nivel.includes(txt);
+      const asesores = asesoresDeUsuario(u).join(" ").toLowerCase();
+      return correo.includes(txt) || nombre.includes(txt) || nivel.includes(txt) || asesores.includes(txt);
     });
   }, [usuarios, busqueda]);
 
@@ -177,11 +202,28 @@ export default function Usuarios() {
                       </select>
                     </td>
                     <td style={{ minWidth: "220px" }}>
-                      {u.asesor_asignado?.trim() ? (
-                        <span className="badge badge--blue">{u.asesor_asignado.trim()}</span>
-                      ) : (
-                        <span className="badge badge--gray">— Sin asesor —</span>
-                      )}
+                      <div className="usuarios-asesores-grid">
+                        {ASESORES_OPCIONES.map((asesor) => {
+                          const asignados = asesoresDeUsuario(u);
+                          const seleccionado = asignados.includes(asesor);
+                          return (
+                            <label key={asesor} className={seleccionado ? "usuarios-asesor-check usuarios-asesor-check--activo" : "usuarios-asesor-check"}>
+                              <input
+                                type="checkbox"
+                                checked={seleccionado}
+                                disabled={asesoresMutation.isPending}
+                                onChange={() => {
+                                  const siguientes = seleccionado
+                                    ? asignados.filter((actual) => actual !== asesor)
+                                    : [...asignados, asesor];
+                                  asesoresMutation.mutate({ idUsuario: u.id_usuario, asesores: siguientes });
+                                }}
+                              />
+                              <span>{asesor}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
                     </td>
                     <td>
                       <span className={`badge ${u.activo ? "badge--green" : "badge--gray"}`}>
@@ -210,6 +252,9 @@ export default function Usuarios() {
             </tbody>
           </table>
         </div>
+      )}
+      {asesoresMutation.isError && (
+        <div className="alert-error">No se pudieron actualizar los asesores: {(asesoresMutation.error as Error).message}</div>
       )}
     </div>
   );

@@ -43,7 +43,7 @@ type ContextoSeguimiento = {
   userId: string;
   email: string | null;
   rol: "admin" | "recepcion" | "ventas" | null;
-  asesorAsignado: string | null;
+  asesoresAsignados: string[];
 };
 
 const MODAL_NORMALIZED_FIELDS = new Set<keyof ModalProspecto>([
@@ -66,7 +66,11 @@ async function fetchContextoSeguimiento(): Promise<ContextoSeguimiento> {
   const user = authData.user;
   if (!user) throw new Error("No hay sesion activa.");
 
-  const [{ data: profileData, error: profileError }, { data: usuarioData, error: usuarioError }] =
+  const [
+    { data: profileData, error: profileError },
+    { data: usuarioData, error: usuarioError },
+    { data: asesoresData, error: asesoresError },
+  ] =
     await Promise.all([
       supabase
         .from("profiles")
@@ -78,26 +82,38 @@ async function fetchContextoSeguimiento(): Promise<ContextoSeguimiento> {
         .select("asesor_asignado")
         .eq("id_usuario", user.id)
         .single(),
+      supabase
+        .from("usuarios_asesores")
+        .select("asesor")
+        .eq("id_usuario", user.id)
+        .order("id", { ascending: true }),
     ]);
 
   if (profileError) throw new Error(profileError.message);
   if (usuarioError) throw new Error(usuarioError.message);
+  if (asesoresError) throw new Error(asesoresError.message);
 
   const rolRaw = String(profileData?.rol ?? "").trim();
   const rol =
     rolRaw === "admin" || rolRaw === "recepcion" || rolRaw === "ventas"
       ? rolRaw
       : null;
+  const asesoresAsignados = (asesoresData ?? [])
+    .map((row) => String(row.asesor ?? "").trim())
+    .filter(Boolean);
+  if (asesoresAsignados.length === 0 && usuarioData?.asesor_asignado?.trim()) {
+    asesoresAsignados.push(usuarioData.asesor_asignado.trim());
+  }
   return {
     userId: user.id,
     email: user.email ?? null,
     rol,
-    asesorAsignado: usuarioData?.asesor_asignado?.trim() || null,
+    asesoresAsignados,
   };
 }
 
 async function fetchProspectos(
-  contexto: Pick<ContextoSeguimiento, "rol" | "asesorAsignado">,
+  contexto: Pick<ContextoSeguimiento, "rol" | "asesoresAsignados">,
 ): Promise<FilaSeguimiento[]> {
   const { data, error } = await supabase
     .from("operadores")
@@ -110,9 +126,9 @@ async function fetchProspectos(
   if (error) throw new Error(error.message);
   const rows = (data ?? []) as unknown as FilaSeguimiento[];
   if (contexto.rol === "admin") return rows;
-  const asesorNorm = normalizarTexto(contexto.asesorAsignado);
-  if (!asesorNorm) return [];
-  return rows.filter((r) => normalizarTexto(r.asesor) === asesorNorm);
+  const permitidos = new Set(contexto.asesoresAsignados.map(normalizarTexto).filter(Boolean));
+  if (permitidos.size === 0) return [];
+  return rows.filter((r) => permitidos.has(normalizarTexto(r.asesor)));
 }
 
 function nombreCompleto(op: FilaSeguimiento) {
@@ -347,18 +363,23 @@ export default function SeguimientoVentas() {
     queryKey: [
       "seguimiento_operadores",
       contextoSeguimiento?.rol ?? null,
-      normalizarTexto(contextoSeguimiento?.asesorAsignado),
+      (contextoSeguimiento?.asesoresAsignados ?? []).map(normalizarTexto).sort().join("|"),
     ],
     enabled: !!contextoSeguimiento,
     queryFn: () =>
       fetchProspectos({
         rol: contextoSeguimiento?.rol ?? null,
-        asesorAsignado: contextoSeguimiento?.asesorAsignado ?? null,
+        asesoresAsignados: contextoSeguimiento?.asesoresAsignados ?? [],
       }),
   });
 
   const hoy = hoyISO();
   const esAdminSeguimiento = contextoSeguimiento?.rol === "admin";
+  const asesoresAsignados = contextoSeguimiento?.asesoresAsignados ?? [];
+  const opcionesAsesor = esAdminSeguimiento
+    ? [...ASESORES_OPCIONES]
+    : asesoresAsignados;
+  const puedeFiltrarAsesor = esAdminSeguimiento || asesoresAsignados.length > 1;
 
   useEffect(() => {
     if (!contextoSeguimiento || esAdminSeguimiento) return;
@@ -366,20 +387,19 @@ export default function SeguimientoVentas() {
   }, [contextoSeguimiento, esAdminSeguimiento]);
 
   useEffect(() => {
-    if (!esAdminSeguimiento) return;
+    if (!puedeFiltrarAsesor) return;
     if (!asesorFiltro || asesorFiltro === "__sin_asesor__") return;
-    if (!(ASESORES_OPCIONES as readonly string[]).includes(asesorFiltro)) {
+    if (!opcionesAsesor.includes(asesorFiltro)) {
       setAsesorFiltro("");
     }
-  }, [esAdminSeguimiento, asesorFiltro]);
+  }, [asesorFiltro, opcionesAsesor, puedeFiltrarAsesor]);
 
   useEffect(() => {
     if (!modalAbierto) return;
     if (contextoSeguimiento?.rol === "admin") return;
-    const asesorAsignado = contextoSeguimiento?.asesorAsignado?.trim() || "";
-    if (!asesorAsignado) return;
-    setModalForm((prev) => (prev.asesor ? prev : { ...prev, asesor: asesorAsignado }));
-  }, [modalAbierto, contextoSeguimiento?.rol, contextoSeguimiento?.asesorAsignado]);
+    if (asesoresAsignados.length !== 1) return;
+    setModalForm((prev) => (prev.asesor ? prev : { ...prev, asesor: asesoresAsignados[0] }));
+  }, [modalAbierto, contextoSeguimiento?.rol, asesoresAsignados]);
 
   const insertMutation = useMutation({
     mutationFn: async (payload: OperadorInsert) => {
@@ -484,7 +504,7 @@ export default function SeguimientoVentas() {
   function abrirModal() {
     if (
       contextoSeguimiento?.rol !== "admin"
-      && !normalizarTexto(contextoSeguimiento?.asesorAsignado)
+      && asesoresAsignados.length === 0
     ) {
       setModalError(
         "No puedes crear prospectos porque tu usuario no tiene asesor asignado. Registra primero tu asesor en esta pantalla.",
@@ -493,7 +513,7 @@ export default function SeguimientoVentas() {
     }
     insertMutation.reset();
     const base = emptyModalProspecto();
-    const asesorDefault = contextoSeguimiento?.asesorAsignado?.trim() || "";
+    const asesorDefault = asesoresAsignados.length === 1 ? asesoresAsignados[0] : "";
     setModalForm({
       ...base,
       asesor: asesorDefault || base.asesor,
@@ -516,7 +536,7 @@ export default function SeguimientoVentas() {
     setModalError(null);
     if (
       contextoSeguimiento?.rol !== "admin"
-      && !normalizarTexto(contextoSeguimiento?.asesorAsignado)
+      && asesoresAsignados.length === 0
     ) {
       setModalError(
         "No puedes guardar prospectos sin asesor asignado en tu usuario. Registra primero tu asesor en esta pantalla.",
@@ -531,10 +551,18 @@ export default function SeguimientoVentas() {
       setModalError("La proxima llamada es obligatoria para poder filtrar y ordenar el seguimiento.");
       return;
     }
-    const asesorForzado =
-      contextoSeguimiento?.rol === "admin"
-        ? modalForm.asesor
-        : (contextoSeguimiento?.asesorAsignado ?? "");
+    const asesorForzado = modalForm.asesor.trim();
+    if (!asesorForzado) {
+      setModalError("Selecciona el asesor que atendera al prospecto.");
+      return;
+    }
+    if (
+      contextoSeguimiento?.rol !== "admin"
+      && !asesoresAsignados.map(normalizarTexto).includes(normalizarTexto(asesorForzado))
+    ) {
+      setModalError("No tienes acceso al asesor seleccionado.");
+      return;
+    }
     insertMutation.mutate(
       modalToInsert({
         ...modalForm,
@@ -562,8 +590,8 @@ export default function SeguimientoVentas() {
     if (diaFiltro) {
       rows = rows.filter((r) => r.proxima_llamada === diaFiltro);
     }
-    if (esAdminSeguimiento) {
-      if (asesorFiltro === "__sin_asesor__") {
+    if (puedeFiltrarAsesor) {
+      if (esAdminSeguimiento && asesorFiltro === "__sin_asesor__") {
         rows = rows.filter((r) => !r.asesor?.trim());
       } else if (asesorFiltro) {
         rows = rows.filter((r) => (r.asesor ?? "").trim() === asesorFiltro);
@@ -581,7 +609,7 @@ export default function SeguimientoVentas() {
       return pa < pb ? -1 : 1;
     });
     return rows;
-  }, [data, busqueda, soloPendientes, diaFiltro, asesorFiltro, hoy, esAdminSeguimiento]);
+  }, [data, busqueda, soloPendientes, diaFiltro, asesorFiltro, hoy, esAdminSeguimiento, puedeFiltrarAsesor]);
 
   const conteoEstatus = useMemo(() => {
     const mapa = new Map<string, number>();
@@ -635,14 +663,14 @@ export default function SeguimientoVentas() {
       )}
 
       {contextoSeguimiento?.rol !== "admin"
-        && !normalizarTexto(contextoSeguimiento?.asesorAsignado) && (
+        && asesoresAsignados.length === 0 && (
           <div className="alert-error" style={{ marginBottom: "12px" }}>
             Tu usuario no tiene asesor asignado. Capturalo una sola vez para continuar.
           </div>
         )}
 
       {contextoSeguimiento?.rol !== "admin"
-        && !normalizarTexto(contextoSeguimiento?.asesorAsignado) && (
+        && asesoresAsignados.length === 0 && (
           <div
             className="form-field"
             style={{
@@ -772,14 +800,14 @@ export default function SeguimientoVentas() {
                   <select
                     value={modalForm.asesor}
                     onChange={(e) => setModal("asesor", e.target.value)}
-                    disabled={contextoSeguimiento?.rol !== "admin"}
+                    disabled={contextoSeguimiento?.rol !== "admin" && asesoresAsignados.length <= 1}
                   >
                     <option value="">— Seleccionar —</option>
                     {modalForm.asesor
                       && !(ASESORES_OPCIONES as readonly string[]).includes(modalForm.asesor) && (
                         <option value={modalForm.asesor}>{modalForm.asesor}</option>
                     )}
-                    {ASESORES_OPCIONES.map((a) => (
+                    {opcionesAsesor.map((a) => (
                       <option key={a} value={a}>
                         {a}
                       </option>
@@ -1263,7 +1291,7 @@ export default function SeguimientoVentas() {
             Quitar filtro de dia
           </button>
         )}
-        {esAdminSeguimiento && (
+        {puedeFiltrarAsesor && (
           <>
             <div className="form-field" style={{ margin: 0, minWidth: "12rem" }}>
               <label style={{ fontSize: "0.75rem", display: "block", marginBottom: "0.25rem" }}>
@@ -1276,8 +1304,8 @@ export default function SeguimientoVentas() {
                 onChange={(e) => setAsesorFiltro(e.target.value)}
               >
                 <option value="">Todos los asesores</option>
-                <option value="__sin_asesor__">Sin asesor</option>
-                {ASESORES_OPCIONES.map((a) => (
+                {esAdminSeguimiento && <option value="__sin_asesor__">Sin asesor</option>}
+                {opcionesAsesor.map((a) => (
                   <option key={a} value={a}>
                     {a}
                   </option>

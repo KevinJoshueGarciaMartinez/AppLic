@@ -1,8 +1,8 @@
 /** Opciones del campo Asesor (seguimiento / prospectos). */
 export const ASESORES_OPCIONES = [
   "AME - VAL",
-  "JESSE - VERO",
-  "JESSE - RENATA",
+  "ANDREA - VERO",
+  "ANDREA - RENATA",
   "ADRIAN",
   "ARANZA",
 ] as const;
