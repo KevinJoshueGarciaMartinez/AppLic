@@ -1945,6 +1945,14 @@ fieldset.venta-flujo-bloque:disabled {
 
 /* ─── Promotor chips (comisiones) ────────────────────────────────────────────── */
 
+.comisiones-observaciones {
+  min-width: 180px;
+  max-width: 320px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
 .promotor-resumen {
   margin-top: 12px;
 }
@@ -2218,6 +2226,26 @@ fieldset.venta-flujo-bloque:disabled {
     width: 30%;
     white-space: pre-wrap !important;
     line-height: 1.35;
+  }
+
+  .comisiones-table {
+    table-layout: fixed;
+    font-size: 0.7rem;
+  }
+
+  .comisiones-table th,
+  .comisiones-table td {
+    padding: 4px 5px;
+    vertical-align: top;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .comisiones-table .comisiones-observaciones {
+    width: 24%;
+    min-width: 0;
+    max-width: none;
+    white-space: pre-wrap;
   }
 
   .table-total-row td { border-top: 2px solid #333; font-weight: bold; }

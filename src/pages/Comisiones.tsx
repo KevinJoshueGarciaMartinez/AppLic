@@ -20,6 +20,7 @@ interface FilaComision {
   promotor: string | null;
   id_promotor: number | null;
   cancelado: boolean;
+  observaciones: string | null;
 }
 
 interface Filtros {
@@ -44,7 +45,7 @@ async function fetchComisiones(filtros: Filtros): Promise<FilaComision[]> {
   let q = supabase
     .from("ventas")
     .select(
-      "id, fecha, fecha_pago, operador_id, operador_nombre, servicio, costo, costo_promotor, comision_pagada, promotor, id_promotor, cancelado",
+      "id, fecha, fecha_pago, operador_id, operador_nombre, servicio, costo, costo_promotor, comision_pagada, promotor, id_promotor, cancelado, observaciones",
     )
     .eq("cancelado", false)
     .order("fecha", { ascending: false });
@@ -382,7 +383,7 @@ export default function Comisiones() {
 
           {/* ── Tabla detalle ── */}
           <div className="table-wrapper" style={{ marginTop: "16px" }}>
-            <table className="data-table">
+            <table className="data-table comisiones-table">
               <thead>
                 <tr>
                   <th>#</th>
@@ -390,6 +391,7 @@ export default function Comisiones() {
                   <th>Operador</th>
                   <th>Servicio</th>
                   <th>Promotor</th>
+                  <th>Observaciones</th>
                   <th>Costo</th>
                   <th>Comision</th>
                   <th>Estado</th>
@@ -404,6 +406,7 @@ export default function Comisiones() {
                     <td>{f.operador_nombre ?? "—"}</td>
                     <td>{f.servicio ?? "—"}</td>
                     <td>{f.promotor ?? "—"}</td>
+                    <td className="comisiones-observaciones">{f.observaciones?.trim() || "—"}</td>
                     <td className="col-money">{fmt(f.costo)}</td>
                     <td className="col-money col-money--green">{fmt(f.costo_promotor)}</td>
                     <td>
@@ -417,7 +420,7 @@ export default function Comisiones() {
               </tbody>
               <tfoot>
                 <tr className="table-total-row">
-                  <td colSpan={5}><strong>TOTAL ({filasActivas.length} registros)</strong></td>
+                  <td colSpan={6}><strong>TOTAL ({filasActivas.length} registros)</strong></td>
                   <td className="col-money"><strong>{fmt(totalCosto)}</strong></td>
                   <td className="col-money col-money--green"><strong>{fmt(totalComision)}</strong></td>
                   <td colSpan={2} />
