@@ -1953,6 +1953,24 @@ fieldset.venta-flujo-bloque:disabled {
   line-height: 1.35;
 }
 
+.venta-promotor-edicion {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.venta-promotor-edicion .btn-primary {
+  width: auto;
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .venta-promotor-edicion {
+    grid-template-columns: 1fr;
+  }
+}
+
 .promotor-resumen {
   margin-top: 12px;
 }

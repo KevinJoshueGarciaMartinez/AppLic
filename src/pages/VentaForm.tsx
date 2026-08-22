@@ -1151,6 +1151,51 @@ export default function VentaForm({ id }: Props) {
     }));
   }
 
+  const cambiarPromotorMutation = useMutation({
+    mutationFn: async () => {
+      if (isNew || id == null) throw new Error("La venta aun no ha sido registrada.");
+      if (esCancelado) throw new Error("No se puede cambiar el promotor de una venta cancelada.");
+      if (form.id_promotor == null) throw new Error("Selecciona un promotor.");
+
+      const promotorSeleccionado = promotores.find(
+        (promotor) => promotor.id_promotor === form.id_promotor,
+      );
+      if (!promotorSeleccionado) throw new Error("El promotor seleccionado no existe.");
+
+      const { error: actualizacionError } = await supabase.rpc("cambiar_promotor_venta", {
+        p_venta_id: id,
+        p_promotor_id: promotorSeleccionado.id_promotor,
+      });
+      if (actualizacionError) throw new Error(actualizacionError.message);
+
+      return promotorSeleccionado;
+    },
+    onSuccess: async (promotorSeleccionado) => {
+      setForm((prev) => ({
+        ...prev,
+        id_promotor: promotorSeleccionado.id_promotor,
+        promotor: promotorSeleccionado.nombre,
+      }));
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["venta", id] }),
+        queryClient.invalidateQueries({ queryKey: ["ticket_items"] }),
+        queryClient.invalidateQueries({ queryKey: ["ventas"] }),
+        queryClient.invalidateQueries({ queryKey: ["comisiones"] }),
+        queryClient.invalidateQueries({ queryKey: [VENTAS_POR_OPERADOR_QUERY_KEY] }),
+      ]);
+      setGuardado(true);
+      setTimeout(() => setGuardado(false), 3000);
+    },
+    onError: () => {
+      if (!ventaData) return;
+      setForm((prev) => ({
+        ...prev,
+        id_promotor: ventaData.id_promotor,
+        promotor: ventaData.promotor,
+      }));
+    },
+  });
+
   const totalItems = items.reduce((s, item) => s + item.costo, 0);
   const tieneCurso = items.some((item) => item.tipo_servicio === 2);
   const faltante = totalItems - form.cobro;
@@ -1481,16 +1526,17 @@ export default function VentaForm({ id }: Props) {
               </div>
             )}
             <div className="form-field" style={{ marginTop: "1.25rem" }}>
-              <label>Promotor *</label>
-              {isNew ? (
+              <label>{isNew ? "Promotor *" : "Promotor de esta venta *"}</label>
+              <div className={!isNew ? "venta-promotor-edicion" : undefined}>
                 <select
                   className="select-promotor-wide"
-                  disabled={isNew && form.operador_id == null}
+                  disabled={(isNew && form.operador_id == null) || (!isNew && (esCancelado || cambiarPromotorMutation.isPending))}
                   value={form.id_promotor ?? ""}
                   onBlur={() => {
                     if (isNew && form.operador_id != null) setPromotorRevisado(true);
                   }}
                   onChange={(e) => {
+                    cambiarPromotorMutation.reset();
                     if (isNew && form.operador_id != null) setPromotorRevisado(true);
                     if (e.target.value) {
                       handlePromotorChange(Number(e.target.value));
@@ -1510,9 +1556,30 @@ export default function VentaForm({ id }: Props) {
                     </option>
                   ))}
                 </select>
-              ) : (
-                <div className="campo-financiero-bloqueado">
-                  <span className="venta-total-cobro-readonly">{form.promotor ?? "— Sin promotor —"}</span>
+                {!isNew && (
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={
+                      esCancelado
+                      || cambiarPromotorMutation.isPending
+                      || form.id_promotor == null
+                      || form.id_promotor === ventaData?.id_promotor
+                    }
+                    onClick={() => cambiarPromotorMutation.mutate()}
+                  >
+                    {cambiarPromotorMutation.isPending ? "GUARDANDO..." : "GUARDAR PROMOTOR"}
+                  </button>
+                )}
+              </div>
+              {!isNew && (
+                <span className="field-hint">
+                  EL CAMBIO APLICA A ESTA VENTA Y NO MODIFICA EL PROMOTOR HABITUAL DEL OPERADOR.
+                </span>
+              )}
+              {cambiarPromotorMutation.isError && (
+                <div className="alert-error" style={{ margin: 0 }}>
+                  {(cambiarPromotorMutation.error as Error).message}
                 </div>
               )}
             </div>
