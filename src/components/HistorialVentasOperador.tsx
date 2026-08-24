@@ -16,6 +16,7 @@ export type VentaHistorialOperadorRow = {
   forma_pago: string;
   cancelado: boolean;
   motivo_cancelacion: string | null;
+  observaciones: string | null;
 };
 
 function fmt(n: number) {
@@ -32,7 +33,7 @@ async function fetchVentasHistorialOperador(
   const { data, error } = await supabase
     .from("ventas")
     .select(
-      "id, fecha, ticket_id, servicio, costo, cobro, faltante, forma_pago, cancelado, motivo_cancelacion",
+      "id, fecha, ticket_id, servicio, costo, cobro, faltante, forma_pago, cancelado, motivo_cancelacion, observaciones",
     )
     .eq("operador_id", operadorId)
     .order("fecha", { ascending: false })
@@ -110,6 +111,11 @@ export default function HistorialVentasOperador({ operadorId, compact }: Props) 
                       <span className="historial-ventas-op__ticket-hint">
                         {" "}
                         · T#{v.ticket_id}
+                      </span>
+                    )}
+                    {v.observaciones?.trim() && (
+                      <span className="historial-ventas-op__concepto">
+                        <strong>Concepto:</strong> {v.observaciones.trim()}
                       </span>
                     )}
                   </td>

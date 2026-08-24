@@ -1627,7 +1627,7 @@ export default function VentaForm({ id }: Props) {
                   <input
                     type="text"
                     className="venta-draft-obs"
-                    placeholder="Nota del servicio (opcional, solo BD)"
+                    placeholder="Concepto / nota del servicio (opcional)"
                     value={draftObservaciones}
                     onChange={(e) => setDraftObservaciones(e.target.value)}
                   />
@@ -1686,6 +1686,11 @@ export default function VentaForm({ id }: Props) {
                                   </option>
                                 ))}
                               </select>
+                            )}
+                            {item.observaciones?.trim() && (
+                              <span className="ticket-line-concepto">
+                                <strong>Concepto:</strong> {item.observaciones.trim()}
+                              </span>
                             )}
                           </td>
                           <td className="col-monto">

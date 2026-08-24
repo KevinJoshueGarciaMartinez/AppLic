@@ -1194,6 +1194,23 @@ input[type="number"] {
   color: #94a3b8;
 }
 
+.historial-ventas-op__concepto,
+.ticket-line-concepto {
+  display: block;
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.historial-ventas-op__concepto strong,
+.ticket-line-concepto strong {
+  color: #475569;
+  font-weight: 700;
+}
+
 .historial-ventas-op__forma {
   display: block;
   font-size: 0.78rem;
