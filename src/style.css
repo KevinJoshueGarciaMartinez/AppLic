@@ -688,6 +688,16 @@ input[type="number"] {
   margin-bottom: 16px;
 }
 
+.alert-info {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
 /* ─── Tabs ───────────────────────────────────────────────────── */
 
 .tabs {

@@ -10,7 +10,6 @@ import {
   fetchMovimientosSaldoTicket,
   insertAbonoSaldo,
   insertAplicacionSaldoTicket,
-  insertDevolucionCancelacion,
   type OperadorSaldoMovimientoRow,
 } from "../lib/saldoOperador";
 import {
@@ -746,52 +745,19 @@ export default function VentaForm({ id }: Props) {
         throw new Error("Solo se pueden cancelar tickets registrados el mismo dia.");
       }
 
-      const ahora = new Date().toISOString();
-      const updateVenta = {
-        cancelado: true,
-        motivo_cancelacion: motivoCancelacion.trim(),
-        cancelado_at: ahora,
-      };
-
-      // 1. Cancelar las ventas
-      if (ticketIdParaPagos) {
-        const { error } = await supabase
-          .from("ventas").update(updateVenta).eq("ticket_id", ticketIdParaPagos);
-        if (error) throw new Error(error.message);
-      } else {
-        const { error } = await supabase
-          .from("ventas").update(updateVenta).eq("id", id!);
-        if (error) throw new Error(error.message);
-      }
-
-      // 2. Obtener pagos del ticket/venta y marcarlos como cancelados
-      const { data: pagos, error: pagosErr } = ticketIdParaPagos
-        ? await supabase.from("ventas_pagos").select("id, pago_saldo").eq("ticket_id", ticketIdParaPagos)
-        : await supabase.from("ventas_pagos").select("id, pago_saldo").eq("venta_id", id!);
-      if (pagosErr) throw new Error(pagosErr.message);
-
-      if (pagos && pagos.length > 0) {
-        const ids = pagos.map((p: { id: number }) => p.id);
-        const { error: markErr } = await supabase
-          .from("ventas_pagos").update({ cancelado: true }).in("id", ids);
-        if (markErr) throw new Error(markErr.message);
-
-        // 3. Devolver saldo a favor si se uso en algun pago
-        const totalSaldoUsado = pagos.reduce(
-          (s: number, p: { pago_saldo: number }) => s + Number(p.pago_saldo ?? 0), 0,
-        );
-        if (totalSaldoUsado > 0.005 && form.operador_id != null) {
-          await insertDevolucionCancelacion(form.operador_id, totalSaldoUsado, {
-            ticketId: ticketIdParaPagos,
-            ventaId: ticketIdParaPagos ? null : (id ?? null),
-          });
-        }
-      }
+      const { data, error } = await supabase.rpc("cancelar_venta_mismo_dia", {
+        p_venta_id: id!,
+        p_motivo: motivoCancelacion.trim(),
+      });
+      if (error) throw new Error(error.message);
+      return Number(data ?? 0);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["venta", id] });
       queryClient.invalidateQueries({ queryKey: ["ventas"] });
       queryClient.invalidateQueries({ queryKey: historialTicketQueryKey });
+      queryClient.invalidateQueries({ queryKey: reembolsoResumenQueryKey });
+      queryClient.invalidateQueries({ queryKey: reembolsosQueryKey });
       queryClient.invalidateQueries({ queryKey: [VENTAS_POR_OPERADOR_QUERY_KEY] });
       queryClient.invalidateQueries({ queryKey: ["operador_saldos", form.operador_id] });
       queryClient.invalidateQueries({ queryKey: ["operador_saldo_movs"] });
@@ -2498,8 +2464,14 @@ export default function VentaForm({ id }: Props) {
             <h2 className="modal-title">⛔ Cancelar ticket</h2>
             <p className="modal-desc">
               Esta accion es irreversible. El ticket quedara cancelado y no se podran
-              registrar mas pagos. El historial se conserva.
+              registrar mas pagos. Todo lo pagado se abonara automaticamente al saldo a
+              favor del operador y el historial se conservara.
             </p>
+            {(resumenReembolso?.pagado ?? 0) > EPSILON_DEUDA && (
+              <div className="alert-info" style={{ marginTop: "12px" }}>
+                SE DEVOLVERAN {fmt(resumenReembolso?.pagado ?? 0)} AL SALDO A FAVOR.
+              </div>
+            )}
             <div className="form-field" style={{ marginTop: "12px" }}>
               <label>Motivo de cancelacion *</label>
               <textarea
@@ -2529,7 +2501,7 @@ export default function VentaForm({ id }: Props) {
                 disabled={cancelMutation.isPending}
                 onClick={() => cancelMutation.mutate()}
               >
-                {cancelMutation.isPending ? "Cancelando…" : "Si, cancelar ticket"}
+                {cancelMutation.isPending ? "Cancelando…" : "Si, cancelar y devolver a saldo"}
               </button>
             </div>
           </div>
