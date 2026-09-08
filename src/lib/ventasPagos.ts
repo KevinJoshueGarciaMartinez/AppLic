@@ -132,6 +132,15 @@ export async function registrarLiquidacion(params: LiquidacionParams): Promise<v
   const peLiq = round2(pagoEfectivo * ratio);
   const pdLiq = round2(pagoDeposito * ratio);
   const psLiq = round2(pagoSaldo * ratio);
+  const peSobrepago = round2(Math.max(0, pagoEfectivo - peLiq));
+  const pdSobrepago = round2(Math.max(0, pagoDeposito - pdLiq));
+  const psSobrepago = round2(Math.max(0, pagoSaldo - psLiq));
+
+  if (sobrepago > 0.005 && psSobrepago > 0.005) {
+    throw new Error(
+      "El sobrepago solo puede provenir de efectivo o deposito; no se puede generar saldo nuevo usando saldo existente.",
+    );
+  }
 
   // ── 2. Distribuir el pago en cascada sobre los faltantes ─────────────────
   const faltantes = filas.map((f) => Number(f.faltante ?? 0));
@@ -189,6 +198,8 @@ export async function registrarLiquidacion(params: LiquidacionParams): Promise<v
       ticketId,
       fecha,
       formaPago,
+      pagoEfectivo: formaPago === "Dividida" ? peSobrepago : 0,
+      pagoDeposito: formaPago === "Dividida" ? pdSobrepago : 0,
       referencia,
     });
   }

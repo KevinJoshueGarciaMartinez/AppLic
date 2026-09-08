@@ -1019,6 +1019,14 @@ export default function VentaForm({ id }: Props) {
             ticketId,
             fecha: payload.fecha ?? hoyLocal(),
             formaPago: payload.forma_pago,
+            pagoEfectivo:
+              payload.forma_pago === "Dividida"
+                ? round2(Math.max(0, Number(payload.pago_efectivo ?? 0) - peTicket))
+                : 0,
+            pagoDeposito:
+              payload.forma_pago === "Dividida"
+                ? round2(Math.max(0, Number(payload.pago_deposito ?? 0) - pdTicket))
+                : 0,
             referencia: payload.numero_referencia ?? null,
           });
         }
@@ -1268,6 +1276,15 @@ export default function VentaForm({ id }: Props) {
 
       const sobrepagoEnNuevaVenta = round2(Math.max(0, form.cobro - totalItems));
       if (sobrepagoEnNuevaVenta > EPSILON_DEUDA) {
+        if (
+          form.forma_pago === "Saldo"
+          || (form.forma_pago === "Dividida" && form.pago_saldo_operador > EPSILON_DEUDA)
+        ) {
+          alert(
+            "El sobrepago solo puede provenir de efectivo o deposito; no se puede generar saldo nuevo usando saldo existente.",
+          );
+          return;
+        }
         if (form.operador_id == null) {
           alert(
             "Selecciona un operador para registrar el sobrepago como saldo a favor.",

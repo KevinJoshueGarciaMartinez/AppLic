@@ -36,6 +36,8 @@ type ReciboAbonoRow = {
   id: number;
   fecha: string | null;
   operador_id: number;
+  venta_id: number | null;
+  ticket_id: number | null;
   forma_pago: string | null;
   pago_efectivo: number;
   pago_deposito: number;
@@ -58,6 +60,11 @@ type ReciboAbonoRow = {
     | null;
 };
 
+type ResultadoVentas = {
+  registros: VentaListadoRow[];
+  abonosVinculados: ReciboAbonoRow[];
+};
+
 function nombreOperador(
   op:
     | {
@@ -77,7 +84,21 @@ function nombreOperador(
   return joinNameParts(base?.nombre, base?.apellido_paterno, base?.apellido_materno);
 }
 
-async function fetchVentas(fecha: string | null, verCanceladas: boolean): Promise<VentaListadoRow[]> {
+function efectivoDeAbono(recibo: ReciboAbonoRow): number {
+  if (recibo.forma_pago === "Dividida") return Number(recibo.pago_efectivo ?? 0);
+  if (recibo.forma_pago === "Deposito" || recibo.forma_pago === "Transferencia") return 0;
+  return Number(recibo.importe ?? 0);
+}
+
+function depositoDeAbono(recibo: ReciboAbonoRow): number {
+  if (recibo.forma_pago === "Dividida") return Number(recibo.pago_deposito ?? 0);
+  if (recibo.forma_pago === "Deposito" || recibo.forma_pago === "Transferencia") {
+    return Number(recibo.importe ?? 0);
+  }
+  return 0;
+}
+
+async function fetchVentas(fecha: string | null, verCanceladas: boolean): Promise<ResultadoVentas> {
   let ventasQuery = supabase
     .from("ventas")
     .select(
@@ -89,11 +110,9 @@ async function fetchVentas(fecha: string | null, verCanceladas: boolean): Promis
   let recibosQuery = supabase
     .from("operador_saldo_movimientos")
     .select(
-      "id, fecha, operador_id, forma_pago, pago_efectivo, pago_deposito, concepto, importe, created_at, operadores:operadores!operador_id(nombre, apellido_paterno, apellido_materno, asesor)",
+      "id, fecha, operador_id, venta_id, ticket_id, forma_pago, pago_efectivo, pago_deposito, concepto, importe, created_at, operadores:operadores!operador_id(nombre, apellido_paterno, apellido_materno, asesor)",
     )
     .eq("tipo", "abono")
-    .is("venta_id", null)
-    .is("ticket_id", null)
     .order("fecha", { ascending: false })
     .order("id", { ascending: false });
 
@@ -124,7 +143,15 @@ async function fetchVentas(fecha: string | null, verCanceladas: boolean): Promis
     kind: "venta" as const,
   }));
 
-  const recibos: VentaListadoRow[] = ((recibosData ?? []) as ReciboAbonoRow[]).map((recibo) => ({
+  const movimientosAbono = (recibosData ?? []) as ReciboAbonoRow[];
+  const recibosDirectos = movimientosAbono.filter(
+    (recibo) => recibo.venta_id == null && recibo.ticket_id == null,
+  );
+  const abonosVinculados = movimientosAbono.filter(
+    (recibo) => recibo.venta_id != null || recibo.ticket_id != null,
+  );
+
+  const recibos: VentaListadoRow[] = recibosDirectos.map((recibo) => ({
     id: recibo.id,
     kind: "recibo_abono" as const,
     fecha: recibo.fecha ?? recibo.created_at.slice(0, 10),
@@ -135,18 +162,8 @@ async function fetchVentas(fecha: string | null, verCanceladas: boolean): Promis
     cobro: Number(recibo.importe ?? 0),
     faltante: 0,
     forma_pago: recibo.forma_pago ?? "Efectivo",
-    pago_efectivo:
-      recibo.forma_pago === "Dividida"
-        ? Number(recibo.pago_efectivo ?? 0)
-        : recibo.forma_pago === "Deposito"
-          ? 0
-          : Number(recibo.importe ?? 0),
-    pago_deposito:
-      recibo.forma_pago === "Dividida"
-        ? Number(recibo.pago_deposito ?? 0)
-        : recibo.forma_pago === "Deposito"
-          ? Number(recibo.importe ?? 0)
-          : 0,
+    pago_efectivo: efectivoDeAbono(recibo),
+    pago_deposito: depositoDeAbono(recibo),
     pago_saldo_operador: 0,
     promotor: null,
     asesor: Array.isArray(recibo.operadores) ? recibo.operadores[0]?.asesor ?? null : recibo.operadores?.asesor ?? null,
@@ -155,11 +172,13 @@ async function fetchVentas(fecha: string | null, verCanceladas: boolean): Promis
     motivo_cancelacion: recibo.concepto ?? null,
   }));
 
-  return [...ventas, ...recibos].sort((a, b) => {
+  const registros = [...ventas, ...recibos].sort((a, b) => {
     const cmpFecha = String(b.fecha ?? "").localeCompare(String(a.fecha ?? ""));
     if (cmpFecha !== 0) return cmpFecha;
     return b.id - a.id;
   });
+
+  return { registros, abonosVinculados };
 }
 
 function sumarPagosUnicos(registros: VentaListadoRow[]) {
@@ -202,14 +221,17 @@ export default function Ventas() {
   const [verCanceladas, setVerCanceladas] = useState(true);
 
   const {
-    data: ventas = [],
+    data: resultadoVentas,
     isLoading,
     isError,
     error,
   } = useQuery({
-    queryKey: ["ventas", fechaFiltro, verCanceladas, "recibos_abono"],
+    queryKey: ["ventas", fechaFiltro, verCanceladas, "recibos_y_sobrepagos"],
     queryFn: () => fetchVentas(fechaFiltro, verCanceladas),
   });
+
+  const ventas = resultadoVentas?.registros ?? [];
+  const abonosVinculados = resultadoVentas?.abonosVinculados ?? [];
 
   const filtradas = ventas.filter((v) => {
     const txt = normalizeForSearch(busqueda);
@@ -220,6 +242,11 @@ export default function Ventas() {
       normalizeForSearch(v.motivo_cancelacion).includes(txt)
     );
   });
+  const textoBusqueda = normalizeForSearch(busqueda);
+  const abonosVinculadosFiltrados = abonosVinculados.filter((abono) => (
+    normalizeForSearch(nombreOperador(abono.operadores)).includes(textoBusqueda)
+    || normalizeForSearch(abono.concepto).includes(textoBusqueda)
+  ));
 
   // Las canceladas y reembolsadas se muestran como historial, pero ya no
   // forman parte de los importes vigentes del dia.
@@ -228,8 +255,18 @@ export default function Ventas() {
   const totalFaltante = registrosVigentes.reduce((s, v) => s + (v.faltante ?? 0), 0);
   const totalCosto = registrosVigentes.reduce((s, v) => s + (v.costo ?? 0), 0);
   const pagosUnicos = sumarPagosUnicos(registrosVigentes);
-  const totalEfectivo = pagosUnicos.efectivo;
-  const totalDeposito = pagosUnicos.deposito;
+  const totalAbonosSaldo = abonosVinculadosFiltrados.reduce(
+    (suma, abono) => suma + Number(abono.importe ?? 0),
+    0,
+  );
+  const totalEfectivo = pagosUnicos.efectivo + abonosVinculadosFiltrados.reduce(
+    (suma, abono) => suma + efectivoDeAbono(abono),
+    0,
+  );
+  const totalDeposito = pagosUnicos.deposito + abonosVinculadosFiltrados.reduce(
+    (suma, abono) => suma + depositoDeAbono(abono),
+    0,
+  );
   const totalResguardo = pagosUnicos.resguardo;
 
   const esHoy = fechaFiltro === hoy();
@@ -339,6 +376,10 @@ export default function Ventas() {
           <div className="summary-item">
             <span className="summary-label">Tomado de resguardo</span>
             <span className="summary-value">{fmt(totalResguardo)}</span>
+          </div>
+          <div className="summary-item">
+            <span className="summary-label">Abonos a saldo</span>
+            <span className="summary-value summary-value--green">{fmt(totalAbonosSaldo)}</span>
           </div>
         </div>
       )}
