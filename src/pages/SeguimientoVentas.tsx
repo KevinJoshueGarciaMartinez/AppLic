@@ -32,7 +32,6 @@ type FilaSeguimiento = Pick<
   | "estatus_seguimiento"
   | "notas_seguimiento"
   | "asesor"
-  | "curp"
   | "num_exp_med_preventiva"
   | "tramite_a_realizar"
 > & {
@@ -118,7 +117,7 @@ async function fetchProspectos(
   const { data, error } = await supabase
     .from("operadores")
     .select(
-      "numero_consecutivo, nombre, apellido_paterno, apellido_materno, telefono_1, medio_captacion, fecha_captacion, proxima_llamada, estatus_seguimiento, notas_seguimiento, asesor, curp, num_exp_med_preventiva, tramite_a_realizar, promotores(nombre)",
+      "numero_consecutivo, nombre, apellido_paterno, apellido_materno, telefono_1, medio_captacion, fecha_captacion, proxima_llamada, estatus_seguimiento, notas_seguimiento, asesor, num_exp_med_preventiva, tramite_a_realizar, promotores(nombre)",
     )
     .eq("es_prospecto", true)
     .order("proxima_llamada", { ascending: true });
@@ -288,7 +287,6 @@ type DetallesModalState = {
   nombre: string;
   medio_captacion: string | null;
   num_exp_med_preventiva: string | null;
-  curp: string | null;
   proxima_llamada: string;
   notasHistorico: string;
   notaNueva: string;
@@ -463,29 +461,13 @@ export default function SeguimientoVentas() {
     },
   });
 
-  const formalizarMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const { error: err } = await supabase
-        .from("operadores")
-        .update({ es_prospecto: false })
-        .eq("numero_consecutivo", id);
-      if (err) throw new Error(err.message);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["seguimiento_operadores"] });
-      queryClient.invalidateQueries({ queryKey: ["operadores"] });
-      queryClient.invalidateQueries({ queryKey: ["reporte_seguimiento_prospectos"] });
-      setDetallesModal(null);
-    },
-  });
-
   const overlayAbierto = modalAbierto || detallesModal != null;
 
   useEffect(() => {
     if (!overlayAbierto) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      if (detallesModal && !patchSeguimientoMutation.isPending && !formalizarMutation.isPending) {
+      if (detallesModal && !patchSeguimientoMutation.isPending) {
         setDetallesModal(null);
       }
       else if (modalAbierto && !insertMutation.isPending) setModalAbierto(false);
@@ -498,7 +480,6 @@ export default function SeguimientoVentas() {
     modalAbierto,
     insertMutation.isPending,
     patchSeguimientoMutation.isPending,
-    formalizarMutation.isPending,
   ]);
 
   function abrirModal() {
@@ -931,7 +912,6 @@ export default function SeguimientoVentas() {
             if (
               e.target === e.currentTarget
               && !patchSeguimientoMutation.isPending
-              && !formalizarMutation.isPending
             ) {
               setDetallesModal(null);
             }
@@ -948,7 +928,7 @@ export default function SeguimientoVentas() {
               type="button"
               className="modal-close"
               aria-label="Cerrar"
-              disabled={patchSeguimientoMutation.isPending || formalizarMutation.isPending}
+              disabled={patchSeguimientoMutation.isPending}
               onClick={() => setDetallesModal(null)}
             >
               ×
@@ -1053,7 +1033,6 @@ export default function SeguimientoVentas() {
                 value={detallesModal.proxima_llamada}
                 disabled={
                   patchSeguimientoMutation.isPending
-                  || formalizarMutation.isPending
                   || !notaHabilitaProximaLlamada(detallesModal.notaNueva)
                 }
                 title={
@@ -1084,11 +1063,6 @@ export default function SeguimientoVentas() {
                 {(patchSeguimientoMutation.error as Error).message}
               </div>
             )}
-            {formalizarMutation.isError && (
-              <div className="alert-error" style={{ marginTop: "12px" }}>
-                {(formalizarMutation.error as Error).message}
-              </div>
-            )}
             {detallesModal.error && (
               <div className="alert-error" style={{ marginTop: "12px" }}>
                 {detallesModal.error}
@@ -1116,71 +1090,22 @@ export default function SeguimientoVentas() {
                 <button
                   type="button"
                   className="btn-edit"
-                  disabled={patchSeguimientoMutation.isPending || formalizarMutation.isPending}
+                  disabled={patchSeguimientoMutation.isPending}
                   style={{ whiteSpace: "nowrap" }}
                   onClick={() => {
-                    if (patchSeguimientoMutation.isPending || formalizarMutation.isPending) return;
+                    if (patchSeguimientoMutation.isPending) return;
                     navigate(`/operadores/${detallesModal.id}?from=seguimiento`);
                   }}
                   title="Ver y editar tramite y documentos del expediente"
                 >
                   Abrir expediente
                 </button>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    gap: "6px",
-                  }}
-                >
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  disabled={formalizarMutation.isPending || patchSeguimientoMutation.isPending}
-                  style={{ whiteSpace: "nowrap" }}
-                  onClick={() => {
-                    const curp = detallesModal.curp?.trim() ?? "";
-                    if (!curp) {
-                      setDetallesModal((m) =>
-                        m
-                          ? {
-                            ...m,
-                            error:
-                              "Para formalizar hace falta la CURP. Abre el expediente, capturala, guarda y vuelve a abrir Detalles.",
-                          }
-                          : m,
-                      );
-                      return;
-                    }
-                    const ok = window.confirm(
-                      "Esta accion formaliza al prospecto y lo saca de Seguimiento. ¿Deseas continuar?",
-                    );
-                    if (!ok) return;
-                    formalizarMutation.mutate(detallesModal.id);
-                  }}
-                  title={
-                    detallesModal.curp?.trim()
-                      ? "Convierte el prospecto en operador formal."
-                      : "Requiere CURP en expediente antes de poder formalizar."
-                  }
-                >
-                  {formalizarMutation.isPending
-                    ? "Formalizando…"
-                    : "Formalizar prospecto"}
-                </button>
-                {!detallesModal.curp?.trim() && (
-                  <span className="field-hint" style={{ margin: 0 }}>
-                    Requiere CURP capturada en expediente para formalizar.
-                  </span>
-                )}
-                </div>
               </div>
               <div style={{ display: "flex", gap: "10px", marginLeft: "auto", flexShrink: 0 }}>
               <button
                 type="button"
                 className="btn-secondary"
-                disabled={patchSeguimientoMutation.isPending || formalizarMutation.isPending}
+                disabled={patchSeguimientoMutation.isPending}
                 onClick={() => setDetallesModal(null)}
               >
                 Cancelar
@@ -1190,7 +1115,6 @@ export default function SeguimientoVentas() {
                 className="btn-primary"
                 disabled={
                   patchSeguimientoMutation.isPending
-                  || formalizarMutation.isPending
                   || !notaHabilitaProximaLlamada(detallesModal.notaNueva)
                   || !detallesModal.proxima_llamada.trim()
                 }
@@ -1464,7 +1388,6 @@ export default function SeguimientoVentas() {
                               medio_captacion: op.medio_captacion ?? null,
                               num_exp_med_preventiva:
                                 op.num_exp_med_preventiva ?? null,
-                              curp: op.curp ?? null,
                               proxima_llamada: op.proxima_llamada ?? "",
                               notasHistorico: op.notas_seguimiento ?? "",
                               notaNueva: "",
