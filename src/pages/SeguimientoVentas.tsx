@@ -1244,14 +1244,13 @@ export default function SeguimientoVentas() {
         </div>
       )}
 
-      <div className="toolbar" style={{ flexWrap: "wrap", gap: "0.75rem" }}>
+      <div className="toolbar seguimiento-filtros-toolbar">
         <input
-          className="search-input"
+          className="search-input seguimiento-busqueda"
           type="text"
           placeholder="Buscar prospecto por nombre o telefono..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
-          style={{ minWidth: "18rem" }}
         />
         {busqueda && (
           <button
@@ -1270,14 +1269,13 @@ export default function SeguimientoVentas() {
           />
           Ocultar finalizados
         </label>
-        <div className="form-field" style={{ margin: 0, minWidth: "11rem" }}>
+        <div className="form-field seguimiento-filtro-campo seguimiento-filtro-campo--dia">
           <label style={{ fontSize: "0.75rem", display: "block", marginBottom: "0.25rem" }}>
             Filtrar por dia (prox. llamada)
           </label>
           <input
             type="date"
-            className="search-input"
-            style={{ width: "100%" }}
+            className="search-input seguimiento-filtro-control"
             value={diaFiltro}
             onChange={(e) => setDiaFiltro(e.target.value)}
           />
@@ -1293,13 +1291,12 @@ export default function SeguimientoVentas() {
         )}
         {puedeFiltrarAsesor && (
           <>
-            <div className="form-field" style={{ margin: 0, minWidth: "12rem" }}>
+            <div className="form-field seguimiento-filtro-campo seguimiento-filtro-campo--asesor">
               <label style={{ fontSize: "0.75rem", display: "block", marginBottom: "0.25rem" }}>
                 Filtrar por asesor
               </label>
               <select
-                className="search-input"
-                style={{ width: "100%", padding: "8px 10px", cursor: "pointer" }}
+                className="search-input seguimiento-filtro-control"
                 value={asesorFiltro}
                 onChange={(e) => setAsesorFiltro(e.target.value)}
               >

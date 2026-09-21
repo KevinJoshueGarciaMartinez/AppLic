@@ -1075,6 +1075,59 @@ input[type="number"] {
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.22);
 }
 
+.seguimiento-filtros-toolbar {
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.seguimiento-busqueda {
+  flex: 1 1 18rem;
+  min-width: 18rem;
+  height: 40px;
+  box-sizing: border-box;
+}
+
+.seguimiento-filtro-campo {
+  flex: 0 0 auto;
+  gap: 4px;
+  margin: 0;
+}
+
+.seguimiento-filtro-campo--dia {
+  width: 180px;
+}
+
+.seguimiento-filtro-campo--asesor {
+  width: 220px;
+}
+
+.seguimiento-filtro-control {
+  flex: none;
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  box-sizing: border-box;
+  padding: 8px 10px;
+}
+
+select.seguimiento-filtro-control {
+  cursor: pointer;
+}
+
+@media (max-width: 700px) {
+  .seguimiento-busqueda {
+    flex-basis: 100%;
+    min-width: 100%;
+  }
+}
+
+@media (max-width: 540px) {
+  .seguimiento-filtro-campo--dia,
+  .seguimiento-filtro-campo--asesor {
+    width: 100%;
+  }
+}
+
 .seguimiento-estatus-filtro {
   display: flex;
   align-items: center;
