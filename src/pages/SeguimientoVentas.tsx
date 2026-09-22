@@ -227,6 +227,7 @@ function baseProspectoInsert(): OperadorInsert {
     proxima_llamada: null,
     estatus_seguimiento: null,
     notas_seguimiento: null,
+    nota_operador: null,
     asesor: null,
   };
 }

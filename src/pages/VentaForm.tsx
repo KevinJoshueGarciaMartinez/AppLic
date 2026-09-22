@@ -202,13 +202,18 @@ async function buscarOperadores(texto: string): Promise<Operador[]> {
 
 type OperadorVentaResumen = Pick<
   Operador,
-  "curp" | "num_exp_med_preventiva" | "licencia_numero" | "licencia_vigencia" | "telefono_1"
+  | "curp"
+  | "num_exp_med_preventiva"
+  | "licencia_numero"
+  | "licencia_vigencia"
+  | "telefono_1"
+  | "nota_operador"
 >;
 
 async function fetchOperadorResumen(operadorId: number): Promise<OperadorVentaResumen> {
   const { data, error } = await supabase
     .from("operadores")
-    .select("curp, num_exp_med_preventiva, licencia_numero, licencia_vigencia, telefono_1")
+    .select("curp, num_exp_med_preventiva, licencia_numero, licencia_vigencia, telefono_1, nota_operador")
     .eq("numero_consecutivo", operadorId)
     .single();
   if (error) throw new Error(error.message);
@@ -430,6 +435,7 @@ export default function VentaForm({ id }: Props) {
   const [items, setItems] = useState<VentaItem[]>([]);
   const [draftServicioId, setDraftServicioId] = useState<number | "">("");
   const [draftObservaciones, setDraftObservaciones] = useState("");
+  const [notaOperadorDraft, setNotaOperadorDraft] = useState("");
   const [guardado, setGuardado] = useState(false);
 
   const emptyLiq = () => ({
@@ -570,6 +576,34 @@ export default function VentaForm({ id }: Props) {
     queryFn: () => fetchOperadorResumen(operadorIdSaldo!),
     enabled: operadorIdSaldo != null,
   });
+
+  useEffect(() => {
+    setNotaOperadorDraft(operadorResumen?.nota_operador ?? "");
+  }, [operadorIdSaldo, operadorResumen?.nota_operador]);
+
+  const notaOperadorMutation = useMutation({
+    mutationFn: async () => {
+      if (operadorIdSaldo == null) {
+        throw new Error("Selecciona un operador antes de guardar la nota.");
+      }
+      const nota = notaOperadorDraft.trim() || null;
+      const { error } = await supabase
+        .from("operadores")
+        .update({ nota_operador: nota })
+        .eq("numero_consecutivo", operadorIdSaldo)
+        .eq("es_prospecto", false);
+      if (error) throw new Error(error.message);
+      return nota;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["operador_resumen_venta", operadorIdSaldo],
+      });
+      await queryClient.invalidateQueries({ queryKey: ["operador", operadorIdSaldo] });
+      await queryClient.invalidateQueries({ queryKey: ["operadores"] });
+    },
+  });
+
   const {
     data: saldosOperador,
     isError: saldoQueryError,
@@ -1507,6 +1541,50 @@ export default function VentaForm({ id }: Props) {
                 No puedes registrar una venta nueva mientras el operador tenga saldo en contra.
                 Liquida primero los faltantes pendientes.
               </div>
+            )}
+            {form.operador_id != null && operadorResumen && (
+              <section className="venta-nota-operador" aria-label="Nota general del operador">
+                <div className="venta-nota-operador__encabezado">
+                  <div>
+                    <strong>Nota general del operador</strong>
+                    <span>Recordatorio permanente; no pertenece a esta venta.</span>
+                  </div>
+                  {operadorResumen.nota_operador?.trim() && (
+                    <span className="venta-nota-operador__aviso">IMPORTANTE</span>
+                  )}
+                </div>
+                <textarea
+                  value={notaOperadorDraft}
+                  onChange={(e) => {
+                    setNotaOperadorDraft(e.target.value);
+                    notaOperadorMutation.reset();
+                  }}
+                  rows={4}
+                  maxLength={1000}
+                  placeholder="Categorias, renovaciones, cursos externos u otros recordatorios importantes…"
+                />
+                <div className="venta-nota-operador__acciones">
+                  {notaOperadorMutation.isError && (
+                    <span className="venta-nota-operador__error">
+                      {(notaOperadorMutation.error as Error).message}
+                    </span>
+                  )}
+                  {notaOperadorMutation.isSuccess && (
+                    <span className="venta-nota-operador__exito">Nota guardada.</span>
+                  )}
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    disabled={
+                      notaOperadorMutation.isPending
+                      || notaOperadorDraft.trim() === (operadorResumen.nota_operador ?? "").trim()
+                    }
+                    onClick={() => notaOperadorMutation.mutate()}
+                  >
+                    {notaOperadorMutation.isPending ? "Guardando…" : "Guardar nota"}
+                  </button>
+                </div>
+              </section>
             )}
             <div className="form-field" style={{ marginTop: "1.25rem" }}>
               <label>{isNew ? "Promotor *" : "Promotor de esta venta *"}</label>

@@ -163,6 +163,7 @@ function emptyForm(): OperadorInsert {
     proxima_llamada: null,
     estatus_seguimiento: null,
     notas_seguimiento: null,
+    nota_operador: null,
     asesor: null,
   };
 }
@@ -352,6 +353,7 @@ export default function OperadorForm({ id }: Props) {
         : (form.curp ?? "").trim().toUpperCase(),
       medio_captacion: form.medio_captacion?.trim() || null,
       notas_seguimiento: form.notas_seguimiento?.trim() || null,
+      nota_operador: form.nota_operador?.trim() || null,
       asesor: form.asesor?.trim() || null,
     };
     mutation.mutate(payload);
@@ -489,6 +491,20 @@ export default function OperadorForm({ id }: Props) {
                 onChange={(e) => set("direccion", e.target.value || null)}
                 rows={2}
               />
+            </div>
+
+            <div className="form-field form-field-full">
+              <label>Nota general del operador</label>
+              <textarea
+                value={form.nota_operador ?? ""}
+                onChange={(e) => set("nota_operador", e.target.value || null)}
+                rows={3}
+                maxLength={1000}
+                placeholder="Categorias, renovaciones, cursos externos u otros recordatorios importantes…"
+              />
+              <span className="field-hint">
+                Esta nota aparecera al seleccionar al operador en Nueva venta.
+              </span>
             </div>
 
             <div className="form-grid form-grid-2">
@@ -740,6 +756,20 @@ export default function OperadorForm({ id }: Props) {
                 onChange={(e) => set("direccion", e.target.value || null)}
                 rows={2}
               />
+            </div>
+
+            <div className="form-field form-field-full">
+              <label>Nota general del operador</label>
+              <textarea
+                value={form.nota_operador ?? ""}
+                onChange={(e) => set("nota_operador", e.target.value || null)}
+                rows={3}
+                maxLength={1000}
+                placeholder="Categorias, renovaciones, cursos externos u otros recordatorios importantes…"
+              />
+              <span className="field-hint">
+                Esta nota aparecera al seleccionar al operador en Nueva venta.
+              </span>
             </div>
 
             <div className="form-grid form-grid-2">

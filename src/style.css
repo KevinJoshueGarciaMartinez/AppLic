@@ -1416,6 +1416,94 @@ fieldset.venta-flujo-bloque:disabled {
   color: #64748b;
 }
 
+.venta-nota-operador {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid #f4c96b;
+  border-radius: 12px;
+  background: #fffbeb;
+  box-shadow: 0 1px 2px rgb(120 53 15 / 0.06);
+}
+
+.venta-nota-operador__encabezado {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.venta-nota-operador__encabezado > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.venta-nota-operador__encabezado strong {
+  color: #78350f;
+  font-size: 0.82rem;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+}
+
+.venta-nota-operador__encabezado span:not(.venta-nota-operador__aviso) {
+  color: #92400e;
+  font-size: 0.7rem;
+}
+
+.venta-nota-operador__aviso {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #f59e0b;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.venta-nota-operador textarea {
+  width: 100%;
+  min-height: 88px;
+  resize: vertical;
+  padding: 10px 12px;
+  border: 1px solid #e9b949;
+  border-radius: 9px;
+  background: #fff;
+  color: #1f2937;
+  font: inherit;
+  line-height: 1.45;
+}
+
+.venta-nota-operador textarea:focus {
+  outline: 2px solid rgb(245 158 11 / 0.22);
+  border-color: #d97706;
+}
+
+.venta-nota-operador__acciones {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-height: 34px;
+  margin-top: 9px;
+}
+
+.venta-nota-operador__error,
+.venta-nota-operador__exito {
+  margin-right: auto;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.venta-nota-operador__error {
+  color: #b91c1c;
+}
+
+.venta-nota-operador__exito {
+  color: #15803d;
+}
+
 .operador-saldo-resumen {
   width: 100%;
 }
