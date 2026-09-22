@@ -1542,50 +1542,6 @@ export default function VentaForm({ id }: Props) {
                 Liquida primero los faltantes pendientes.
               </div>
             )}
-            {form.operador_id != null && operadorResumen && (
-              <section className="venta-nota-operador" aria-label="Nota general del operador">
-                <div className="venta-nota-operador__encabezado">
-                  <div>
-                    <strong>Nota general del operador</strong>
-                    <span>Recordatorio permanente; no pertenece a esta venta.</span>
-                  </div>
-                  {operadorResumen.nota_operador?.trim() && (
-                    <span className="venta-nota-operador__aviso">IMPORTANTE</span>
-                  )}
-                </div>
-                <textarea
-                  value={notaOperadorDraft}
-                  onChange={(e) => {
-                    setNotaOperadorDraft(e.target.value);
-                    notaOperadorMutation.reset();
-                  }}
-                  rows={4}
-                  maxLength={1000}
-                  placeholder="Categorias, renovaciones, cursos externos u otros recordatorios importantes…"
-                />
-                <div className="venta-nota-operador__acciones">
-                  {notaOperadorMutation.isError && (
-                    <span className="venta-nota-operador__error">
-                      {(notaOperadorMutation.error as Error).message}
-                    </span>
-                  )}
-                  {notaOperadorMutation.isSuccess && (
-                    <span className="venta-nota-operador__exito">Nota guardada.</span>
-                  )}
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    disabled={
-                      notaOperadorMutation.isPending
-                      || notaOperadorDraft.trim() === (operadorResumen.nota_operador ?? "").trim()
-                    }
-                    onClick={() => notaOperadorMutation.mutate()}
-                  >
-                    {notaOperadorMutation.isPending ? "Guardando…" : "Guardar nota"}
-                  </button>
-                </div>
-              </section>
-            )}
             <div className="form-field" style={{ marginTop: "1.25rem" }}>
               <label>{isNew ? "Promotor *" : "Promotor de esta venta *"}</label>
               <div className={!isNew ? "venta-promotor-edicion" : undefined}>
@@ -1653,6 +1609,51 @@ export default function VentaForm({ id }: Props) {
 
             {form.operador_id != null && (
               <HistorialVentasOperador operadorId={form.operador_id} compact />
+            )}
+
+            {form.operador_id != null && operadorResumen && (
+              <section className="venta-nota-operador" aria-label="Nota general del operador">
+                <div className="venta-nota-operador__encabezado">
+                  <div>
+                    <strong>Nota general del operador</strong>
+                    <span>Recordatorio permanente; no pertenece a esta venta.</span>
+                  </div>
+                  {operadorResumen.nota_operador?.trim() && (
+                    <span className="venta-nota-operador__aviso">IMPORTANTE</span>
+                  )}
+                </div>
+                <textarea
+                  value={notaOperadorDraft}
+                  onChange={(e) => {
+                    setNotaOperadorDraft(e.target.value);
+                    notaOperadorMutation.reset();
+                  }}
+                  rows={4}
+                  maxLength={1000}
+                  placeholder="Categorias, renovaciones, cursos externos u otros recordatorios importantes…"
+                />
+                <div className="venta-nota-operador__acciones">
+                  {notaOperadorMutation.isError && (
+                    <span className="venta-nota-operador__error">
+                      {(notaOperadorMutation.error as Error).message}
+                    </span>
+                  )}
+                  {notaOperadorMutation.isSuccess && (
+                    <span className="venta-nota-operador__exito">Nota guardada.</span>
+                  )}
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    disabled={
+                      notaOperadorMutation.isPending
+                      || notaOperadorDraft.trim() === (operadorResumen.nota_operador ?? "").trim()
+                    }
+                    onClick={() => notaOperadorMutation.mutate()}
+                  >
+                    {notaOperadorMutation.isPending ? "Guardando…" : "Guardar nota"}
+                  </button>
+                </div>
+              </section>
             )}
           </div>
 
